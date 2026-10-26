@@ -1,4 +1,5 @@
 // Style section (spec 4.4): all appearance.
+import type { KdlValue, UnknownNode } from "./structure.ts";
 
 /** Reference to a theme token, written `$name`. */
 export type TokenRef = `$${string}`;
@@ -36,7 +37,7 @@ export interface StyleProps {
   headStart?: ArrowHead;
   headEnd?: ArrowHead;
   /** Typed properties registered by packs and plugins. */
-  ext?: Record<string, string | number | boolean>;
+  ext?: Record<string, KdlValue>;
 }
 
 /** Named tokens. v1 has one theme. */
@@ -64,4 +65,6 @@ export interface Style {
   /** In listed order; later classes win. */
   classes: StyleClass[];
   overrides: ElementStyle[];
+  /** Style statements from packs that are not installed, kept as written. */
+  unknown?: UnknownNode[];
 }

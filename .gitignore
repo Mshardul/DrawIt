@@ -1,5 +1,6 @@
 node_modules/
-dist/
+/web/dist/
+/internal/webui/dist/app/
 web/test-results/
 web/playwright-report/
 web/blob-report/

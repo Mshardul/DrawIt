@@ -75,7 +75,7 @@ describe("document model", () => {
 
   it("[T-002] discriminates elements by kind", () => {
     expectTypeOf<DiagramElement["kind"]>().toEqualTypeOf<
-      "node" | "frame" | "edge" | "text" | "image" | "shape"
+      "node" | "frame" | "edge" | "text" | "image" | "shape" | "unknown"
     >();
     const edge = example.elements.find((e): e is EdgeElement => e.kind === "edge");
     expectTypeOf(edge).toEqualTypeOf<EdgeElement | undefined>();

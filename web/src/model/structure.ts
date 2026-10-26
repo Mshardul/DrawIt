@@ -12,10 +12,27 @@ export interface PluginRef {
   version: number;
 }
 
+/** A value KDL can hold. */
+export type KdlValue = string | number | boolean | null;
+
+/** A node the model does not know, kept so a save does not lose it (spec 4.6). */
+export interface UnknownNode {
+  name: string;
+  args: KdlValue[];
+  props: Record<string, KdlValue>;
+  children: UnknownNode[];
+  /** Whole-line `//` comments above the node, as written. */
+  comments?: string[];
+}
+
 interface ElementBase {
   id: string;
   /** Style class name. */
   class?: string;
+  /** Whole-line `//` comments above the element, as written. They move with it. */
+  comments?: string[];
+  /** Properties no installed pack defines, kept as written. */
+  ext?: Record<string, KdlValue>;
 }
 
 export interface NodeElement extends ElementBase {
@@ -55,10 +72,19 @@ export interface ShapeElement extends ElementBase {
   shape: string;
 }
 
+/** A structure node from a pack that is not installed. Drawn as a placeholder. */
+export interface UnknownElement {
+  kind: "unknown";
+  /** The node's first argument when it is a valid ID, otherwise `unknown-N`. */
+  id: string;
+  node: UnknownNode;
+}
+
 export type DiagramElement =
   | NodeElement
   | FrameElement
   | EdgeElement
   | TextElement
   | ImageElement
-  | ShapeElement;
+  | ShapeElement
+  | UnknownElement;

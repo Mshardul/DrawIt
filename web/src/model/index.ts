@@ -11,6 +11,8 @@ export interface DiagramDocument {
   version: number;
   title?: string;
   plugins: PluginRef[];
+  /** Whole-line `//` comments above the header. */
+  comments?: string[];
   /** Structure section, in authored order. */
   elements: DiagramElement[];
   style: Style;
