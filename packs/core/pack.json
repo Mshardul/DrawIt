@@ -1,0 +1,24 @@
+{
+  "pack": "core",
+  "version": 1,
+  "shapes": [
+    {
+      "id": "rounded-rect",
+      "name": "Rounded rectangle",
+      "category": "Basic",
+      "tags": ["box", "container", "rounded", "rectangle"],
+      "svg": "rounded-rect.svg",
+      "size": { "w": 160, "h": 80 },
+      "outline": "M 8 0 H 152 C 156.418 0 160 3.582 160 8 V 72 C 160 76.418 156.418 80 152 80 H 8 C 3.582 80 0 76.418 0 72 V 8 C 0 3.582 3.582 0 8 0 Z",
+      "anchors": {
+        "top": { "x": 80, "y": 0 },
+        "right": { "x": 160, "y": 40 },
+        "bottom": { "x": 80, "y": 80 },
+        "left": { "x": 0, "y": 40 }
+      },
+      "label": { "x": 8, "y": 8, "w": 144, "h": 64 },
+      "stretch": { "x": [8, 152], "y": [8, 72] },
+      "keepAspect": false
+    }
+  ]
+}

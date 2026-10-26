@@ -3,6 +3,7 @@
 import type { DiagramDocument } from "../model/index.ts";
 import type { Box } from "../render/boxes.ts";
 import { describeDiagram } from "../render/describe.ts";
+import { describeGrid } from "../render/grid.ts";
 import { mount, patch } from "../render/mount.ts";
 import { describeOverlay } from "../render/overlay.ts";
 import { attachTransformInput } from "../move/input.ts";
@@ -24,6 +25,17 @@ function el<K extends keyof HTMLElementTagNameMap>(
   return element;
 }
 
+/** Grid display and snap. View settings like pan and zoom: not in history or the file (preferences come later, decision A14). */
+export interface GridSettings {
+  show: boolean;
+  snap: boolean;
+  /** Cell size in world px. */
+  size: number;
+}
+
+/** Cell sizes offered in the status bar. */
+const GRID_SIZES = [4, 8, 16, 32, 64];
+
 export interface Shell {
   /** The open file, or null before one is opened. */
   readonly file: OpenFile | null;
@@ -32,6 +44,9 @@ export interface Shell {
   /** Pan and zoom of the canvas. Not document state: it is not in history or the file. */
   readonly view: View;
   setView(view: View): void;
+  /** Grid display, snap and cell size. */
+  readonly grid: GridSettings;
+  setGrid(change: Partial<GridSettings>): void;
   /** Fits every drawn element in the canvas. */
   fit(): void;
   /** Redraws the canvas and the unsaved indicator from the open file. Call after changing its history. */
@@ -44,6 +59,18 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter): Pr
   const name = el("span", { className: "name" });
   const unsaved = el("span", { className: "unsaved", textContent: "Unsaved changes", hidden: true });
   const saveButton = el("button", { type: "button", textContent: "Save", disabled: true });
+  const zoom = el("span", { className: "zoom" });
+  const gridToggle = el("input", { type: "checkbox" });
+  const snapToggle = el("input", { type: "checkbox" });
+  const gridSize = el("select", { ariaLabel: "Grid size" }, ...GRID_SIZES.map((n) => el("option", { value: String(n), textContent: String(n) })));
+  const status = el(
+    "footer",
+    { className: "status" },
+    zoom,
+    el("label", {}, gridToggle, "Grid"),
+    el("label", {}, snapToggle, "Snap"),
+    el("label", {}, "Grid size", gridSize),
+  );
   const error = el("div", { className: "error", hidden: true });
   error.setAttribute("role", "alert");
   const canvas = document.createElementNS(SVG_NS, "svg");
@@ -51,23 +78,27 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter): Pr
   // The renderer draws world coordinates into this group; the view transform is its attribute.
   const world = document.createElementNS(SVG_NS, "g");
   world.setAttribute("class", "world");
+  const gridLayer = document.createElementNS(SVG_NS, "g");
+  gridLayer.setAttribute("class", "grid");
   const elements = document.createElementNS(SVG_NS, "g");
   elements.setAttribute("class", "elements");
   // Selection outlines and the drag-box draw over the elements.
   const overlay = document.createElementNS(SVG_NS, "g");
   overlay.setAttribute("class", "overlay");
-  world.append(elements, overlay);
+  world.append(gridLayer, elements, overlay);
   canvas.append(world);
 
   root.replaceChildren(
     el("header", { className: "bar" }, el("h1", { textContent: "DrawIt" }), picker, name, unsaved, saveButton),
     error,
     canvas,
+    status,
   );
 
   let current: OpenFile | null = null;
   let view: View = IDENTITY;
   let marquee: Box | null = null;
+  let grid: GridSettings = { show: false, snap: false, size: 8 };
   // A drag draws this copy of the document; the file's own document changes only on release.
   let preview: DiagramDocument | null = null;
   let opening = Promise.resolve();
@@ -96,9 +127,22 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter): Pr
     saveButton.disabled = !current;
   };
 
+  const drawGrid = (): void => {
+    mount(gridLayer, grid.show ? describeGrid(grid.size, view.scale) : []);
+  };
+  const setGrid = (change: Partial<GridSettings>): void => {
+    grid = { ...grid, ...change };
+    gridToggle.checked = grid.show;
+    snapToggle.checked = grid.snap;
+    gridSize.value = String(grid.size);
+    drawGrid();
+  };
+
   const setView = (next: View): void => {
     view = next;
     world.setAttribute("transform", viewTransform(view));
+    zoom.textContent = `${String(Math.round(view.scale * 100))}%`;
+    drawGrid();
     // Handles keep their screen size, so they depend on the scale.
     drawOverlay();
   };
@@ -153,10 +197,15 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter): Pr
       return view;
     },
     setView,
+    get grid() {
+      return grid;
+    },
+    setGrid,
     fit,
     refresh,
   };
   setView(IDENTITY);
+  setGrid({});
   attachSelectInput({
     target: canvas,
     getView: () => view,
@@ -170,6 +219,7 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter): Pr
     target: canvas,
     getView: () => view,
     getFile: () => current,
+    getGrid: () => (grid.snap ? grid.size : 0),
     setPreview: (doc) => {
       preview = doc;
     },
@@ -187,6 +237,17 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter): Pr
     void shell.open(picker.value);
   });
   saveButton.addEventListener("click", () => void shell.save());
+  gridToggle.addEventListener("change", () => { setGrid({ show: gridToggle.checked }); gridToggle.blur(); });
+  snapToggle.addEventListener("change", () => { setGrid({ snap: snapToggle.checked }); snapToggle.blur(); });
+  gridSize.addEventListener("change", () => { setGrid({ size: Number(gridSize.value) }); gridSize.blur(); });
+  addEventListener("keydown", (event) => {
+    const t = event.target;
+    if (t instanceof HTMLSelectElement || t instanceof HTMLTextAreaElement || t instanceof HTMLInputElement) return;
+    if (event.metaKey || event.ctrlKey || event.altKey || event.key.toLowerCase() !== "g") return;
+    event.preventDefault();
+    if (event.shiftKey) setGrid({ snap: !grid.snap });
+    else setGrid({ show: !grid.show });
+  });
   addEventListener("keydown", (event) => {
     if ((event.metaKey || event.ctrlKey) && event.key === "s") {
       event.preventDefault();

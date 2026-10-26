@@ -28,6 +28,12 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm check:tags
+      - run: pnpm validate:packs
+      - run: pnpm contact-sheet
+      - uses: actions/upload-artifact@v4
+        with:
+          name: contact-sheet
+          path: web/contact-sheet
       - run: pnpm test
       - run: pnpm build
       - run: pnpm exec playwright install --with-deps chromium firefox webkit

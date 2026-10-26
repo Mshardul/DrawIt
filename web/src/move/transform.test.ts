@@ -122,3 +122,37 @@ describe("resize", () => {
     expect(handlesFor(sample, ["a"]).find((h) => h.handle === "se")).toMatchObject({ x: 110, y: 70 });
   });
 });
+
+describe("snap to grid", () => {
+  it("[T-023] a move lands the selection's top-left on the grid and keeps the offsets between elements", () => {
+    const layout = after(moveCommand(sample, ["a", "b"], 3, 3, 8));
+    expect(layout.find((e) => e.id === "a")).toMatchObject({ x: 16, y: 24 });
+    expect(layout.find((e) => e.id === "b")).toMatchObject({ x: 206, y: 24 });
+  });
+
+  it("[T-023] a move that is already on the grid stays a whole number of cells", () => {
+    const layout = after(moveCommand(sample, ["a"], 14, 14, 8));
+    expect(layout.find((e) => e.id === "a")).toMatchObject({ x: 24, y: 32 });
+  });
+
+  it("[T-023] a move with no grid is exact", () => {
+    const layout = after(moveCommand(sample, ["a"], 3, 3, 0));
+    expect(layout.find((e) => e.id === "a")).toMatchObject({ x: 13, y: 23 });
+  });
+
+  it("[T-023] a move that snaps back to where it started is not a command", () => {
+    expect(moveCommand(sample, ["a"], 1, 1, 10)).toBeNull();
+  });
+
+  it("[T-023] a resize snaps the dragged edges and holds the opposite edge", () => {
+    const se = resizeCommand(sample, "a", "se", 3, 3, 8);
+    expect(se).toEqual({ type: "setLayout", changes: [{ id: "a", set: { x: 10, y: 20, w: 102, h: 52 } }] });
+    const nw = resizeCommand(sample, "a", "nw", -3, -3, 8);
+    expect(nw).toEqual({ type: "setLayout", changes: [{ id: "a", set: { x: 8, y: 16, w: 102, h: 54 } }] });
+  });
+
+  it("[T-023] a snapped resize still stops at the minimum size", () => {
+    const set = (resizeCommand(sample, "a", "e", -95, 0, 8) as { changes: { set: { w: number } }[] }).changes[0]?.set;
+    expect(set?.w).toBeGreaterThanOrEqual(MIN_SIZE);
+  });
+});

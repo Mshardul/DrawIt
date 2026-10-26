@@ -5,6 +5,7 @@
 import type { Command } from "../commands/command.ts";
 import type { DiagramDocument } from "../model/index.ts";
 import { drawnBoxes, type DrawnBox } from "../render/boxes.ts";
+import { snapTo } from "./snap.ts";
 
 /** Smallest width or height a resize leaves (one cell of the 8px design grid). */
 export const MIN_SIZE = 8;
@@ -17,14 +18,25 @@ const TEXT_HANDLES: Handle[] = ["e", "w"];
 const transformable = (doc: DiagramDocument, id: string): DrawnBox | undefined =>
   drawnBoxes(doc).find((b) => b.element.id === id && !b.locked);
 
-/** One command moving every transformable selected element by (dx, dy), rounded to whole px; null if nothing moves. */
-export function moveCommand(doc: DiagramDocument, ids: string[], dx: number, dy: number): Command | null {
-  const rx = Math.round(dx);
-  const ry = Math.round(dy);
-  if (rx === 0 && ry === 0) return null;
+/**
+ * One command moving every transformable selected element by (dx, dy), rounded to whole px; null
+ * if nothing moves. With a `grid` size the selection's top-left corner lands on the grid and the
+ * elements keep their offsets from it.
+ */
+export function moveCommand(doc: DiagramDocument, ids: string[], dx: number, dy: number, grid = 0): Command | null {
   const selected = new Set(ids);
-  const changes = drawnBoxes(doc)
-    .filter((b) => selected.has(b.element.id) && !b.locked)
+  const boxes = drawnBoxes(doc).filter((b) => selected.has(b.element.id) && !b.locked);
+  if (boxes.length === 0) return null;
+  let rx = Math.round(dx);
+  let ry = Math.round(dy);
+  if (grid > 0) {
+    const left = Math.min(...boxes.map((b) => b.x));
+    const top = Math.min(...boxes.map((b) => b.y));
+    rx = snapTo(left + rx, grid) - left;
+    ry = snapTo(top + ry, grid) - top;
+  }
+  if (rx === 0 && ry === 0) return null;
+  const changes = boxes
     .map((b) => ({ id: b.element.id, set: { x: b.x + rx, y: b.y + ry } }));
   return changes.length === 0 ? null : { type: "setLayout", changes };
 }
@@ -60,9 +72,10 @@ export function handlesFor(doc: DiagramDocument, selection: string[]): { handle:
 /**
  * Resizes one element by dragging `handle` by (dx, dy). The edge opposite the handle stays put and
  * the size stops at `MIN_SIZE`. An element with no w and h starts from its default size and gets
- * both written. A text box takes width only (its height follows its content).
+ * both written. A text box takes width only (its height follows its content). With a `grid` size
+ * the dragged edges land on the grid.
  */
-export function resizeCommand(doc: DiagramDocument, id: string, handle: Handle, dx: number, dy: number): Command | null {
+export function resizeCommand(doc: DiagramDocument, id: string, handle: Handle, dx: number, dy: number, grid = 0): Command | null {
   const box = transformable(doc, id);
   if (!box) return null;
   const text = box.element.kind === "text";
@@ -74,10 +87,11 @@ export function resizeCommand(doc: DiagramDocument, id: string, handle: Handle, 
   const moveS = !text && handle.includes("s");
   const right = box.x + box.w;
   const bottom = box.y + box.h;
-  let x0 = box.x + (moveW ? Math.round(dx) : 0);
-  let x1 = right + (moveE ? Math.round(dx) : 0);
-  let y0 = box.y + (moveN ? Math.round(dy) : 0);
-  let y1 = bottom + (moveS ? Math.round(dy) : 0);
+  const edge = (v: number, moving: boolean, delta: number): number => (moving ? snapTo(Math.round(v + delta), grid) : v);
+  let x0 = edge(box.x, moveW, dx);
+  let x1 = edge(right, moveE, dx);
+  let y0 = edge(box.y, moveN, dy);
+  let y1 = edge(bottom, moveS, dy);
   if (x1 - x0 < MIN_SIZE) {
     if (moveW) x0 = x1 - MIN_SIZE;
     else x1 = x0 + MIN_SIZE;

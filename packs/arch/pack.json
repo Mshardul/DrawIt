@@ -1,0 +1,24 @@
+{
+  "pack": "arch",
+  "version": 1,
+  "shapes": [
+    {
+      "id": "database",
+      "name": "Database",
+      "category": "Architecture (generic)",
+      "tags": ["database", "storage", "sql", "cylinder"],
+      "svg": "database.svg",
+      "size": { "w": 96, "h": 112 },
+      "outline": "M 0 16 C 0 7.163 21.49 0 48 0 C 74.51 0 96 7.163 96 16 V 96 C 96 104.837 74.51 112 48 112 C 21.49 112 0 104.837 0 96 Z",
+      "anchors": {
+        "top": { "x": 48, "y": 0 },
+        "right": { "x": 96, "y": 56 },
+        "bottom": { "x": 48, "y": 112 },
+        "left": { "x": 0, "y": 56 }
+      },
+      "label": { "x": 8, "y": 40, "w": 80, "h": 56 },
+      "stretch": { "y": [32, 96] },
+      "keepAspect": false
+    }
+  ]
+}

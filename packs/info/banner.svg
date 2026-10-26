@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 64">
+  <polygon data-role="fill" points="0,0 192,0 176,32 192,64 0,64 16,32"/>
+  <line data-role="detail" x1="16" y1="0" x2="16" y2="32"/>
+  <line data-role="detail" x1="176" y1="0" x2="176" y2="32"/>
+</svg>

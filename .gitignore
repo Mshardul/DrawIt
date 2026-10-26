@@ -4,4 +4,5 @@ node_modules/
 web/test-results/
 web/playwright-report/
 web/blob-report/
+/web/contact-sheet/
 .DS_Store

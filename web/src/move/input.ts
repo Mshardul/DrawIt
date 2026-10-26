@@ -15,6 +15,8 @@ export interface TransformInputHost {
   target: SVGSVGElement;
   getView(): View;
   getFile(): OpenFile | null;
+  /** Grid size to snap drags to, or 0 when snap is off. */
+  getGrid(): number;
   /** Draws this document instead of the file's until set back to null. */
   setPreview(doc: DiagramDocument | null): void;
   /** Redraws the canvas only; used on every pointer move. `changed` lists the IDs whose drawing differs from the last draw. */
@@ -52,12 +54,14 @@ export function attachTransformInput(host: TransformInputHost): () => void {
   let box: DOMRect = target.getBoundingClientRect();
   const world = (event: { clientX: number; clientY: number }): Pt =>
     screenToWorld(host.getView(), { x: event.clientX - box.left, y: event.clientY - box.top });
-  const commandFor = (file: OpenFile, d: Drag, now: Pt): Command | null => {
+  // Holding Alt (Option) bypasses snap for that event.
+  const commandFor = (file: OpenFile, d: Drag, now: Pt, bypass: boolean): Command | null => {
+    const grid = bypass ? 0 : host.getGrid();
     const dx = now.x - d.world.x;
     const dy = now.y - d.world.y;
     return d.action.kind === "move"
-      ? moveCommand(file.document, file.history.selection, dx, dy)
-      : resizeCommand(file.document, d.action.id, d.action.handle, dx, dy);
+      ? moveCommand(file.document, file.history.selection, dx, dy, grid)
+      : resizeCommand(file.document, d.action.id, d.action.handle, dx, dy, grid);
   };
   const cancel = (): void => {
     if (!drag) return;
@@ -91,7 +95,7 @@ export function attachTransformInput(host: TransformInputHost): () => void {
     if (!drag || drag.pointer !== event.pointerId || !file) return;
     if (!drag.active && Math.hypot(event.clientX - drag.screen.x, event.clientY - drag.screen.y) < DRAG_THRESHOLD) return;
     drag.active = true;
-    const command = commandFor(file, drag, world(event));
+    const command = commandFor(file, drag, world(event), event.altKey);
     host.setPreview(command ? applyCommand(file.document, command).document : null);
     // Redraw what changed this frame and what the previous frame changed (it may have snapped back).
     const now = changedIds(command);
@@ -105,7 +109,7 @@ export function attachTransformInput(host: TransformInputHost): () => void {
     drag = null;
     drawn = new Set();
     host.setPreview(null);
-    const command = file && d.active ? commandFor(file, d, world(event)) : null;
+    const command = file && d.active ? commandFor(file, d, world(event), event.altKey) : null;
     if (file && command) file.history.execute(command);
     host.refresh();
   };

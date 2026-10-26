@@ -1,0 +1,24 @@
+{
+  "pack": "info",
+  "version": 1,
+  "shapes": [
+    {
+      "id": "banner",
+      "name": "Banner",
+      "category": "Infographic",
+      "tags": ["banner", "ribbon", "heading"],
+      "svg": "banner.svg",
+      "size": { "w": 192, "h": 64 },
+      "outline": "M 0 0 H 192 L 176 32 L 192 64 H 0 L 16 32 Z",
+      "anchors": {
+        "top": { "x": 96, "y": 0 },
+        "right": { "x": 176, "y": 32 },
+        "bottom": { "x": 96, "y": 64 },
+        "left": { "x": 16, "y": 32 }
+      },
+      "label": { "x": 24, "y": 8, "w": 144, "h": 48 },
+      "stretch": { "x": [16, 176] },
+      "keepAspect": false
+    }
+  ]
+}

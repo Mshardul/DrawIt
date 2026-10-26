@@ -54,7 +54,7 @@ const wheel = (page: import("@playwright/test").Page, init: { deltaX?: number; d
 test("[T-013] opening a file fits it in the canvas", async ({ page }) => {
   // Reopen to see the fit: boot already reset the view for the other tests.
   await page.evaluate(() => {
-    const select = document.querySelector("select");
+    const select = document.querySelector(".bar select");
     select?.dispatchEvent(new Event("change"));
   });
   await expect.poll(async () => (await view(page)).scale).toBeLessThan(0.5);

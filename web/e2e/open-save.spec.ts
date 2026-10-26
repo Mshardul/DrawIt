@@ -46,7 +46,7 @@ async function boot(page: import("@playwright/test").Page, files: Files): Promis
 
 test("[T-016] opens the first diagram of the folder and draws it", async ({ page }) => {
   await boot(page, { "a.drawit.kdl": good, "notes.txt": "x" });
-  await expect(page.locator("select option")).toHaveText(["a.drawit.kdl"]);
+  await expect(page.getByLabel("File").locator("option")).toHaveText(["a.drawit.kdl"]);
   await expect(page.locator('g[data-id="a"] text')).toHaveText("Alpha");
   await expect(page.locator('g[data-id="b"] ellipse')).toHaveCount(1);
   await expect(page.getByText("Unsaved changes")).toBeHidden();
@@ -65,13 +65,13 @@ test("[T-016] shows the unsaved indicator after an edit and Cmd/Ctrl+S saves and
 
 test("[T-016] opens another file from the list", async ({ page }) => {
   await boot(page, { "a.drawit.kdl": good, "b.drawit.kdl": good.replace("Alpha", "Other") });
-  await page.locator("select").selectOption("b.drawit.kdl");
+  await page.getByLabel("File").selectOption("b.drawit.kdl");
   await expect(page.locator('g[data-id="a"] text')).toHaveText("Other");
 });
 
 test("[T-016] refuses a file that is not valid KDL with its line and column, and never overwrites it", async ({ page }) => {
   await boot(page, { "a.drawit.kdl": good, "bad.drawit.kdl": bad });
-  await page.locator("select").selectOption("bad.drawit.kdl");
+  await page.getByLabel("File").selectOption("bad.drawit.kdl");
   await expect(page.getByRole("alert")).toContainText(/line \d+, column \d+/);
   await expect(page.getByRole("alert")).toContainText("bad.drawit.kdl");
   await page.keyboard.press("ControlOrMeta+s");

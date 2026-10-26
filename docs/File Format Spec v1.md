@@ -89,14 +89,16 @@ The shape library is categorised and searchable, in the left sidebar. Shapes shi
 - **Original shapes only:** no vendor icon sets (AWS, GCP, Azure) are bundled.
 - **Growth:** packs are added and extended without changes to the core.
 - **Packs:** `core` (basic, flowchart, arrows and lines; names need no prefix), `arch`, `net`, `c4`, `info`.
-- **Manifest:** id, name, category, search tags, default size, `outline`, `anchors`, `label` and `stretch`.
-  - `outline` is a closed path used for hit-testing and for attaching edges anywhere along the shape's edge.
-  - `anchors` are the default attach points for `auto`: the four side midpoints on the outline, plus optional extras.
+- **Pack folder:** `packs/<pack>/` holds `pack.json` (JSON) and one SVG per shape. The folder is named after the pack id; a shape's full name is `<pack>.<id>`.
+- **Manifest:** per shape: `id`, `name`, `category`, `tags`, `svg` (file name), `size` (`{ w, h }`, the default size), `outline`, `anchors`, `label`, `stretch` and `keepAspect`. All coordinates are in the SVG's own space, `0 0 w h` at the default size.
+  - `outline` is one closed path used for hit-testing and for attaching edges anywhere along the shape's edge.
+  - `anchors` are the default attach points for `auto`: `top`, `right`, `bottom` and `left`, each a point on the outline (the side midpoint, or where the outline meets the side's centre line), plus an optional `extra` list.
   - `label` is the rectangle where text is centred.
-- **Stretch:** optional x and y cut lines. Parts outside them keep their size and move; parts between them scale. With no cut lines the whole shape scales. `keep-aspect` locks the ratio, as for icons.
-- **SVG rules:** only `path`, `rect`, `circle`, `ellipse`, `polygon`, `line`, `polyline` and `g`. No text, filters, images, styles, scripts or external references. No literal colours: each element has a role (`fill`, `stroke` or `detail`) and takes its colour from the theme and classes. Stroke width comes from style.
+- **Stretch:** optional x and y cut lines, two per axis (`"stretch": { "x": [a, b], "y": [c, d] }`). Parts outside them keep their size and move; parts between them scale. A target narrower than the fixed parts shrinks them together. With no cut lines the whole shape scales. `keepAspect` locks the ratio, as for icons, and excludes cut lines. A circle or ellipse lies inside one zone of each stretched axis.
+- **SVG rules:** only `path`, `rect`, `circle`, `ellipse`, `polygon`, `line`, `polyline` and `g`. No text, filters, images, styles, scripts or external references. Paths use absolute `M`, `L`, `H`, `V`, `C`, `Q` and `Z`. No literal colours: each element has a role in `data-role` (`fill`, `stroke` or `detail`) and takes its colour from the theme and classes. Stroke width comes from style.
 - **Look:** flat outline plus fill, round joins and caps, an 8px design grid, default sizes in multiples of 8. Icon shapes share one canvas size and level of detail. Containers share one corner radius.
-- **Validation:** a validator checks every pack for schema, allowed elements, literal colours, a closed outline, and anchors and label inside the shape's bounds.
+- **Validation:** `pnpm validate:packs` checks every pack for schema, allowed elements and attributes, literal colours, roles, a closed outline, anchors on the outline and inside the shape's bounds, a label inside the bounds, and cut lines.
+- **Contact sheet:** `pnpm contact-sheet` writes one page showing every shape at its default size, stretched wide and narrow, in light and dark, with a view of its outline, anchors and label area.
 
 ## 4. File format
 
