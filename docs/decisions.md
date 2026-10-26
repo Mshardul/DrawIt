@@ -23,7 +23,7 @@ Why DrawIt works the way it does. The spec states what DrawIt does; this file re
 
 | # | Decision | Choice | Why | Rejected |
 |---|---|---|---|---|
-| F1 | Base syntax | KDL v2 with a DrawIt schema | Hand-writable, supports comments, no indentation or typing traps, existing parsers, no grammar to own | Custom DSL, YAML (ambiguity), TOML (poor nesting), JSON (noisy diffs, no comments) |
+| F1 | Base syntax | KDL v2 with a DrawIt schema, parsed with `@bgotink/kdl` (MIT, no dependencies) | Hand-writable, supports comments, no indentation or typing traps, no grammar to own. The parser reports line and column on errors, keeps whole-line comments and keeps unknown nodes and properties | Custom DSL, YAML (ambiguity), TOML (poor nesting), JSON (noisy diffs, no comments), `kdljs` (no comment preservation, error positions buried in parser tokens) |
 | F2 | Sections | Structure, style and layout in one file | Text edits, restyles and drags each change a different line; no sync drift | Separate layout sidecar file; two sections (structure + layout) |
 | F3 | Formatter | App rewrites canonical form on every save | Stable bytes, clean diffs, hand edits normalised | Preserving arbitrary formatting |
 | F4 | Source of truth | DrawIt's own document model | A rendering library's internal format never reaches disk, so libraries stay swappable | Persisting a library's state |
@@ -89,7 +89,7 @@ Why DrawIt works the way it does. The spec states what DrawIt does; this file re
 | Q1 | Performance target | Budgets at 500 elements, tested automatically | Matches "hundreds of elements" | No budgets |
 | Q2 | Development | Test-first with AI; tests tagged by ticket ID; Playwright for browser behaviour | The test catalogue is the definition of done; text, drag and export behaviour only shows in real browsers | Writing tests after code |
 | Q3 | Planning | Dependency-ordered phases, no dates | Work happens as time allows | Date-based schedule |
-| Q4 | Tickets | One `tickets.md` table: ID, phase, title, description, depends on, status, created on, updated on | Lean enough to stay current; dependencies let agents pick valid work | One file per ticket |
+| Q4 | Tickets | One `tickets.md` table: ID, phase, title, description, depends on, story points, status, created on, updated on | Lean enough to stay current; dependencies let agents pick valid work | One file per ticket |
 | Q5 | v1 scope | The slice used daily: drawing, connectors, plain text, files, export. UML/ERD, sequence diagrams, visual diff, bundles, rotation, guides, rich text and copy style follow in v1.1 | A smaller v1 ships and can be used sooner, and the riskiest features build on a proven core | Everything in v1 |
 | L1 | Licence | AGPL-3.0 | Derivatives stay open source, including hosted versions | MIT, GPL (hosted-service gap) |
 | L2 | Contributions | No CLA | Simpler for contributors; the project stays AGPL permanently | CLA enabling relicensing |

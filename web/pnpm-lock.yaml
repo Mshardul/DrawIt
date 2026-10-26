@@ -7,6 +7,10 @@ settings:
 importers:
 
   .:
+    dependencies:
+      '@bgotink/kdl':
+        specifier: 0.4.1
+        version: 0.4.1
     devDependencies:
       '@eslint/js':
         specifier: ^10.0.1
@@ -37,6 +41,9 @@ importers:
         version: 5.0.5(@types/node@26.6.5)(vite@8.3.5(@types/node@26.6.5))
 
 packages:
+
+  '@bgotink/kdl@0.4.1':
+    resolution: {integrity: sha512-zuCVbRXGaY09Y9uc0LQ+PpAe4YnE7o2nT1ZEsRzrG/vnMrQlkqaFgYuaItHiUxK1nc7bd3uAYaiBW75g5u1kbw==}
 
   '@cacheable/memory@2.2.0':
     resolution: {integrity: sha512-CTLKqLItRCEixEAewD3/j9DB3/o96gpTPD4eJ1v+DGOlxZRZncRQkGYqqnAGCscYd6RNeXfGeiuCphsPtqyIfQ==}
@@ -839,6 +846,8 @@ packages:
     engines: {node: '>=10'}
 
 snapshots:
+
+  '@bgotink/kdl@0.4.1': {}
 
   '@cacheable/memory@2.2.0':
     dependencies:
