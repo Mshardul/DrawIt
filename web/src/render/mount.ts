@@ -23,30 +23,54 @@ function setAttrs(el: Element, attrs: SvgNode["attrs"]): void {
   }
 }
 
-/** Makes the children of `root` match `groups`, in order. */
-export function mount(root: Element, groups: SvgNode[]): void {
-  const existing = new Map<string, Element>();
+/** Brings `el` in line with `spec`, rebuilding its children only when their content changed. */
+function update(el: Element, spec: SvgNode): void {
+  const content = JSON.stringify(spec.children);
+  setAttrs(el, spec.attrs);
+  if (el.getAttribute(CONTENT) !== content) el.replaceChildren(...spec.children.map(build));
+  el.setAttribute(CONTENT, content);
+}
+
+const idOf = (spec: SvgNode): string => String(spec.attrs["data-id"]);
+
+function childrenById(root: Element): Map<string, Element> {
+  const byId = new Map<string, Element>();
   for (const child of Array.from(root.children)) {
     const id = child.getAttribute("data-id");
-    if (id !== null) existing.set(id, child);
+    if (id !== null) byId.set(id, child);
   }
+  return byId;
+}
 
+/** Makes the children of `root` match `groups`, in order. */
+export function mount(root: Element, groups: SvgNode[]): void {
+  const existing = childrenById(root);
   let previous: Element | null = null as Element | null;
   for (const spec of groups) {
-    const id = String(spec.attrs["data-id"]);
-    const content = JSON.stringify(spec.children);
-    let el = existing.get(id);
+    let el = existing.get(idOf(spec));
     if (el) {
-      existing.delete(id);
-      setAttrs(el, spec.attrs);
-      if (el.getAttribute(CONTENT) !== content) el.replaceChildren(...spec.children.map(build));
+      existing.delete(idOf(spec));
+      update(el, spec);
     } else {
       el = build(spec);
+      el.setAttribute(CONTENT, JSON.stringify(spec.children));
     }
-    el.setAttribute(CONTENT, content);
     const expectedPosition: Element | null = previous ? previous.nextElementSibling : root.firstElementChild;
     if (expectedPosition !== el) root.insertBefore(el, expectedPosition);
     previous = el;
   }
   for (const stale of existing.values()) stale.remove();
+}
+
+/**
+ * Updates only the groups in `groups` that already exist under `root`, leaving every other child
+ * and the order alone. A drag changes sizes and positions but never z-order, so it need not
+ * visit the other elements.
+ */
+export function patch(root: Element, groups: SvgNode[]): void {
+  const existing = childrenById(root);
+  for (const spec of groups) {
+    const el = existing.get(idOf(spec));
+    if (el) update(el, spec);
+  }
 }

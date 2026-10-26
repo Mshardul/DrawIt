@@ -64,10 +64,11 @@ function body(element: DiagramElement, w: number, h: number): SvgNode[] | null {
  * a `g` carrying its ID in `data-id`. Rectangles, ellipses and text boxes are drawn; edges
  * (routing is T-018), frames, images, unknown elements and elements without a layout entry are not.
  */
-export function describeDiagram(doc: DiagramDocument): SvgNode[] {
+export function describeDiagram(doc: DiagramDocument, only?: ReadonlySet<string>): SvgNode[] {
   const elements = new Map(doc.elements.map((e) => [e.id, e]));
   const out: SvgNode[] = [];
   for (const entry of doc.layout) {
+    if (only && !only.has(entry.id)) continue;
     const element = elements.get(entry.id);
     const size = element && sizeOf(element, entry);
     if (!element || !size) continue;

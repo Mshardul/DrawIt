@@ -45,10 +45,11 @@ Phases 0 and 1 are broken into tickets. Later phases are outlined and get ticket
 | T-022 | 0 | Shape standard | Manifest schema, SVG rules and validator for shape packs (spec 3), a contact-sheet script (default size, stretched wide and narrow, light and dark), and three reference shapes. Gates the category tickets. | T-001 | 5 | todo | 2026-10-26 | 2026-10-26 |
 | T-010 | 1 | Storage adapter interface | One interface for list, read, atomic write and watch within a workspace folder, plus an in-memory implementation for tests (A1). | T-002 | 3 | done | 2026-10-25 | 2026-10-26 |
 | T-012 | 1 | SVG renderer: basic elements | Draw rectangles, ellipses and text boxes from the model. The renderer holds no state. | T-002, T-009 | 5 | done | 2026-10-25 | 2026-10-26 |
-| T-013 | 1 | Pan and zoom | Infinite canvas with trackpad and mouse pan, pinch and keyboard zoom, zoom to fit. | T-012 | 3 | todo | 2026-10-25 | 2026-10-26 |
-| T-014 | 1 | Selection | Click, multi-select, drag-box, select all. Selection is restored by undo. | T-012, T-006 | 5 | todo | 2026-10-25 | 2026-10-26 |
-| T-015 | 1 | Move and resize | Drag and resize with handles, arrow-key nudge. A drag commits as one command. | T-014 | 5 | todo | 2026-10-25 | 2026-10-26 |
+| T-013 | 1 | Pan and zoom | Infinite canvas with trackpad and mouse pan, pinch and keyboard zoom, zoom to fit. | T-012 | 3 | done | 2026-10-25 | 2026-10-26 |
+| T-014 | 1 | Selection | Click, multi-select, drag-box, select all. Selection is restored by undo. | T-012, T-006 | 5 | done | 2026-10-25 | 2026-10-26 |
+| T-015 | 1 | Move and resize | Drag and resize with handles, arrow-key nudge. A drag commits as one command. | T-014 | 5 | done | 2026-10-25 | 2026-10-26 |
 | T-016 | 1 | Open, save and invalid files | Open a folder and file, explicit save with unsaved indicator. Files that fail to parse are refused with line and column. | T-003, T-004, T-012, T-021 | 5 | done | 2026-10-25 | 2026-10-26 |
 | T-019 | 1 | Go server: files | Single binary that serves the embedded app and opens the browser. API for list, read and atomic write, confined to the opened folder with `os.Root` (A4, A7). | T-001 | 5 | done | 2026-10-26 | 2026-10-26 |
 | T-020 | 1 | Server security | Bind to 127.0.0.1; session token in the URL fragment, sent as a header; Host and Origin checks; strict CSP; no-referrer (A6). | T-019 | 3 | done | 2026-10-26 | 2026-10-26 |
 | T-021 | 1 | HTTP storage adapter | Storage adapter over the server API, inside the opened folder (A1). | T-010, T-020 | 2 | done | 2026-10-26 | 2026-10-26 |
+| T-023 | 1 | Grid and snap | Grid display on and off, snap to the grid on and off, snap while moving and resizing, with toggles in the status bar (spec 2.2, 5.1, 5.2). | T-015 | 3 | todo | 2026-10-26 | 2026-10-26 |
