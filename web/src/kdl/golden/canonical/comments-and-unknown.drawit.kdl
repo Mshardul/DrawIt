@@ -1,0 +1,30 @@
+// top of file
+diagram version=1 {
+  plugins core@1 chart@1
+}
+
+// about a
+// still about a
+node a "A" shape=rect glow=#true
+frame f
+// chart note
+chart sales type=chart.bar title=Sales {
+  // first row
+  row Q1 10 20
+  row Q2 30 40 {
+    cell x=1
+  }
+}
+
+style {
+  class c fill=red sparkle=3
+  gradient sunset from=red to=blue {
+    stop 0
+    stop 1
+  }
+}
+
+layout {
+  a x=1 y=2 pin=yes
+  f x=10 y=20 w=100 h=50
+}

@@ -1,0 +1,14 @@
+diagram version=1
+
+// ── structure ─────────────────────────
+frame a
+
+// ── style ─────────────────────────────
+style {
+  class c fill=red
+}
+
+// ── layout (managed by app) ───────────
+layout {
+  a x=0 y=0
+}

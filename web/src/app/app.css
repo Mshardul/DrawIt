@@ -1,0 +1,8 @@
+html, body { margin: 0; height: 100%; font: 14px system-ui, sans-serif; color: #1a1a1a; }
+#app { display: flex; flex-direction: column; height: 100%; }
+.bar { display: flex; align-items: center; gap: 12px; padding: 6px 12px; border-bottom: 1px solid #ccc; }
+.bar h1 { font-size: 16px; margin: 0; }
+.name { font-weight: 600; }
+.unsaved { color: #a35200; }
+.error { padding: 8px 12px; background: #fde8e8; color: #7a1010; white-space: pre-wrap; }
+.canvas { flex: 1; width: 100%; min-height: 0; display: block; }

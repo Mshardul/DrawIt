@@ -1,0 +1,4 @@
+diagram version=1
+
+text t "line one\nline \"two\"\ttabbed"
+node "a b" "Quoted ID" shape=rect

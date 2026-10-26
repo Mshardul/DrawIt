@@ -1,0 +1,15 @@
+diagram version=1
+
+node a "A" shape=rect
+node b "B" shape=ellipse
+edge a b id=e1 label="one" class=thin
+edge - b id=e2
+edge a - id=e3
+
+layout {
+  a x=0 y=0 w=160 h=80 locked=#true
+  b x=400 y=0 w=160 h=80
+  e1 from=bottom:0.3 to=auto label-at=0.25
+  e2 to=left from-point="200,200"
+  e3 from=right to-point="300,-40" via="320,0 320,-40"
+}

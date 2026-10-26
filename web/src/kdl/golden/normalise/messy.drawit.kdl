@@ -1,0 +1,16 @@
+diagram   title="Order flow"   version=1 {
+  plugins   core@1
+}
+
+
+
+node   api   shape=arch.gateway   class=x   "API"
+edge a b label="L" id=e1 class=y
+
+
+
+layout {
+  api   y=2    x=1
+  e1 to=left   from=top:0.3
+  gone x=5 y=5
+}

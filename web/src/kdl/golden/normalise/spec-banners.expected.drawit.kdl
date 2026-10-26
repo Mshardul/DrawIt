@@ -1,0 +1,12 @@
+diagram version=1
+
+// ── structure ─────────────────────────
+frame a
+
+style {
+  class c fill=red
+}
+
+layout {
+  a x=0 y=0
+}

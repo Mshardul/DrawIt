@@ -1,0 +1,43 @@
+diagram version=1 title="Order flow" {
+  plugins core@1 arch@1
+}
+
+frame overview "Overview"
+text headline "Orders grew 42% in Q3" class=accent
+node api "API Gateway" shape=arch.gateway
+node orders "Order Service" shape=arch.server class=critical
+shape backend shape=rect class=boundary
+text backend-title "Backend"
+node db "Orders DB" shape=arch.database
+node queue "Events" shape=arch.queue
+edge api orders label="POST /orders"
+edge orders db
+edge orders queue id=publish
+image logo src="assets/logo.svg"
+
+style {
+  theme default {
+    color primary="#1F4E79" accent="#E8732A" ink="#1A1A1A"
+    font heading=Inter body=Inter
+    size h1=36 body=14
+  }
+  class accent weight=700 color=$accent
+  class critical stroke=$accent stroke-width=2
+  class boundary stroke=$primary dash=dashed
+  el headline font=$heading size=$h1
+  el backend-title weight=700
+  el publish dash=dashed route=elbow head-end=arrow
+}
+
+layout {
+  overview x=0 y=0 w=720 h=640
+  headline x=40 y=24 w=600
+  logo x=600 y=24 w=80 h=40
+  backend x=240 y=260 w=420 h=200
+  backend-title x=256 y=268
+  api x=40 y=150 w=160 h=60
+  orders x=280 y=150 w=180 h=60
+  db x=260 y=320
+  queue x=480 y=320
+  publish from=right to=top:0.5 via="480,230 520,290"
+}
