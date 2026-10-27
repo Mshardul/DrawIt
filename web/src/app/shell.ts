@@ -25,7 +25,7 @@ function el<K extends keyof HTMLElementTagNameMap>(
   return element;
 }
 
-/** Grid display and snap. View settings like pan and zoom: not in history or the file (preferences come later, decision A14). */
+/** Grid display and snap. View settings like pan and zoom: not in history or the file (preferences come later). */
 export interface GridSettings {
   show: boolean;
   snap: boolean;

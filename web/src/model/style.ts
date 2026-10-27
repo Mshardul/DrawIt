@@ -1,4 +1,4 @@
-// Style section (spec 4.4): all appearance.
+// Style section: all appearance.
 import type { KdlValue, UnknownNode } from "./structure.ts";
 
 /** Reference to a theme token, written `$name`. */
@@ -10,7 +10,7 @@ export type Styled<T> = T | TokenRef;
 export type Route = "straight" | "elbow";
 export type ArrowHead = "arrow" | "dot" | "none";
 
-/** Properties of the style groups in spec 4.4. All optional. */
+/** Properties of the style groups. All optional. */
 export interface StyleProps {
   // Fill
   /** Colour or gradient. */

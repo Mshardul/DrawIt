@@ -1,5 +1,5 @@
 // Outline and drawing paths in shape packs use absolute M, L, H, V, C, Q and Z only. That is
-// enough for every flat shape in the standard, and every coordinate then stretches (A15) by
+// enough for every flat shape in the standard, and every coordinate then stretches by
 // mapping numbers: arcs and relative commands would need geometry, not mapping.
 import type { Point } from "../model/layout.ts";
 

@@ -3,7 +3,7 @@ import type { DiagramDocument, DiagramElement, LayoutEntry } from "../model/inde
 export type GeneratedKind = "frame" | "node" | "shape" | "text" | "edge";
 
 export interface GenerateOptions {
-  /** Total number of elements. Default 500 (spec 7.1). */
+  /** Total number of elements. Default 500. */
   count?: number;
   /** Same seed, same document. */
   seed?: number;
@@ -52,7 +52,7 @@ function allocate(count: number, ratios: Record<GeneratedKind, number>): Record<
   return Object.fromEntries(KINDS.map((k, i) => [k, counts[i] ?? 0])) as Record<GeneratedKind, number>;
 }
 
-/** Builds a deterministic test diagram for the performance budgets (spec 7.1). */
+/** Builds a deterministic test diagram for the performance budgets. */
 export function generateDiagram(options: GenerateOptions = {}): DiagramDocument {
   const { count = 500, seed = 1, ratios: given = DEFAULT_RATIOS } = options;
   if (!Number.isInteger(count) || count < 0) throw new Error(`count must be a non-negative integer, got ${String(count)}`);

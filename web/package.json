@@ -15,10 +15,8 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "check:tags": "node tools/ticket-tags.ts check",
     "validate:packs": "node tools/packs.ts validate",
-    "contact-sheet": "node tools/packs.ts contact-sheet",
-    "test:ticket": "node tools/ticket-tags.ts run"
+    "contact-sheet": "node tools/packs.ts contact-sheet"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

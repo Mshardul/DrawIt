@@ -1,4 +1,4 @@
-// Command layer (spec 5.5, decisions A1, A3, A12): the only way a document changes.
+// Command layer: the only way a document changes.
 // Commands are plain, ID-addressed data; applying one returns the new document plus Immer
 // forward and inverse patches. Nothing here knows about the UI.
 import { applyPatches as immerApplyPatches, enablePatches, produceWithPatches } from "immer";
@@ -30,7 +30,7 @@ export interface AddCommand {
   items: { element: DiagramElement; layout?: LayoutEntry }[];
 }
 
-/** Removes elements. Edges attached to them keep their ends as free ends where the elements were (spec 5.3). */
+/** Removes elements. Edges attached to them keep their ends as free ends where the elements were. */
 export interface DeleteCommand {
   type: "delete";
   ids: string[];

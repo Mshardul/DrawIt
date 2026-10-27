@@ -1,4 +1,4 @@
-// Selection rules (spec 5.2, decision E4) as pure functions over the document, so they need no
+// Selection rules as pure functions over the document, so they need no
 // browser. They only see what the renderer draws (`drawnBoxes`): edges, frames, images and
 // unknown elements cannot be selected until they are drawn.
 import type { DiagramDocument } from "../model/index.ts";

@@ -1,7 +1,7 @@
-// Spike T-018: connector routing as a pure function from the two ends to a polyline (spec 5.3).
-// Hand-rolled; the decision row A16 records why. Straight routes clip the centre line to the
+// Connector routing as a pure function from the two ends to a polyline.
+// Hand-rolled. Straight routes clip the centre line to the
 // outlines; elbow routes leave each shape along the normal of its side and turn at right angles.
-// Throwaway-quality code: it has no obstacle avoidance and no model or command integration.
+// It has no obstacle avoidance and no model or command integration.
 import type { Anchor, Point, Side } from "../model/layout.ts";
 import type { Box } from "../render/boxes.ts";
 

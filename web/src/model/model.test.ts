@@ -10,7 +10,7 @@ import type {
   StyleProps,
 } from "./index.ts";
 
-// The spec 4.2 example, expressed as a model value.
+// The spec example, expressed as a model value.
 const example: DiagramDocument = {
   version: 1,
   title: "Order flow",
@@ -67,13 +67,13 @@ const example: DiagramDocument = {
 };
 
 describe("document model", () => {
-  it("[T-002] holds the spec example in structure, style and layout", () => {
+  it("holds the spec example in structure, style and layout", () => {
     expect(example.elements).toHaveLength(10);
     expect(example.style.classes.map((c) => c.name)).toEqual(["accent", "boundary"]);
     expect(example.layout.map((e) => e.id)).toEqual(["overview", "api", "publish", "loose"]);
   });
 
-  it("[T-002] discriminates elements by kind", () => {
+  it("discriminates elements by kind", () => {
     expectTypeOf<DiagramElement["kind"]>().toEqualTypeOf<
       "node" | "frame" | "edge" | "text" | "image" | "shape" | "unknown"
     >();
@@ -82,7 +82,7 @@ describe("document model", () => {
     expectTypeOf<EdgeElement["from"]>().toEqualTypeOf<string | null>();
   });
 
-  it("[T-002] types anchors, layout entries and style props", () => {
+  it("types anchors, layout entries and style props", () => {
     expectTypeOf<Anchor>().toEqualTypeOf<
       "auto" | { side: "top" | "right" | "bottom" | "left"; at?: number }
     >();
@@ -91,13 +91,13 @@ describe("document model", () => {
     expectTypeOf<StyleProps["route"]>().toEqualTypeOf<"straight" | "elbow" | undefined>();
   });
 
-  it("[T-002] accepts IDs matching the pattern and rejects others", () => {
+  it("accepts IDs matching the pattern and rejects others", () => {
     expect(ID_PATTERN.source).toBe("^[a-z][a-z0-9_-]*$");
     for (const ok of ["a", "api", "backend-title", "x_1", "q2-3"]) expect(isValidId(ok)).toBe(true);
     for (const bad of ["", "1a", "A", "-a", "a b", "a.b", "a->b"]) expect(isValidId(bad)).toBe(false);
   });
 
-  it("[T-002] imports nothing outside the model and touches no DOM", () => {
+  it("imports nothing outside the model and touches no DOM", () => {
     const dir = new URL(".", import.meta.url);
     const sources = readdirSync(dir).filter((f) => f.endsWith(".ts") && !f.endsWith(".test.ts"));
     expect(sources).toContain("index.ts");

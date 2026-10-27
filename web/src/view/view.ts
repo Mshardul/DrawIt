@@ -1,5 +1,5 @@
 // The view transform: pan and zoom of the canvas. It is not document state, so it never enters
-// history or the file (spec 2.1). The renderer draws world coordinates into a wrapping group; the
+// history or the file. The renderer draws world coordinates into a wrapping group; the
 // shell sets that group's `transform` from `viewTransform`.
 import type { DiagramDocument } from "../model/index.ts";
 import { type Box, drawnBoxes } from "../render/boxes.ts";

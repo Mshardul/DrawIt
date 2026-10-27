@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestT019_CommandPerPlatform(t *testing.T) {
+func TestCommandPerPlatform(t *testing.T) {
 	const url = "http://127.0.0.1:8080/"
 	for _, c := range []struct {
 		goos string

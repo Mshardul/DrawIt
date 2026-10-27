@@ -1,4 +1,4 @@
-// Opening, editing state and saving of one diagram file (spec 5.6). No DOM: `shell.ts` draws it.
+// Opening, editing state and saving of one diagram file. No DOM: `shell.ts` draws it.
 import { History } from "../commands/history.ts";
 import { KdlSyntaxError, readDiagram } from "../kdl/read.ts";
 import { writeDiagram } from "../kdl/write.ts";
@@ -6,7 +6,7 @@ import type { DiagramDocument } from "../model/index.ts";
 import { placeUnplaced } from "../render/place.ts";
 import { type StorageAdapter, writeText } from "../storage/adapter.ts";
 
-/** Decision F14: DrawIt's own files. */
+/** DrawIt's own files. */
 export const FILE_EXTENSION = ".drawit.kdl";
 
 /** The diagram files in the opened folder, in the server's order. */
@@ -44,7 +44,7 @@ export class OpenFile {
   }
 }
 
-/** The file is not valid KDL (decision E2). Nothing is open and nothing is written. */
+/** The file is not valid KDL. Nothing is open and nothing is written. */
 export interface RefusedFile {
   path: string;
   message: string;

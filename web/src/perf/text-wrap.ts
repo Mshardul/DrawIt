@@ -1,7 +1,6 @@
-// Spike T-008: compare wrapped text in three places in the same browser (decision A8):
-// canvas measurement (what the line breaker sees), SVG text, the editing overlay, and the rasterised SVG
-// that PNG export would draw. Throwaway measurement code; the real text engine is a later ticket.
-import { breakLines } from "./wrap.ts";
+// Compares wrapped text in three places in the same browser: canvas measurement (what the line
+// breaker sees), SVG text, the editing overlay, and the rasterised SVG that PNG export would draw.
+import { breakLines } from "../text/wrap.ts";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 const FONT = "16px sans-serif";

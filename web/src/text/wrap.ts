@@ -1,4 +1,4 @@
-// Spike T-008: own line-breaking for SVG text (decision A8).
+// Own line-breaking for SVG text.
 // Lines break only between whitespace-separated words, and a word wider than the box is split between
 // graphemes (Intl.Segmenter). Word-granularity segments are not line-break opportunities: they split
 // "e.g." into "e.g" and ".", and engines disagree on such runs. Widths come from an injected measure

@@ -21,7 +21,7 @@ const texts = (node: SvgNode): string[] => [
 ];
 
 describe("SVG renderer, basic elements", () => {
-  it("[T-012] draws a rectangle node as a group at its layout position with a rect of its size", () => {
+  it("draws a rectangle node as a group at its layout position with a rect of its size", () => {
     const [g] = describeDiagram(
       doc([{ kind: "node", id: "a", label: "A", shape: "rect" }], [{ id: "a", x: 40, y: 30, w: 200, h: 90 }]),
     );
@@ -29,7 +29,7 @@ describe("SVG renderer, basic elements", () => {
     expect(find(g as SvgNode, "rect")?.attrs).toMatchObject({ width: 200, height: 90 });
   });
 
-  it("[T-012] draws an ellipse node as an ellipse filling its box", () => {
+  it("draws an ellipse node as an ellipse filling its box", () => {
     const [g] = describeDiagram(
       doc([{ kind: "node", id: "a", shape: "ellipse" }], [{ id: "a", x: 0, y: 0, w: 100, h: 60 }]),
     );
@@ -37,23 +37,23 @@ describe("SVG renderer, basic elements", () => {
     expect(find(g as SvgNode, "rect")).toBeUndefined();
   });
 
-  it("[T-012] draws a shape from a pack that is not installed as a rectangle", () => {
+  it("draws a shape from a pack that is not installed as a rectangle", () => {
     const [g] = describeDiagram(doc([{ kind: "node", id: "a", shape: "arch.server" }], [{ id: "a", x: 0, y: 0 }]));
     expect(find(g as SvgNode, "rect")).toBeDefined();
   });
 
-  it("[T-012] draws a decorative shape element without a label", () => {
+  it("draws a decorative shape element without a label", () => {
     const [g] = describeDiagram(doc([{ kind: "shape", id: "b", shape: "ellipse" }], [{ id: "b", x: 0, y: 0 }]));
     expect(find(g as SvgNode, "ellipse")).toBeDefined();
     expect(find(g as SvgNode, "text")).toBeUndefined();
   });
 
-  it("[T-012] uses the default size when layout has no w and h", () => {
+  it("uses the default size when layout has no w and h", () => {
     const [g] = describeDiagram(doc([{ kind: "node", id: "a", shape: "rect" }], [{ id: "a", x: 0, y: 0 }]));
     expect(find(g as SvgNode, "rect")?.attrs).toMatchObject({ width: 160, height: 80 });
   });
 
-  it("[T-012] centres the node label, and defaults it to the ID", () => {
+  it("centres the node label, and defaults it to the ID", () => {
     const [a, b] = describeDiagram(
       doc(
         [
@@ -71,7 +71,7 @@ describe("SVG renderer, basic elements", () => {
     expect(texts(b as SvgNode)).toEqual(["b"]);
   });
 
-  it("[T-012] draws a text box with one line per line break at the default width", () => {
+  it("draws a text box with one line per line break at the default width", () => {
     const [g] = describeDiagram(
       doc([{ kind: "text", id: "t", content: "one\ntwo\nthree" }], [{ id: "t", x: 5, y: 6 }]),
     );
@@ -80,7 +80,7 @@ describe("SVG renderer, basic elements", () => {
     expect(find(g as SvgNode, "rect")).toBeUndefined();
   });
 
-  it("[T-012] draws in layout order, which is z-order", () => {
+  it("draws in layout order, which is z-order", () => {
     const out = describeDiagram(
       doc(
         [
@@ -96,7 +96,7 @@ describe("SVG renderer, basic elements", () => {
     expect(out.map((g) => g.attrs["data-id"])).toEqual(["b", "a"]);
   });
 
-  it("[T-012] skips edges, frames, images, unknown elements, elements with no layout entry and layout entries with no element", () => {
+  it("skips edges, frames, images, unknown elements, elements with no layout entry and layout entries with no element", () => {
     const out = describeDiagram(
       doc(
         [
@@ -120,7 +120,7 @@ describe("SVG renderer, basic elements", () => {
     expect(out.map((g) => g.attrs["data-id"])).toEqual(["a"]);
   });
 
-  it("[T-012] holds no state: the same document gives equal output and the document is not changed", () => {
+  it("holds no state: the same document gives equal output and the document is not changed", () => {
     const d = doc([{ kind: "node", id: "a", label: "A", shape: "ellipse" }], [{ id: "a", x: 1, y: 2 }]);
     const before = structuredClone(d);
     expect(describeDiagram(d)).toEqual(describeDiagram(d));

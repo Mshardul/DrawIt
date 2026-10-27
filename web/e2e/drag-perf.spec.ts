@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
-// Spike T-009: drag a selection in a generated 500-element file and compare frame time with the
-// 60fps budget (spec 7.1). Each frame, the page dispatches one pointermove and records the time
+// Drag a selection in a generated 500-element file and compare frame time with the
+// 60fps budget. Each frame, the page dispatches one pointermove and records the time
 // from the previous animation frame.
 const FRAMES = 240;
 const SELECTED = 100;
@@ -24,8 +24,8 @@ function percentile(values: number[], p: number): number {
   return sorted[Math.min(sorted.length - 1, Math.ceil(p * sorted.length) - 1)] ?? 0;
 }
 
-test("[T-009] a 500-element file renders as SVG with edges and a selection moves with the drag", async ({ page }) => {
-  await page.goto(`/spike-drag.html?select=${String(SELECTED)}`);
+test("a 500-element file renders as SVG with edges and a selection moves with the drag", async ({ page }) => {
+  await page.goto(`/drag-perf.html?select=${String(SELECTED)}`);
   const run = await page.evaluate<DragRun, number>(
     (frames) => (window as unknown as { runDrag: (n: number) => Promise<DragRun> }).runDrag(frames),
     FRAMES,
@@ -36,8 +36,8 @@ test("[T-009] a 500-element file renders as SVG with edges and a selection moves
   expect(run.moved).toBeGreaterThan(0);
 });
 
-test("[T-009] dragging the selection holds the 60fps frame budget", async ({ page, browserName }) => {
-  await page.goto(`/spike-drag.html?select=${String(SELECTED)}`);
+test("dragging the selection holds the 60fps frame budget", async ({ page, browserName }) => {
+  await page.goto(`/drag-perf.html?select=${String(SELECTED)}`);
   const run = await page.evaluate<DragRun, number>(
     (frames) => (window as unknown as { runDrag: (n: number) => Promise<DragRun> }).runDrag(frames),
     FRAMES,
@@ -56,6 +56,6 @@ test("[T-009] dragging the selection holds the 60fps frame budget", async ({ pag
     scriptP95: percentile(scripts, 0.95),
     scriptMax: Math.max(...scripts),
   };
-  console.log(`T-009 ${JSON.stringify(summary)}`);
+  console.log(`selection drag ${JSON.stringify(summary)}`);
   expect(summary.missedShare).toBeLessThanOrEqual(MAX_MISSED_SHARE);
 });

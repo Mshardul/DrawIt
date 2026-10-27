@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// Config holds what the server needs to defend itself (decision A6).
+// Config holds what the server needs to defend itself.
 type Config struct {
 	// Token is the session token every /api/ request must carry as `Authorization: Bearer`.
 	// With no token the API refuses every request.
@@ -16,7 +16,7 @@ type Config struct {
 }
 
 // csp lets the app load only its own files and talk only to its own server, so neither the
-// app nor a pack can reach the network (spec 6.2).
+// app nor a pack can reach the network.
 const csp = "default-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'"
 
 // protect wraps next with the security headers, the Host and Origin checks, and the token check

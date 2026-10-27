@@ -1,7 +1,7 @@
 // The contact sheet: every shape of every pack at its default size, stretched wide and stretched
 // narrow, in the light and the dark theme, plus a guides view with the outline, anchors and label
 // area. It is one self-contained HTML page drawn with the same stretch function the app uses, so
-// what an author sees is what the canvas will draw (spec 3).
+// what an author sees is what the canvas will draw.
 import { parseSvg, type SvgEl } from "./svg.ts";
 import { stretchSvg, targetBox } from "./stretch.ts";
 import type { PackManifest, ShapeManifest, Size } from "./types.ts";

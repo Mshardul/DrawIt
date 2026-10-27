@@ -1,4 +1,4 @@
-// KDL v2 reader (spec 4, decision F1): `.drawit.kdl` text to the document model.
+// KDL v2 reader: `.drawit.kdl` text to the document model.
 import { InvalidKdlError, parse } from "@bgotink/kdl";
 import type { Document, Node } from "@bgotink/kdl";
 import { isValidId } from "../model/index.ts";
@@ -15,7 +15,7 @@ import type {
   UnknownNode,
 } from "../model/index.ts";
 
-/** The file is not valid KDL (decision E2). `line` and `column` start at 1. */
+/** The file is not valid KDL. `line` and `column` start at 1. */
 export class KdlSyntaxError extends Error {
   readonly line: number;
   readonly column: number;
@@ -329,7 +329,7 @@ function parseSource(text: string): Document {
   }
 }
 
-/** Reads a `.drawit.kdl` file. Only KDL syntax is checked (decision F21); a syntax error throws `KdlSyntaxError`. */
+/** Reads a `.drawit.kdl` file. Only KDL syntax is checked; a syntax error throws `KdlSyntaxError`. */
 export function readDiagram(text: string): ReadResult {
   const source = parseSource(text);
   const reader = new Reader();

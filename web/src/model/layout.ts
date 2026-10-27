@@ -1,4 +1,4 @@
-// Layout section (spec 4.5): geometry only, one entry per element, keyed by ID.
+// Layout section: geometry only, one entry per element, keyed by ID.
 import type { KdlValue } from "./structure.ts";
 
 /** Integer px at 1x zoom, absolute canvas coordinates. */

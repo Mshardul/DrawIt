@@ -1,4 +1,4 @@
-// Browser side of the session token (spec 6.2). The server opens the page at `/#<token>`; the
+// Browser side of the session token. The server opens the page at `/#<token>`; the
 // fragment never reaches a server or a Referer header. The page keeps the token in
 // `sessionStorage` and removes it from the address bar.
 

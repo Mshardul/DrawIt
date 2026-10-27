@@ -15,7 +15,7 @@ layout {
 `;
 
 describe("open, save and invalid files", () => {
-  it("[T-016] lists only the diagram files of the opened folder", async () => {
+  it("lists only the diagram files of the opened folder", async () => {
     const storage = new MemoryStorage({
       "b.drawit.kdl": canonical,
       "sub/a.drawit.kdl": canonical,
@@ -25,7 +25,7 @@ describe("open, save and invalid files", () => {
     expect(await workspaceFiles(storage)).toEqual(["b.drawit.kdl", "sub/a.drawit.kdl"]);
   });
 
-  it("[T-016] opens a file into a document that is not dirty", async () => {
+  it("opens a file into a document that is not dirty", async () => {
     const storage = new MemoryStorage({ "d.drawit.kdl": canonical });
     const result = await openFile(storage, "d.drawit.kdl");
     if (!result.ok) throw new Error("expected the file to open");
@@ -34,7 +34,7 @@ describe("open, save and invalid files", () => {
     expect(result.file.dirty).toBe(false);
   });
 
-  it("[T-016] places elements that have no layout line on open, and a save writes the positions", async () => {
+  it("places elements that have no layout line on open, and a save writes the positions", async () => {
     const storage = new MemoryStorage({ "d.drawit.kdl": "diagram version=1\n\nnode a shape=rect\nnode b shape=rect\n" });
     const result = await openFile(storage, "d.drawit.kdl");
     if (!result.ok) throw new Error("expected the file to open");
@@ -47,7 +47,7 @@ describe("open, save and invalid files", () => {
     expect(await readText(storage, "d.drawit.kdl")).toContain("layout {\n  a x=0 y=0\n  b x=240 y=0\n}\n");
   });
 
-  it("[T-016] is dirty after a command and clean again once the change is undone", async () => {
+  it("is dirty after a command and clean again once the change is undone", async () => {
     const storage = new MemoryStorage({ "d.drawit.kdl": canonical });
     const result = await openFile(storage, "d.drawit.kdl");
     if (!result.ok) throw new Error("expected the file to open");
@@ -58,7 +58,7 @@ describe("open, save and invalid files", () => {
     expect(file.dirty).toBe(false);
   });
 
-  it("[T-016] saves the document in canonical form and is clean afterwards", async () => {
+  it("saves the document in canonical form and is clean afterwards", async () => {
     const storage = new MemoryStorage({ "d.drawit.kdl": canonical });
     const result = await openFile(storage, "d.drawit.kdl");
     if (!result.ok) throw new Error("expected the file to open");
@@ -69,7 +69,7 @@ describe("open, save and invalid files", () => {
     expect(file.dirty).toBe(false);
   });
 
-  it("[T-016] stays dirty when the save fails", async () => {
+  it("stays dirty when the save fails", async () => {
     const storage = new MemoryStorage({ "d.drawit.kdl": canonical });
     const result = await openFile(storage, "d.drawit.kdl");
     if (!result.ok) throw new Error("expected the file to open");
@@ -80,7 +80,7 @@ describe("open, save and invalid files", () => {
     expect(file.dirty).toBe(true);
   });
 
-  it("[T-016] refuses a file that is not valid KDL, with line and column, and leaves it untouched", async () => {
+  it("refuses a file that is not valid KDL, with line and column, and leaves it untouched", async () => {
     const bad = "diagram version=1\n\nnode a \"unclosed\n";
     const storage = new MemoryStorage({ "bad.drawit.kdl": bad });
     const result = await openFile(storage, "bad.drawit.kdl");
@@ -92,7 +92,7 @@ describe("open, save and invalid files", () => {
     expect(await readText(storage, "bad.drawit.kdl")).toBe(bad);
   });
 
-  it("[T-016] reports a missing file as a storage error, not as an invalid file", async () => {
+  it("reports a missing file as a storage error, not as an invalid file", async () => {
     await expect(openFile(new MemoryStorage(), "none.drawit.kdl")).rejects.toMatchObject({ code: "not-found" });
   });
 });

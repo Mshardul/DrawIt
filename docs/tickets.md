@@ -1,6 +1,6 @@
 # DrawIt — Tickets
 
-One table, dependency-ordered phases, no dates promised (decision Q3, Q4). Tests are tagged with the ticket ID they verify; a ticket is done when all its tests pass (spec 7.3).
+One table, dependency-ordered phases, no dates promised (decision Q3, Q4). A ticket is done when all its tests pass (spec 7.3).
 
 ## Format
 
@@ -31,7 +31,7 @@ Phases 0 and 1 are broken into tickets. Later phases are outlined and get ticket
 
 | ID | Phase | Title | Description | Depends on | Story Points | Status | Created on | Updated on |
 |---|---|---|---|---|---|---|---|---|
-| T-001 | 0 | Project scaffold | TypeScript app and Go module, test runners, lint, CI. Test tagging by ticket ID works. Playwright runs in Chromium, Firefox and WebKit. | none | 3 | done | 2026-10-25 | 2026-10-26 |
+| T-001 | 0 | Project scaffold | TypeScript app and Go module, test runners, lint, CI. Playwright runs in Chromium, Firefox and WebKit. | none | 3 | done | 2026-10-25 | 2026-10-26 |
 | T-002 | 0 | Document model types | Structure, style and layout types per spec 4.3–4.5, with no UI imports. | T-001 | 2 | done | 2026-10-25 | 2026-10-26 |
 | T-003 | 0 | KDL v2 reader | Parse a `.drawit.kdl` file into the model. Invalid files fail with line and column (E2). | T-002, T-017 | 5 | done | 2026-10-25 | 2026-10-26 |
 | T-004 | 0 | Canonical writer (formatter) | Write the model to canonical KDL: fixed section and property order, stable bytes (spec 4.6). | T-002 | 5 | done | 2026-10-25 | 2026-10-26 |

@@ -14,7 +14,7 @@ function doc(partial: Partial<DiagramDocument> = {}): DiagramDocument {
   };
 }
 
-// The spec 4.2 example in canonical form: one element per line, fixed property order, no banners.
+// The spec example in canonical form: one element per line, fixed property order, no banners.
 const canonical = `diagram version=1 title="Order flow" {
   plugins core@1 arch@1
 }
@@ -63,16 +63,16 @@ layout {
 const roundTrip = (text: string): string => writeDiagram(readDiagram(text).document);
 
 describe("canonical writer", () => {
-  it("[T-004] writes the spec 4.2 example in canonical form", () => {
+  it("writes the spec example in canonical form", () => {
     expect(roundTrip(canonical)).toBe(canonical);
   });
 
-  it("[T-004] is stable: writing what it read from its own output changes nothing", () => {
+  it("is stable: writing what it read from its own output changes nothing", () => {
     const once = roundTrip(canonical);
     expect(roundTrip(once)).toBe(once);
   });
 
-  it("[T-004] normalises property order, spacing and blank lines", () => {
+  it("normalises property order, spacing and blank lines", () => {
     const messy = `diagram   title="Order flow"   version=1 {
   plugins   core@1
 }
@@ -103,16 +103,16 @@ layout {
 `);
   });
 
-  it("[T-004] writes a header without a block when there are no plugins", () => {
+  it("writes a header without a block when there are no plugins", () => {
     expect(writeDiagram(doc({ title: "T" }))).toBe(`diagram version=1 title="T"\n`);
   });
 
-  it("[T-004] leaves out empty style and layout sections", () => {
+  it("leaves out empty style and layout sections", () => {
     const out = writeDiagram(doc({ elements: [{ kind: "frame", id: "f" }] }));
     expect(out).toBe(`diagram version=1\n\nframe f\n`);
   });
 
-  it("[T-004] keeps layout order, which is z-order", () => {
+  it("keeps layout order, which is z-order", () => {
     const out = writeDiagram(
       doc({
         elements: [
@@ -128,7 +128,7 @@ layout {
     expect(out.indexOf("  b x=0")).toBeLessThan(out.indexOf("  a x=1"));
   });
 
-  it("[T-004] writes coordinates and sizes as integers", () => {
+  it("writes coordinates and sizes as integers", () => {
     const out = writeDiagram(
       doc({
         elements: [{ kind: "frame", id: "a" }],
@@ -138,7 +138,7 @@ layout {
     expect(out).toContain("  a x=2 y=0 w=100 h=10\n");
   });
 
-  it("[T-004] writes anchors, free-end points, bend points, label position and lock in fixed order", () => {
+  it("writes anchors, free-end points, bend points, label position and lock in fixed order", () => {
     const out = writeDiagram(
       doc({
         elements: [
@@ -165,7 +165,7 @@ layout {
     expect(out).toContain(`  e from=left:0.3 to=auto from-point="7,6" to-point="9,8" via="1,2 3,4" label-at=0.25\n`);
   });
 
-  it("[T-004] omits x and y on edge entries and drops entries for IDs not in structure", () => {
+  it("omits x and y on edge entries and drops entries for IDs not in structure", () => {
     const out = writeDiagram(
       doc({
         elements: [
@@ -183,7 +183,7 @@ layout {
     expect(out).not.toContain("gone");
   });
 
-  it("[T-004] adds id= to an edge when the default id does not apply", () => {
+  it("adds id= to an edge when the default id does not apply", () => {
     const out = writeDiagram(
       doc({
         elements: [
@@ -196,7 +196,7 @@ layout {
     expect(out).toBe(`diagram version=1\n\nedge a b id=e1\nedge - b id=e2\nedge a b\n`);
   });
 
-  it("[T-004] writes style properties in fixed order with kebab-case names", () => {
+  it("writes style properties in fixed order with kebab-case names", () => {
     const out = writeDiagram(
       doc({
         style: {
@@ -214,25 +214,25 @@ layout {
     expect(out).toContain(`  class c fill="#fff" stroke-width=2 italic=#true line-height=1.5 route=elbow head-end=arrow\n`);
   });
 
-  it("[T-004] quotes IDs that KDL requires to be quoted", () => {
+  it("quotes IDs that KDL requires to be quoted", () => {
     const out = writeDiagram(doc({ elements: [{ kind: "frame", id: "a b" }] }));
     expect(out).toContain(`frame "a b"\n`);
   });
 
-  it("[T-004] escapes line breaks and quotes in text", () => {
+  it("escapes line breaks and quotes in text", () => {
     const out = writeDiagram(doc({ elements: [{ kind: "text", id: "t", content: 'a\nb "c"' }] }));
     expect(out).toContain(`text t "a\\nb \\"c\\""\n`);
     const back = readDiagram(out).document.elements[0];
     expect(back).toMatchObject({ kind: "text", content: 'a\nb "c"' });
   });
 
-  it("[T-004] escapes control characters in text", () => {
+  it("escapes control characters in text", () => {
     const content = "tab\there\u0001end\u2028";
     const out = writeDiagram(doc({ elements: [{ kind: "text", id: "t", content }] }));
     expect(readDiagram(out).document.elements[0]).toMatchObject({ content });
   });
 
-  it("[T-004] re-emits whole-line comments above their element and above the header", () => {
+  it("re-emits whole-line comments above their element and above the header", () => {
     const text = `// top
 diagram version=1
 
@@ -244,7 +244,7 @@ frame b
     expect(roundTrip(text)).toBe(text);
   });
 
-  it("[T-004] re-emits unknown elements, nested children and their comments", () => {
+  it("re-emits unknown elements, nested children and their comments", () => {
     const text = `diagram version=1
 
 // chart note
@@ -260,7 +260,7 @@ frame a
     expect(roundTrip(text)).toBe(text);
   });
 
-  it("[T-004] re-emits ext properties on elements, style props and layout entries", () => {
+  it("re-emits ext properties on elements, style props and layout entries", () => {
     const text = `diagram version=1
 
 node n shape=rect class=c glow=#true
@@ -277,7 +277,7 @@ layout {
     expect(roundTrip(text)).toBe(text);
   });
 
-  it("[T-004] re-emits unknown style statements", () => {
+  it("re-emits unknown style statements", () => {
     const text = `diagram version=1
 
 style {
@@ -291,12 +291,12 @@ style {
     expect(roundTrip(text)).toBe(text);
   });
 
-  it("[T-004] writes valid KDL that reads back to the same model", () => {
+  it("writes valid KDL that reads back to the same model", () => {
     const { document } = readDiagram(canonical);
     expect(readDiagram(writeDiagram(document)).document).toEqual(document);
   });
 
-  it("[T-004] round-trips the spec 4.2 example with its banners without growing", () => {
+  it("round-trips the spec example with its banners without growing", () => {
     const banners = `diagram version=1
 
 // ── structure ──

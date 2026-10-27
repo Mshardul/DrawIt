@@ -1,6 +1,6 @@
 // The canvas grid as data, like `describeDiagram`: one tiled pattern filling one large rect, so a
 // pan or zoom touches attributes and never adds nodes. Lines keep a 1 screen px width, and the
-// cell coarsens at low zoom so they never crowd (spec 2.2).
+// cell coarsens at low zoom so they never crowd.
 import { gridStep } from "../move/snap.ts";
 import type { SvgNode } from "./describe.ts";
 

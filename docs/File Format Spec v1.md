@@ -362,7 +362,7 @@ Each budget is an automated test against generated 500-element files.
 
 ### 7.3 Testing
 
-- Development is test-first. Every test is tagged with the ID of the ticket it verifies; a ticket is complete when all of its tests pass.
+- Development is test-first. A ticket is complete when all of its tests pass.
 - Golden-file tests verify that open-then-save reproduces files byte for byte.
 - Selection, dragging, text editing and export are tested in real browsers (Chromium, Firefox, WebKit) with Playwright.
 

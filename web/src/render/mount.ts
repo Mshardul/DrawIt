@@ -1,6 +1,6 @@
 // Puts `describeDiagram` output on the page. It keeps no state of its own: the DOM it finds under
 // `root` is what it compares with. Groups are matched by `data-id`, so a drag that only changes
-// `transform` touches one attribute (the T-009 spike's fast path) and an element whose content is
+// `transform` touches one attribute (the fast path for drags) and an element whose content is
 // unchanged keeps its DOM nodes.
 import type { SvgNode } from "./describe.ts";
 

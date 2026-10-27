@@ -27,7 +27,7 @@ function fakeFetch(respond: (seen: Seen) => Response) {
 }
 
 describe("HTTP storage adapter", () => {
-  it("[T-021] lists files from GET /api/files with the bearer token", async () => {
+  it("lists files from GET /api/files with the bearer token", async () => {
     const files = [{ path: "a.drawit.kdl", size: 3, modified: "2026-10-26T00:00:00.000Z" }];
     const { fetchFn, seen } = fakeFetch(() => Response.json({ files }));
     const storage = new HttpStorage({ token: "tok", fetch: fetchFn });
@@ -35,7 +35,7 @@ describe("HTTP storage adapter", () => {
     expect(seen).toMatchObject([{ url: "/api/files", method: "GET", authorization: "Bearer tok" }]);
   });
 
-  it("[T-021] reads bytes from GET /api/file with the path encoded", async () => {
+  it("reads bytes from GET /api/file with the path encoded", async () => {
     const { fetchFn, seen } = fakeFetch(() => new Response(new Uint8Array([1, 2, 3])));
     const storage = new HttpStorage({ token: "tok", fetch: fetchFn });
     expect(await storage.read("my dir/a&b.drawit.kdl")).toEqual(new Uint8Array([1, 2, 3]));
@@ -43,7 +43,7 @@ describe("HTTP storage adapter", () => {
     expect(seen[0]?.authorization).toBe("Bearer tok");
   });
 
-  it("[T-021] writes bytes with PUT /api/file and the bearer token", async () => {
+  it("writes bytes with PUT /api/file and the bearer token", async () => {
     const { fetchFn, seen } = fakeFetch(() => new Response(null, { status: 204 }));
     const storage = new HttpStorage({ token: "tok", fetch: fetchFn });
     await storage.write("a.drawit.kdl", new Uint8Array([9, 8]));
@@ -56,7 +56,7 @@ describe("HTTP storage adapter", () => {
     [404, "not-found"],
     [400, "invalid-path"],
     [403, "refused"],
-  ] as const)("[T-021] maps HTTP %i to StorageError %s", async (status, code) => {
+  ] as const)("maps HTTP %i to StorageError %s", async (status, code) => {
     const { fetchFn } = fakeFetch(() => new Response("no", { status }));
     const storage = new HttpStorage({ token: "tok", fetch: fetchFn });
     for (const call of [() => storage.read("a"), () => storage.write("a", new Uint8Array()), () => storage.list()]) {
@@ -65,7 +65,7 @@ describe("HTTP storage adapter", () => {
     }
   });
 
-  it("[T-021] rejects with a plain Error for any other failure status", async () => {
+  it("rejects with a plain Error for any other failure status", async () => {
     const { fetchFn } = fakeFetch(() => new Response("boom", { status: 500 }));
     const storage = new HttpStorage({ token: "tok", fetch: fetchFn });
     const err = await storage.read("a").catch((e: unknown) => e);
@@ -74,7 +74,7 @@ describe("HTTP storage adapter", () => {
     expect((err as Error).message).toContain("500");
   });
 
-  it("[T-021] watch is a no-op that never calls the listener and returns an unsubscribe function", () => {
+  it("watch is a no-op that never calls the listener and returns an unsubscribe function", () => {
     const { fetchFn, seen } = fakeFetch(() => new Response(null, { status: 204 }));
     const storage: StorageAdapter = new HttpStorage({ token: "tok", fetch: fetchFn });
     let calls = 0;
@@ -105,24 +105,24 @@ function fakeEnv(hash: string, stored: Record<string, string> = {}) {
 }
 
 describe("session token", () => {
-  it("[T-021] reads the token from the URL fragment, keeps it in session storage and strips it from the address bar", () => {
+  it("reads the token from the URL fragment, keeps it in session storage and strips it from the address bar", () => {
     const { env, store, replaced } = fakeEnv("#abc123");
     expect(startSession(env)).toBe("abc123");
     expect(store.get("drawit.token")).toBe("abc123");
     expect(replaced).toEqual(["/app/?x=1"]);
   });
 
-  it("[T-021] falls back to the token in session storage when the fragment has none", () => {
+  it("falls back to the token in session storage when the fragment has none", () => {
     const { env, replaced } = fakeEnv("", { "drawit.token": "kept" });
     expect(startSession(env)).toBe("kept");
     expect(replaced).toEqual([]);
   });
 
-  it("[T-021] returns null when there is no token anywhere", () => {
+  it("returns null when there is no token anywhere", () => {
     expect(startSession(fakeEnv("").env)).toBeNull();
   });
 
-  it("[T-021] a new fragment token replaces the stored one", () => {
+  it("a new fragment token replaces the stored one", () => {
     const { env, store } = fakeEnv("#new", { "drawit.token": "old" });
     expect(startSession(env)).toBe("new");
     expect(store.get("drawit.token")).toBe("new");

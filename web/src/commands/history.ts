@@ -1,4 +1,4 @@
-// Per-file undo and redo (spec 5.5, decision A3): a session-only stack of Immer patches.
+// Per-file undo and redo: a session-only stack of Immer patches.
 import type { DiagramDocument } from "../model/index.ts";
 import { applyCommand, applyPatches } from "./command.ts";
 import type { Command, Patch } from "./command.ts";

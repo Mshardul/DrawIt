@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestT019_FilesIsAReadableFolder(t *testing.T) {
+func TestFilesIsAReadableFolder(t *testing.T) {
 	info, err := fs.Stat(Files(), ".")
 	if err != nil {
 		t.Fatal(err)

@@ -1,4 +1,4 @@
-// Structure section (spec 4.3): what exists, what it says, how things connect.
+// Structure section: what exists, what it says, how things connect.
 
 /** Element IDs: short slugs, unique across the file; all element types share one namespace. */
 export const ID_PATTERN = /^[a-z][a-z0-9_-]*$/;
@@ -15,7 +15,7 @@ export interface PluginRef {
 /** A value KDL can hold. */
 export type KdlValue = string | number | boolean | null;
 
-/** A node the model does not know, kept so a save does not lose it (spec 4.6). */
+/** A node the model does not know, kept so a save does not lose it. */
 export interface UnknownNode {
   name: string;
   args: KdlValue[];

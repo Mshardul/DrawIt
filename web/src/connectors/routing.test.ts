@@ -12,26 +12,26 @@ const noZeroSegments = (path: Point[]): boolean =>
   path.every((p, i) => i === 0 || p.x !== (path[i - 1] as Point).x || p.y !== (path[i - 1] as Point).y);
 
 describe("connector routing: straight", () => {
-  it("[T-018] auto ends sit on the facing sides when the shapes are level", () => {
+  it("auto ends sit on the facing sides when the shapes are level", () => {
     expect(route(rect(0, 0), rect(300, 0), { route: "straight" })).toEqual([
       { x: 100, y: 25 },
       { x: 300, y: 25 },
     ]);
   });
 
-  it("[T-018] a diagonal line is clipped to each rectangle's outline", () => {
+  it("a diagonal line is clipped to each rectangle's outline", () => {
     const [a, b] = route(rect(0, 0), rect(300, 200), { route: "straight" }) as [Point, Point];
     expect(a.x === 100 || a.y === 50).toBe(true);
     expect(b.x === 300 || b.y === 200).toBe(true);
   });
 
-  it("[T-018] ellipse ends lie on the ellipse", () => {
+  it("ellipse ends lie on the ellipse", () => {
     const [a] = route(ellipse(0, 0, 100, 50), rect(300, 200), { route: "straight" }) as [Point, Point];
     const k = ((a.x - 50) / 50) ** 2 + ((a.y - 25) / 25) ** 2;
     expect(k).toBeCloseTo(1, 2);
   });
 
-  it("[T-018] a fixed side with a position attaches anywhere along that side", () => {
+  it("a fixed side with a position attaches anywhere along that side", () => {
     const from = withAnchor(rect(0, 0), { side: "right", at: 0.3 });
     const to = withAnchor(rect(300, 0), { side: "top", at: 0.5 });
     expect(route(from, to, { route: "straight" })).toEqual([
@@ -40,7 +40,7 @@ describe("connector routing: straight", () => {
     ]);
   });
 
-  it("[T-018] a position along an ellipse's side lands on the ellipse outline", () => {
+  it("a position along an ellipse's side lands on the ellipse outline", () => {
     const from = withAnchor(ellipse(0, 0, 100, 50), { side: "top", at: 0.25 });
     const [a] = route(from, rect(300, 200), { route: "straight" }) as [Point, Point];
     expect(a.x).toBe(25);
@@ -48,7 +48,7 @@ describe("connector routing: straight", () => {
     expect(a.y).toBeLessThan(25);
   });
 
-  it("[T-018] a free end is a point, and bend points are kept in order", () => {
+  it("a free end is a point, and bend points are kept in order", () => {
     const path = route(rect(0, 0), { point: { x: 400, y: 300 } }, { route: "straight", via: [{ x: 200, y: 25 }, { x: 200, y: 300 }] });
     expect(path.slice(1, 3)).toEqual([{ x: 200, y: 25 }, { x: 200, y: 300 }]);
     expect(path.at(-1)).toEqual({ x: 400, y: 300 });
@@ -57,14 +57,14 @@ describe("connector routing: straight", () => {
 });
 
 describe("connector routing: elbow", () => {
-  it("[T-018] shapes level with facing sides are joined by a straight run", () => {
+  it("shapes level with facing sides are joined by a straight run", () => {
     expect(route(rect(0, 0), rect(300, 0), { route: "elbow" })).toEqual([
       { x: 100, y: 25 },
       { x: 300, y: 25 },
     ]);
   });
 
-  it("[T-018] shapes offset in y get a Z with the bend half way", () => {
+  it("shapes offset in y get a Z with the bend half way", () => {
     expect(route(rect(0, 0), rect(300, 100), { route: "elbow" })).toEqual([
       { x: 100, y: 25 },
       { x: 200, y: 25 },
@@ -73,7 +73,7 @@ describe("connector routing: elbow", () => {
     ]);
   });
 
-  it("[T-018] every segment is axis-aligned and non-empty for every pair of sides and relative position", () => {
+  it("every segment is axis-aligned and non-empty for every pair of sides and relative position", () => {
     const sides: Side[] = ["top", "right", "bottom", "left"];
     const places: Point[] = [
       { x: 300, y: 0 },
@@ -93,27 +93,27 @@ describe("connector routing: elbow", () => {
         }
   });
 
-  it("[T-018] the path leaves a fixed side outwards", () => {
+  it("the path leaves a fixed side outwards", () => {
     const path = route(withAnchor(rect(0, 0), { side: "top" }), rect(300, 200), { route: "elbow" });
     expect(path[0]).toEqual({ x: 50, y: 0 });
     expect(path[1]?.x).toBe(50);
     expect(path[1]?.y).toBeLessThan(0);
   });
 
-  it("[T-018] bend points are kept and the path stays axis-aligned", () => {
+  it("bend points are kept and the path stays axis-aligned", () => {
     const via = [{ x: 200, y: 300 }];
     const path = route(rect(0, 0), rect(300, 0), { route: "elbow", via });
     expect(path).toContainEqual(via[0]);
     expect(axisAligned(path)).toBe(true);
   });
 
-  it("[T-018] a free end is reached orthogonally", () => {
+  it("a free end is reached orthogonally", () => {
     const path = route(rect(0, 0), { point: { x: 333, y: 222 } }, { route: "elbow" });
     expect(path.at(-1)).toEqual({ x: 333, y: 222 });
     expect(axisAligned(path)).toBe(true);
   });
 
-  it("[T-018] moving a shape recomputes the endpoints, and the side that faces", () => {
+  it("moving a shape recomputes the endpoints, and the side that faces", () => {
     const before = route(rect(0, 0), rect(300, 0), { route: "elbow" });
     const after = route(rect(0, 0), rect(300, 400), { route: "elbow" });
     expect(before.at(-1)).toEqual({ x: 300, y: 25 });
@@ -128,19 +128,19 @@ describe("connector routing: re-attaching an end", () => {
     { id: "oval", box: { x: 250, y: 100, w: 100, h: 50 }, shape: "ellipse" },
   ];
 
-  it("[T-018] the topmost element under the pointer is the target, with the nearest side and position", () => {
+  it("the topmost element under the pointer is the target, with the nearest side and position", () => {
     expect(attachTarget(targets, { x: 195, y: 110 })).toEqual({ id: "front", anchor: { side: "right", at: 0.2 } });
   });
 
-  it("[T-018] the pointer in the corner of an ellipse's box misses the ellipse", () => {
+  it("the pointer in the corner of an ellipse's box misses the ellipse", () => {
     expect(attachTarget(targets, { x: 252, y: 102 })?.id).toBe("back");
   });
 
-  it("[T-018] the pointer over nothing detaches the end", () => {
+  it("the pointer over nothing detaches the end", () => {
     expect(attachTarget(targets, { x: 900, y: 900 })).toBeNull();
   });
 
-  it("[T-018] an element can be excluded, so an edge cannot attach to itself by dropping on its own start", () => {
+  it("an element can be excluded, so an edge cannot attach to itself by dropping on its own start", () => {
     expect(attachTarget(targets, { x: 150, y: 120 }, new Set(["front"]))?.id).toBe("back");
   });
 });

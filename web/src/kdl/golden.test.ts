@@ -15,12 +15,12 @@ const openThenSave = (text: string): string => writeDiagram(readDiagram(text).do
 describe("golden files", () => {
   const canonical = names("canonical");
 
-  it("[T-005] has canonical golden files", () => {
+  it("has canonical golden files", () => {
     expect(canonical.length).toBeGreaterThanOrEqual(4);
   });
 
   for (const name of canonical) {
-    it(`[T-005] open then save reproduces canonical/${name} byte for byte`, () => {
+    it(`open then save reproduces canonical/${name} byte for byte`, () => {
       const text = read(`canonical/${name}`);
       expect(openThenSave(text)).toBe(text);
     });
@@ -28,12 +28,12 @@ describe("golden files", () => {
 
   const messy = names("normalise").filter((f) => !f.endsWith(".expected.drawit.kdl"));
 
-  it("[T-005] has non-canonical golden files", () => {
+  it("has non-canonical golden files", () => {
     expect(messy.length).toBeGreaterThanOrEqual(1);
   });
 
   for (const name of messy) {
-    it(`[T-005] open then save normalises normalise/${name} to its canonical bytes`, () => {
+    it(`open then save normalises normalise/${name} to its canonical bytes`, () => {
       const expected = read(`normalise/${name.replace(".drawit.kdl", ".expected.drawit.kdl")}`);
       const out = openThenSave(read(`normalise/${name}`));
       expect(out).toBe(expected);

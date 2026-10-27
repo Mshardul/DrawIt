@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { EdgeElement, NodeElement } from "../model/index.ts";
 import { KdlSyntaxError, readDiagram } from "./read.ts";
 
-// The spec 4.2 example.
+// The spec example.
 const example = `diagram version=1 title="Order flow" {
   plugins core@1 arch@1
 }
@@ -57,7 +57,7 @@ layout {
 `;
 
 describe("KDL v2 reader", () => {
-  it("[T-003] reads the header and plugins", () => {
+  it("reads the header and plugins", () => {
     const { document } = readDiagram(example);
     expect(document.version).toBe(1);
     expect(document.title).toBe("Order flow");
@@ -67,7 +67,7 @@ describe("KDL v2 reader", () => {
     ]);
   });
 
-  it("[T-003] reads structure elements in authored order", () => {
+  it("reads structure elements in authored order", () => {
     const { document } = readDiagram(example);
     expect(document.elements.map((e) => `${e.kind}:${e.id}`)).toEqual([
       "frame:overview",
@@ -102,7 +102,7 @@ describe("KDL v2 reader", () => {
     expect(document.elements.find((e) => e.id === "backend")).toEqual({ kind: "shape", id: "backend", shape: "rect", class: "boundary" });
   });
 
-  it("[T-003] reads edges with derived and explicit IDs, labels and free ends", () => {
+  it("reads edges with derived and explicit IDs, labels and free ends", () => {
     const { document } = readDiagram(`edge a b label="x y"\nedge a b id=second\nedge - b id=loose\nedge a - id=loose2\n`);
     const edges = document.elements as EdgeElement[];
     expect(edges[0]).toEqual({ kind: "edge", id: "a->b", from: "a", to: "b", label: "x y" });
@@ -111,7 +111,7 @@ describe("KDL v2 reader", () => {
     expect(edges[3]).toEqual({ kind: "edge", id: "loose2", from: "a", to: null });
   });
 
-  it("[T-003] reads the style section: theme tokens, classes and overrides", () => {
+  it("reads the style section: theme tokens, classes and overrides", () => {
     const { document } = readDiagram(example);
     expect(document.style.theme).toEqual({
       name: "default",
@@ -132,7 +132,7 @@ describe("KDL v2 reader", () => {
     ]);
   });
 
-  it("[T-003] reads the layout section in z-order with anchors and bend points", () => {
+  it("reads the layout section in z-order with anchors and bend points", () => {
     const { document } = readDiagram(example);
     expect(document.layout.map((e) => e.id)).toEqual([
       "overview",
@@ -161,7 +161,7 @@ describe("KDL v2 reader", () => {
     });
   });
 
-  it("[T-003] reads auto anchors, free end points, label position and lock", () => {
+  it("reads auto anchors, free end points, label position and lock", () => {
     const { document } = readDiagram(
       `layout {\n  e1 from=auto to=left:0.3 from-point="10,20" to-point="30,40" label-at=0.25\n  n1 x=1 y=2 locked=#true\n}\n`,
     );
@@ -171,13 +171,13 @@ describe("KDL v2 reader", () => {
     ]);
   });
 
-  it("[T-003] reads a file with no sections as an empty diagram", () => {
+  it("reads a file with no sections as an empty diagram", () => {
     const { document, warnings } = readDiagram("");
     expect(document).toMatchObject({ version: 1, plugins: [], elements: [], layout: [] });
     expect(warnings).toEqual([]);
   });
 
-  it("[T-003] fails on invalid KDL with line and column", () => {
+  it("fails on invalid KDL with line and column", () => {
     const run = () => readDiagram('node a shape=rect\nnode "unterminated');
     expect(run).toThrow(KdlSyntaxError);
     try {
@@ -190,7 +190,7 @@ describe("KDL v2 reader", () => {
     }
   });
 
-  it("[T-003] fails on an unclosed block with line and column", () => {
+  it("fails on an unclosed block with line and column", () => {
     try {
       readDiagram("layout {\n  a x=1 y=2\n");
       expect.unreachable();
@@ -201,14 +201,14 @@ describe("KDL v2 reader", () => {
     }
   });
 
-  it("[T-003] keeps whole-line comments with the element below", () => {
+  it("keeps whole-line comments with the element below", () => {
     const { document, warnings } = readDiagram(`// the gateway\n// second line\nnode api shape=rect\nnode db shape=rect\n`);
     expect(document.elements[0]).toMatchObject({ id: "api", comments: ["// the gateway", "// second line"] });
     expect(document.elements[1]).not.toHaveProperty("comments");
     expect(warnings).toEqual([]);
   });
 
-  it("[T-003] drops end-of-line and block comments with a warning", () => {
+  it("drops end-of-line and block comments with a warning", () => {
     const { document, warnings } = readDiagram(`node api shape=rect // trailing\n/* block */\nnode db shape=rect\n`);
     expect(document.elements).toHaveLength(2);
     expect(document.elements[0]).not.toHaveProperty("comments");
@@ -217,7 +217,7 @@ describe("KDL v2 reader", () => {
     expect(warnings[0]).toMatch(/comment/i);
   });
 
-  it("[T-003] keeps unknown nodes with arguments, properties, children and comments", () => {
+  it("keeps unknown nodes with arguments, properties, children and comments", () => {
     const { document } = readDiagram(`// from a pack\ngadget g1 mode=fast enabled=#true nothing=#null {\n  // inner\n  part 1 2 tag=x\n}\nnode a shape=rect\n`);
     expect(document.elements.map((e) => e.kind)).toEqual(["unknown", "node"]);
     expect(document.elements[0]).toEqual({
@@ -233,12 +233,12 @@ describe("KDL v2 reader", () => {
     });
   });
 
-  it("[T-003] gives unknown nodes without a usable ID a generated one", () => {
+  it("gives unknown nodes without a usable ID a generated one", () => {
     const { document } = readDiagram(`gadget\nwidget 5\n`);
     expect(document.elements.map((e) => e.id)).toEqual(["unknown-1", "unknown-2"]);
   });
 
-  it("[T-003] keeps unknown properties on known elements, style props and layout lines", () => {
+  it("keeps unknown properties on known elements, style props and layout lines", () => {
     const { document } = readDiagram(
       `node a shape=rect owner="ops" weight=3\nstyle {\n  class c fill=red glow=#true\n  el a blur=4\n}\nlayout {\n  a x=1 y=2 depth=7\n}\n`,
     );
@@ -248,17 +248,17 @@ describe("KDL v2 reader", () => {
     expect(document.layout[0]).toEqual({ id: "a", x: 1, y: 2, ext: { depth: 7 } });
   });
 
-  it("[T-003] keeps unknown style statements and unknown top-level sections", () => {
+  it("keeps unknown style statements and unknown top-level sections", () => {
     const { document } = readDiagram(`style {\n  // pack rule\n  palette warm a=1\n}\n`);
     expect(document.style.unknown).toEqual([{ name: "palette", args: ["warm"], props: { a: 1 }, children: [], comments: ["// pack rule"] }]);
   });
 
-  it("[T-003] keeps a known keyword with missing arguments as an unknown node", () => {
+  it("keeps a known keyword with missing arguments as an unknown node", () => {
     const { document } = readDiagram(`node\nedge onlyone\n`);
     expect(document.elements.map((e) => e.kind)).toEqual(["unknown", "unknown"]);
   });
 
-  it("[T-003] keeps a comment above the header", () => {
+  it("keeps a comment above the header", () => {
     const { document } = readDiagram(`// my diagram\ndiagram version=2\n`);
     expect(document.version).toBe(2);
     expect(document.comments).toEqual(["// my diagram"]);

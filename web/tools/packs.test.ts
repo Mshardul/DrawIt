@@ -28,13 +28,13 @@ function makeRoot(svg: string): string {
 const run = (...args: string[]) => spawnSync("node", [join(here, "packs.ts"), ...args], { encoding: "utf8" });
 
 describe("shape packs in the repository", () => {
-  it("[T-022] every pack under packs/ validates", () => {
+  it("every pack under packs/ validates", () => {
     const packs = loadPacks(REPO_PACKS);
     expect(packs.map((p) => p.manifest.pack).sort()).toEqual(["arch", "core", "info"]);
     expect(validateAll(packs)).toEqual([]);
   });
 
-  it("[T-022] the three reference shapes exercise both axes, one axis and fixed ends", () => {
+  it("the three reference shapes exercise both axes, one axis and fixed ends", () => {
     const shapes = Object.fromEntries(loadPacks(REPO_PACKS).flatMap((p) => p.manifest.shapes.map((s) => [`${p.manifest.pack}.${s.id}`, s])));
     expect(shapes["core.rounded-rect"]?.stretch?.x).toBeDefined();
     expect(shapes["core.rounded-rect"]?.stretch?.y).toBeDefined();
@@ -46,23 +46,23 @@ describe("shape packs in the repository", () => {
 });
 
 describe("pack tools", () => {
-  it("[T-022] validate exits 0 for a correct pack folder", () => {
+  it("validate exits 0 for a correct pack folder", () => {
     const result = run("validate", makeRoot(goodSvg));
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("1 pack");
   });
 
-  it("[T-022] validate exits 1 and prints pack, shape and problem for a bad one", () => {
+  it("validate exits 1 and prints pack, shape and problem for a bad one", () => {
     const result = run("validate", makeRoot(goodSvg.replace('data-role="fill"', 'fill="#fff"')));
     expect(result.status).toBe(1);
     expect(result.stderr).toMatch(/core\.box.*svg-attribute/);
   });
 
-  it("[T-022] validate on a folder with no packs fails", () => {
+  it("validate on a folder with no packs fails", () => {
     expect(run("validate", mkdtempSync(join(tmpdir(), "empty-"))).status).toBe(1);
   });
 
-  it("[T-022] contact-sheet writes the page for valid packs", () => {
+  it("contact-sheet writes the page for valid packs", () => {
     const out = join(mkdtempSync(join(tmpdir(), "sheet-")), "index.html");
     const result = run("contact-sheet", out, makeRoot(goodSvg));
     expect(result.status).toBe(0);
@@ -70,7 +70,7 @@ describe("pack tools", () => {
     expect(readFileSync(out, "utf8")).toContain('data-shape="core.box"');
   });
 
-  it("[T-022] contact-sheet refuses invalid packs and writes nothing", () => {
+  it("contact-sheet refuses invalid packs and writes nothing", () => {
     const out = join(mkdtempSync(join(tmpdir(), "sheet-")), "index.html");
     const result = run("contact-sheet", out, makeRoot("<svg"));
     expect(result.status).toBe(1);

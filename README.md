@@ -16,7 +16,7 @@ Under construction. Work is tracked in [docs/tickets.md](docs/tickets.md).
 
 ## Vendor icons
 
-AWS, GCP, Azure and other vendor icon sets are not bundled. Each has its own licence terms (decision D11). Shipped templates, themes and shape packs are CC0.
+AWS, GCP, Azure and other vendor icon sets are not bundled. Each has its own licence terms. Shipped templates, themes and shape packs are CC0.
 
 ## Layout
 
@@ -40,15 +40,13 @@ pnpm lint
 pnpm typecheck
 pnpm test                # Vitest
 pnpm test:e2e            # Playwright: Chromium, Firefox, WebKit
-pnpm check:tags          # every test carries a ticket ID
-pnpm test:ticket T-001   # run only the tests tagged T-001
 
 cd ..
 go test ./...
 golangci-lint run
 ```
 
-Every test is tagged with the ID of the ticket it verifies, and a ticket is done when all its tests pass. In TypeScript the tag is in the test title, `[T-001] does a thing`. In Go it is in the function name, `TestT001_DoesAThing`.
+A ticket is done when all its tests pass.
 
 ## Licence
 

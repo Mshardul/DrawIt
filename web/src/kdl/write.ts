@@ -1,4 +1,4 @@
-// Canonical KDL writer (spec 4.6, decision F3): the document model to `.drawit.kdl` text.
+// Canonical KDL writer: the document model to `.drawit.kdl` text.
 // The inverse of `readDiagram`; the same model always produces the same bytes.
 import { Node, format } from "@bgotink/kdl";
 import type {
@@ -25,7 +25,7 @@ type Field = readonly [name: string, value: Arg | undefined];
 
 const INDENT = "  ";
 
-// Fixed property order of the style groups (spec 4.4): [model key, file key].
+// Fixed property order of the style groups: [model key, file key].
 const STYLE_ORDER = [
   ["fill", "fill"], ["opacity", "opacity"],
   ["stroke", "stroke"], ["strokeWidth", "stroke-width"], ["dash", "dash"], ["radius", "radius"],

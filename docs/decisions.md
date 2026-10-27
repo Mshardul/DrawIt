@@ -89,7 +89,7 @@ Why DrawIt works the way it does. The spec states what DrawIt does; this file re
 | # | Decision | Choice | Why | Rejected |
 |---|---|---|---|---|
 | Q1 | Performance target | Budgets at 500 elements, tested automatically | Matches "hundreds of elements" | No budgets |
-| Q2 | Development | Test-first with AI; tests tagged by ticket ID; Playwright for browser behaviour | The test catalogue is the definition of done; text, drag and export behaviour only shows in real browsers | Writing tests after code |
+| Q2 | Development | Test-first with AI; Playwright for browser behaviour | The test catalogue is the definition of done; text, drag and export behaviour only shows in real browsers | Writing tests after code |
 | Q3 | Planning | Dependency-ordered phases, no dates | Work happens as time allows | Date-based schedule |
 | Q4 | Tickets | One `tickets.md` table: ID, phase, title, description, depends on, story points, status, created on, updated on | Lean enough to stay current; dependencies let agents pick valid work | One file per ticket |
 | Q5 | v1 scope | The slice used daily: drawing, connectors, plain text, files, export. UML/ERD, sequence diagrams, visual diff, bundles, rotation, guides, rich text and copy style follow in v1.1 | A smaller v1 ships and can be used sooner, and the riskiest features build on a proven core | Everything in v1 |

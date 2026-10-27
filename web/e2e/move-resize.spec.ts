@@ -71,7 +71,7 @@ async function drag(page: Page, from: [number, number], to: [number, number]): P
   await page.mouse.up();
 }
 
-test("[T-015] dragging an element moves it, and the whole drag is one undo step", async ({ page }) => {
+test("dragging an element moves it, and the whole drag is one undo step", async ({ page }) => {
   await drag(page, [90, 65], [150, 95]);
   expect(await layout(page, "a")).toEqual({ id: "a", x: 100, y: 70, w: 100, h: 50 });
   await expect(page.locator('g[data-id="a"]')).toHaveAttribute("transform", "translate(100 70)");
@@ -81,7 +81,7 @@ test("[T-015] dragging an element moves it, and the whole drag is one undo step"
   await expect(page.getByText("Unsaved changes")).toBeHidden();
 });
 
-test("[T-015] the file and history are untouched until release; the screen follows the pointer", async ({ page }) => {
+test("the file and history are untouched until release; the screen follows the pointer", async ({ page }) => {
   const start = await at(page, 90, 65);
   const end = await at(page, 190, 65);
   await page.mouse.move(start.x, start.y);
@@ -94,7 +94,7 @@ test("[T-015] the file and history are untouched until release; the screen follo
   expect(await layout(page, "a")).toMatchObject({ x: 140, y: 40 });
 });
 
-test("[T-015] Escape during a drag cancels it", async ({ page }) => {
+test("Escape during a drag cancels it", async ({ page }) => {
   const start = await at(page, 90, 65);
   const end = await at(page, 190, 65);
   await page.mouse.move(start.x, start.y);
@@ -107,13 +107,13 @@ test("[T-015] Escape during a drag cancels it", async ({ page }) => {
   await expect(page.getByText("Unsaved changes")).toBeHidden();
 });
 
-test("[T-015] a click without dragging changes nothing", async ({ page }) => {
+test("a click without dragging changes nothing", async ({ page }) => {
   const p = await at(page, 90, 65);
   await page.mouse.click(p.x, p.y);
   await expect(page.getByText("Unsaved changes")).toBeHidden();
 });
 
-test("[T-015] a multi-selection moves together, keeps the selection, and skips locked elements", async ({ page }) => {
+test("a multi-selection moves together, keeps the selection, and skips locked elements", async ({ page }) => {
   await select(page, ["a", "b", "c"]);
   await drag(page, [90, 65], [90, 105]);
   expect(await layout(page, "a")).toMatchObject({ x: 40, y: 80 });
@@ -124,7 +124,7 @@ test("[T-015] a multi-selection moves together, keeps the selection, and skips l
   expect(await layout(page, "b")).toMatchObject({ y: 40 });
 });
 
-test("[T-015] the south-east handle resizes, and the opposite corner stays", async ({ page }) => {
+test("the south-east handle resizes, and the opposite corner stays", async ({ page }) => {
   await select(page, ["a"]);
   await drag(page, [140, 90], [180, 130]);
   expect(await layout(page, "a")).toEqual({ id: "a", x: 40, y: 40, w: 140, h: 90 });
@@ -132,19 +132,19 @@ test("[T-015] the south-east handle resizes, and the opposite corner stays", asy
   expect(await layout(page, "a")).toMatchObject({ w: 100, h: 50 });
 });
 
-test("[T-015] resizing stops at the minimum size", async ({ page }) => {
+test("resizing stops at the minimum size", async ({ page }) => {
   await select(page, ["a"]);
   await drag(page, [140, 90], [0, 0]);
   expect(await layout(page, "a")).toMatchObject({ x: 40, y: 40, w: 8, h: 8 });
 });
 
-test("[T-015] resizing an element with no w and h writes both from its default size", async ({ page }) => {
+test("resizing an element with no w and h writes both from its default size", async ({ page }) => {
   await select(page, ["b"]);
   await drag(page, [400, 120], [420, 130]);
   expect(await layout(page, "b")).toEqual({ id: "b", x: 240, y: 40, w: 180, h: 90 });
 });
 
-test("[T-015] a text box shows only east and west handles, and resizes its width", async ({ page }) => {
+test("a text box shows only east and west handles, and resizes its width", async ({ page }) => {
   await select(page, ["note"]);
   await expect(page.locator(".handle")).toHaveCount(2);
   await drag(page, [160, 312], [200, 330]);
@@ -153,7 +153,7 @@ test("[T-015] a text box shows only east and west handles, and resizes its width
   expect(entry?.h).toBeUndefined();
 });
 
-test("[T-015] a locked element or several selected show no handles", async ({ page }) => {
+test("a locked element or several selected show no handles", async ({ page }) => {
   await select(page, ["c"]);
   await expect(page.locator(".handle")).toHaveCount(0);
   await select(page, ["a", "b"]);
@@ -162,7 +162,7 @@ test("[T-015] a locked element or several selected show no handles", async ({ pa
   await expect(page.locator(".handle")).toHaveCount(8);
 });
 
-test("[T-015] arrow keys nudge 1px and shift-arrow 10px, and quick nudges undo as one step", async ({ page }) => {
+test("arrow keys nudge 1px and shift-arrow 10px, and quick nudges undo as one step", async ({ page }) => {
   await select(page, ["a"]);
   await page.keyboard.press("ArrowRight");
   await page.keyboard.press("ArrowRight");
@@ -172,7 +172,7 @@ test("[T-015] arrow keys nudge 1px and shift-arrow 10px, and quick nudges undo a
   expect(await layout(page, "a")).toMatchObject({ x: 40, y: 40 });
 });
 
-test("[T-015] nudging does nothing without a selection and skips locked elements", async ({ page }) => {
+test("nudging does nothing without a selection and skips locked elements", async ({ page }) => {
   await page.keyboard.press("ArrowRight");
   await select(page, ["c"]);
   await page.keyboard.press("ArrowRight");
@@ -180,7 +180,7 @@ test("[T-015] nudging does nothing without a selection and skips locked elements
   await expect(page.getByText("Unsaved changes")).toBeHidden();
 });
 
-test("[T-015] dragging 100 selected elements of a 500-element file stays inside the frame budget", async ({ page }) => {
+test("dragging 100 selected elements of a 500-element file stays inside the frame budget", async ({ page }) => {
   await page.evaluate(async () => {
     const load = <T>(path: string) => import(path) as Promise<T>;
     const { generateDiagram } = await load<typeof import("../src/testing/generate-diagram.ts")>("/src/testing/generate-diagram.ts");
@@ -213,7 +213,7 @@ test("[T-015] dragging 100 selected elements of a 500-element file stays inside 
   const times = await page.evaluate(() => (window as unknown as { times: number[] }).times);
   const sorted = [...times].sort((x, y) => x - y);
   const p95 = sorted[Math.floor(sorted.length * 0.95)] ?? Infinity;
-  console.log(`T-015 pointermove handler p95 ${p95.toFixed(2)}ms over ${String(times.length)} moves`);
+  console.log(`move pointermove handler p95 ${p95.toFixed(2)}ms over ${String(times.length)} moves`);
   expect(times.length).toBeGreaterThan(30);
   expect(p95).toBeLessThan(16);
 });

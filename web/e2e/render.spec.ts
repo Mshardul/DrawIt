@@ -46,7 +46,7 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-test("[T-012] draws a rectangle, an ellipse and a text box in the browser", async ({ page }) => {
+test("draws a rectangle, an ellipse and a text box in the browser", async ({ page }) => {
   await page.evaluate((doc) => { (window as unknown as { page: Page }).page.render(doc); }, small);
   await expect(page.locator('g[data-id="box"] rect')).toHaveAttribute("width", "100");
   await expect(page.locator('g[data-id="oval"] ellipse')).toHaveAttribute("rx", "50");
@@ -60,7 +60,7 @@ test("[T-012] draws a rectangle, an ellipse and a text box in the browser", asyn
   expect(box?.height).toBeCloseTo(51, 0);
 });
 
-test("[T-012] drawing again updates in place: a moved element keeps its DOM node, a removed one goes", async ({ page }) => {
+test("drawing again updates in place: a moved element keeps its DOM node, a removed one goes", async ({ page }) => {
   const result = await page.evaluate((doc) => {
     const p = (window as unknown as { page: Page }).page;
     p.render(doc);
@@ -80,7 +80,7 @@ test("[T-012] drawing again updates in place: a moved element keeps its DOM node
   expect(result).toEqual({ same: true, transform: "translate(99 20)", order: ["note", "box"] });
 });
 
-test("[T-012] redrawing 500 elements with 100 moved holds the frame budget", async ({ page }) => {
+test("redrawing 500 elements with 100 moved holds the frame budget", async ({ page }) => {
   const median = await page.evaluate(async () => {
     const load = <T>(path: string) => import(path) as Promise<T>;
     const { generateDiagram } = await load<typeof import("../src/testing/generate-diagram.ts")>(

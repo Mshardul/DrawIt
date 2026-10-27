@@ -10,18 +10,18 @@ const countKinds = (doc: DiagramDocument): Record<string, number> => {
 };
 
 describe("diagram generator", () => {
-  it("[T-007] makes 500 elements by default in the default mix", () => {
+  it("makes 500 elements by default in the default mix", () => {
     const doc = generateDiagram();
     expect(doc.elements).toHaveLength(500);
     expect(countKinds(doc)).toEqual({ node: 300, edge: 175, text: 15, frame: 5, shape: 5 });
   });
 
-  it("[T-007] gives the same document for the same seed and a different one for another", () => {
+  it("gives the same document for the same seed and a different one for another", () => {
     expect(generateDiagram({ seed: 7 })).toEqual(generateDiagram({ seed: 7 }));
     expect(generateDiagram({ seed: 7 })).not.toEqual(generateDiagram({ seed: 8 }));
   });
 
-  it("[T-007] honours the count and the ratios, and always hits the count exactly", () => {
+  it("honours the count and the ratios, and always hits the count exactly", () => {
     const doc = generateDiagram({ count: 1000, ratios: { node: 1, edge: 1 } });
     expect(doc.elements).toHaveLength(1000);
     expect(countKinds(doc)).toEqual({ node: 500, edge: 500 });
@@ -29,7 +29,7 @@ describe("diagram generator", () => {
     expect(odd.elements).toHaveLength(7);
   });
 
-  it("[T-007] uses unique valid IDs, and layout matches structure one to one", () => {
+  it("uses unique valid IDs, and layout matches structure one to one", () => {
     const doc = generateDiagram();
     const ids = doc.elements.map((e) => e.id);
     expect(new Set(ids).size).toBe(ids.length);
@@ -40,7 +40,7 @@ describe("diagram generator", () => {
     }
   });
 
-  it("[T-007] connects edges between distinct existing nodes", () => {
+  it("connects edges between distinct existing nodes", () => {
     const doc = generateDiagram();
     const nodeIds = new Set(doc.elements.filter((e) => e.kind === "node").map((e) => e.id));
     const edges = doc.elements.filter((e): e is Extract<DiagramElement, { kind: "edge" }> => e.kind === "edge");
@@ -52,7 +52,7 @@ describe("diagram generator", () => {
     }
   });
 
-  it("[T-007] rejects ratios that cannot make a valid diagram", () => {
+  it("rejects ratios that cannot make a valid diagram", () => {
     expect(() => generateDiagram({ ratios: { node: -1 } })).toThrow();
     expect(() => generateDiagram({ ratios: { node: 0, edge: 0, text: 0, frame: 0, shape: 0 } })).toThrow();
     expect(() => generateDiagram({ ratios: { node: 0.1, edge: 1 }, count: 1 })).toThrow();

@@ -8,7 +8,8 @@ Read these before changing anything:
 
 ## Rules
 
-- Tests are tagged with the ID of the ticket they verify. TypeScript: `[T-001]` in the test title. Go: `TestT001_Name`. `pnpm check:tags` (in `web/`) fails on an untagged test; `pnpm test:ticket T-001` runs one ticket's tests and fails if none exist.
+- Code never mentions tickets, decisions, spec sections or project status: not in comments, test titles, test names, log labels or identifiers. Those references live in `docs/` only. Comments explain a non-obvious why, nothing else.
+- Do not copy a convention from surrounding code because it is there. Decide what is right for this codebase and apply that, and if existing code has the wrong convention, fix it where you touch it.
 - Test-first: write the failing test, then the code.
 - Docs describe the current state only. Edit rows and paragraphs in place; never write changelog wording ("replaces", "no longer", "now", "was", "removed"). Git holds the history.
 - No UI framework without asking. The renderer is our own SVG.

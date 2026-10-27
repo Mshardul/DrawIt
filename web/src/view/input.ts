@@ -1,4 +1,4 @@
-// Maps wheel and key input to a new view (spec 2.1). The pure functions are tested as data;
+// Maps wheel and key input to a new view. The pure functions are tested as data;
 // `attachViewInput` wires them and space-drag and middle-drag pan to an element.
 import type { Box } from "../render/boxes.ts";
 import { panBy, type Pt, type View, zoomAt, zoomToFit } from "./view.ts";
@@ -107,7 +107,7 @@ export function attachViewInput(host: ViewInputHost): () => void {
   const onPointerDown = (event: PointerEvent): void => {
     if (!(event.button === 1 || (event.button === 0 && spaceDown))) return;
     event.preventDefault();
-    // Selection (T-014) listens on the same element; a pan gesture is not a click on the canvas.
+    // Selection listens on the same element; a pan gesture is not a click on the canvas.
     event.stopImmediatePropagation();
     target.setPointerCapture(event.pointerId);
     panning = { pointer: event.pointerId, x: event.clientX, y: event.clientY };

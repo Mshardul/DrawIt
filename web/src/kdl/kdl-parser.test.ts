@@ -19,7 +19,7 @@ layout {
 `;
 
 describe("KDL parser choice", () => {
-  it("[T-017] parses KDL v2 syntax", () => {
+  it("parses KDL v2 syntax", () => {
     const doc = parse(file);
     expect(doc.nodes.map((n) => n.name.getName())).toEqual(["diagram", "node", "gadget", "edge", "layout"]);
     const api = doc.findNodeByName("layout")?.children?.findNodeByName("api");
@@ -27,7 +27,7 @@ describe("KDL parser choice", () => {
     expect(api?.getProperty("x")).toBe(40);
   });
 
-  it("[T-017] reports line and column on a syntax error", () => {
+  it("reports line and column on a syntax error", () => {
     const run = () => parse('node a\nnode "unterminated');
     expect(run).toThrow(InvalidKdlError);
     try {
@@ -38,14 +38,14 @@ describe("KDL parser choice", () => {
     }
   });
 
-  it("[T-017] keeps whole-line comments with the node below", () => {
+  it("keeps whole-line comments with the node below", () => {
     const doc = parse(file);
     const gadget = doc.findNodeByName("gadget");
     expect(gadget?.leading).toContain("// kept with the element below");
     expect(format(doc)).toBe(file);
   });
 
-  it("[T-017] keeps unknown nodes, properties and children across an edit", () => {
+  it("keeps unknown nodes, properties and children across an edit", () => {
     const doc = parse(file);
     doc.findNodeByName("node")?.setProperty("shape", "arch.server");
     const out = format(clearFormat(doc));

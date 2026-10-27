@@ -100,7 +100,7 @@ func get(t *testing.T, url, path string) string {
 	return body
 }
 
-func TestT019_RunServesTheFolderAndOpensTheBrowser(t *testing.T) {
+func TestRunServesTheFolderAndOpensTheBrowser(t *testing.T) {
 	url, out, stop := start(t, "-addr", "127.0.0.1:0", folderWithFile(t))
 
 	if !strings.HasPrefix(url, "http://") {
@@ -123,7 +123,7 @@ func TestT019_RunServesTheFolderAndOpensTheBrowser(t *testing.T) {
 	}
 }
 
-func TestT019_RunWritesFilesIntoTheFolder(t *testing.T) {
+func TestRunWritesFilesIntoTheFolder(t *testing.T) {
 	dir := folderWithFile(t)
 	url, _, stop := start(t, "-addr", "127.0.0.1:0", dir)
 	defer func() { _ = stop() }()
@@ -137,7 +137,7 @@ func TestT019_RunWritesFilesIntoTheFolder(t *testing.T) {
 	}
 }
 
-func TestT019_RunWithNoBrowserFlagDoesNotOpenOne(t *testing.T) {
+func TestRunWithNoBrowserFlagDoesNotOpenOne(t *testing.T) {
 	url, out, stop := start(t, "-addr", "127.0.0.1:0", "-no-browser", folderWithFile(t))
 	defer func() { _ = stop() }()
 
@@ -149,7 +149,7 @@ func TestT019_RunWithNoBrowserFlagDoesNotOpenOne(t *testing.T) {
 	}
 }
 
-func TestT019_RunDefaultsToTheCurrentFolder(t *testing.T) {
+func TestRunDefaultsToTheCurrentFolder(t *testing.T) {
 	t.Chdir(folderWithFile(t))
 	url, _, stop := start(t, "-addr", "127.0.0.1:0")
 	defer func() { _ = stop() }()
@@ -159,28 +159,28 @@ func TestT019_RunDefaultsToTheCurrentFolder(t *testing.T) {
 	}
 }
 
-func TestT019_RunRefusesAFolderThatDoesNotExist(t *testing.T) {
+func TestRunRefusesAFolderThatDoesNotExist(t *testing.T) {
 	err := run(context.Background(), []string{"-addr", "127.0.0.1:0", filepath.Join(t.TempDir(), "missing")}, io.Discard, nil, nil)
 	if err == nil {
 		t.Fatal("run succeeded for a missing folder")
 	}
 }
 
-func TestT019_RunRefusesAFileInsteadOfAFolder(t *testing.T) {
+func TestRunRefusesAFileInsteadOfAFolder(t *testing.T) {
 	file := filepath.Join(folderWithFile(t), "a.drawit.kdl")
 	if err := run(context.Background(), []string{"-addr", "127.0.0.1:0", file}, io.Discard, nil, nil); err == nil {
 		t.Fatal("run succeeded for a file")
 	}
 }
 
-func TestT019_RunRefusesMoreThanOneFolder(t *testing.T) {
+func TestRunRefusesMoreThanOneFolder(t *testing.T) {
 	err := run(context.Background(), []string{"-addr", "127.0.0.1:0", t.TempDir(), t.TempDir()}, io.Discard, nil, nil)
 	if err == nil {
 		t.Fatal("run accepted two folders")
 	}
 }
 
-func TestT020_RunRefusesAddressesOffTheLoopback(t *testing.T) {
+func TestRunRefusesAddressesOffTheLoopback(t *testing.T) {
 	for _, addr := range []string{"0.0.0.0:0", ":0", "[::]:0", "[::1]:0", "localhost:0", "192.168.1.5:0", "127.0.0.2:0", "example.com:80"} {
 		err := run(context.Background(), []string{"-addr", addr, t.TempDir()}, io.Discard, nil, nil)
 		if err == nil {
@@ -189,7 +189,7 @@ func TestT020_RunRefusesAddressesOffTheLoopback(t *testing.T) {
 	}
 }
 
-func TestT020_RunListensOn127001ByDefault(t *testing.T) {
+func TestRunListensOn127001ByDefault(t *testing.T) {
 	url, _, stop := start(t, t.TempDir())
 	defer func() { _ = stop() }()
 	if !strings.HasPrefix(url, "http://127.0.0.1:") {
@@ -197,7 +197,7 @@ func TestT020_RunListensOn127001ByDefault(t *testing.T) {
 	}
 }
 
-func TestT020_TheTokenTravelsInTheURLFragment(t *testing.T) {
+func TestTheTokenTravelsInTheURLFragment(t *testing.T) {
 	url, out, stop := start(t, "-addr", "127.0.0.1:0", folderWithFile(t))
 	defer func() { _ = stop() }()
 
@@ -213,7 +213,7 @@ func TestT020_TheTokenTravelsInTheURLFragment(t *testing.T) {
 	}
 }
 
-func TestT020_EachRunHasItsOwnToken(t *testing.T) {
+func TestEachRunHasItsOwnToken(t *testing.T) {
 	first, _, stopFirst := start(t, "-addr", "127.0.0.1:0", t.TempDir())
 	defer func() { _ = stopFirst() }()
 	second, _, stopSecond := start(t, "-addr", "127.0.0.1:0", t.TempDir())
@@ -226,7 +226,7 @@ func TestT020_EachRunHasItsOwnToken(t *testing.T) {
 	}
 }
 
-func TestT020_ARunningServerRefusesRequestsWithoutTheToken(t *testing.T) {
+func TestARunningServerRefusesRequestsWithoutTheToken(t *testing.T) {
 	url, _, stop := start(t, "-addr", "127.0.0.1:0", folderWithFile(t))
 	defer func() { _ = stop() }()
 	base, token := split(t, url)
@@ -242,7 +242,7 @@ func TestT020_ARunningServerRefusesRequestsWithoutTheToken(t *testing.T) {
 	}
 }
 
-func TestT020_ARunningServerRefusesAForeignHostAndOrigin(t *testing.T) {
+func TestARunningServerRefusesAForeignHostAndOrigin(t *testing.T) {
 	url, _, stop := start(t, "-addr", "127.0.0.1:0", folderWithFile(t))
 	defer func() { _ = stop() }()
 	base, token := split(t, url)
@@ -268,7 +268,7 @@ func TestT020_ARunningServerRefusesAForeignHostAndOrigin(t *testing.T) {
 	}
 }
 
-func TestT020_ARunningServerSendsSecurityHeaders(t *testing.T) {
+func TestARunningServerSendsSecurityHeaders(t *testing.T) {
 	url, _, stop := start(t, "-addr", "127.0.0.1:0", folderWithFile(t))
 	defer func() { _ = stop() }()
 	base, _ := split(t, url)
@@ -282,7 +282,7 @@ func TestT020_ARunningServerSendsSecurityHeaders(t *testing.T) {
 	}
 }
 
-func TestT019_RunStopsEvenWhenAConnectionStaysOpen(t *testing.T) {
+func TestRunStopsEvenWhenAConnectionStaysOpen(t *testing.T) {
 	url, _, stop := start(t, "-addr", "127.0.0.1:0", t.TempDir())
 	base, _ := split(t, url)
 	// A client that connected and sent nothing, like a browser's spare connection.

@@ -1,5 +1,4 @@
-// Spike T-009: draw a generated file as SVG with edges and drag a selection (decision A2).
-// Throwaway measurement code; the real renderer is T-012.
+// Draws a generated file as SVG with edges and drags a selection.
 import type { DiagramDocument } from "../model/index.ts";
 import { generateDiagram } from "../testing/generate-diagram.ts";
 

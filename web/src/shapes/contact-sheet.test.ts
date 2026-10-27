@@ -43,37 +43,37 @@ const cell = (shape: string, size: string, theme: string) =>
   new RegExp(`<figure[^>]*data-shape="${shape}"[^>]*data-size="${size}"[^>]*data-theme="${theme}"[^>]*>([\\s\\S]*?)</figure>`).exec(html)?.[1] ?? "";
 
 describe("contact sheet", () => {
-  it("[T-022] shows every shape at default, wide and narrow size in light and dark", () => {
+  it("shows every shape at default, wide and narrow size in light and dark", () => {
     for (const size of ["default", "wide", "narrow"]) for (const theme of ["light", "dark"]) {
       expect(cell("core.box", size, theme), `${size} ${theme}`).toContain("<svg");
     }
   });
 
-  it("[T-022] wide is twice the default width and narrow half, stretched by the cut lines", () => {
+  it("wide is twice the default width and narrow half, stretched by the cut lines", () => {
     expect(cell("core.box", "wide", "light")).toContain('viewBox="0 0 320 80"');
     expect(cell("core.box", "narrow", "light")).toContain('viewBox="0 0 80 80"');
     expect(cell("core.box", "wide", "light")).toContain("H 312");
   });
 
-  it("[T-022] a keep-aspect shape keeps its ratio when wide or narrow", () => {
+  it("a keep-aspect shape keeps its ratio when wide or narrow", () => {
     expect(cell("core.icon", "wide", "light")).toContain('viewBox="0 0 64 64"');
     expect(cell("core.icon", "narrow", "light")).toContain('viewBox="0 0 32 32"');
   });
 
-  it("[T-022] a guides cell draws the outline, anchors and label area", () => {
+  it("a guides cell draws the outline, anchors and label area", () => {
     const guides = /<figure[^>]*data-shape="core.box"[^>]*data-size="guides"[^>]*>([\s\S]*?)<\/figure>/.exec(html)?.[1] ?? "";
     expect(guides).toContain(OUTLINE);
     expect(guides.match(/<circle/g)).toHaveLength(4);
     expect(guides).toContain('class="label-area"');
   });
 
-  it("[T-022] names are escaped and the page has no scripts", () => {
+  it("names are escaped and the page has no scripts", () => {
     expect(html).toContain("Box &lt;one&gt;");
     expect(html).not.toContain("<one>");
     expect(html).not.toMatch(/<script/i);
   });
 
-  it("[T-022] the light and dark themes colour the roles through the same classes", () => {
+  it("the light and dark themes colour the roles through the same classes", () => {
     expect(html).toMatch(/\.theme-dark/);
     expect(html).toMatch(/\[data-role="fill"\]/);
     expect(html).toMatch(/\[data-role="detail"\]/);

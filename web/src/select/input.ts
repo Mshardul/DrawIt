@@ -55,7 +55,7 @@ export function attachSelectInput(host: SelectInputHost): () => void {
     const { scale } = host.getView();
     if (!press.dragged && Math.hypot(p.x - press.start.x, p.y - press.start.y) * scale < DRAG_THRESHOLD) return;
     press.dragged = true;
-    // A press that began on an element is the start of a move (T-015), not of a drag-box.
+    // A press that began on an element is the start of a move, not of a drag-box.
     if (!press.box && hitTest(file.document, press.start) !== null) return;
     press.box = true;
     const dragBox = { x: press.start.x, y: press.start.y, w: p.x - press.start.x, h: p.y - press.start.y };

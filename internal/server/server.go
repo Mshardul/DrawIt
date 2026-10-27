@@ -1,5 +1,5 @@
 // Package server is DrawIt's local HTTP server: it serves the embedded app and the file API for
-// one opened folder (decisions A4, A7). Every file access goes through os.Root, so paths and
+// one opened folder. Every file access goes through os.Root, so paths and
 // symlinks cannot lead out of the folder. Security checks are in security.go; the bind address is the caller's.
 package server
 

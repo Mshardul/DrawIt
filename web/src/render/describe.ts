@@ -1,4 +1,4 @@
-// The renderer's output: a tree of SVG nodes describing a document (spec 6.1, decision A2). It is
+// The renderer's output: a tree of SVG nodes describing a document. It is
 // data, not DOM, so it needs no browser to test; `mount` puts it on the page. The renderer holds
 // no state: the same document always gives the same tree.
 import type { DiagramDocument, DiagramElement } from "../model/index.ts";
@@ -60,9 +60,9 @@ function body(element: DiagramElement, w: number, h: number): SvgNode[] | null {
 }
 
 /**
- * Describes the drawable elements in layout order, which is z-order (spec 4.5). Each element is
+ * Describes the drawable elements in layout order, which is z-order. Each element is
  * a `g` carrying its ID in `data-id`. Rectangles, ellipses and text boxes are drawn; edges
- * (routing is T-018), frames, images, unknown elements and elements without a layout entry are not.
+ * (routing is separate), frames, images, unknown elements and elements without a layout entry are not.
  */
 export function describeDiagram(doc: DiagramDocument, only?: ReadonlySet<string>): SvgNode[] {
   const elements = new Map(doc.elements.map((e) => [e.id, e]));

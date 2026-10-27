@@ -63,19 +63,19 @@ async function drag(page: Page, from: [number, number], to: [number, number], ke
   if (key) await page.keyboard.up(key);
 }
 
-test("[T-023] the status bar shows the zoom and has Grid, Snap and Grid size controls", async ({ page }) => {
+test("the status bar shows the zoom and has Grid, Snap and Grid size controls", async ({ page }) => {
   await expect(page.locator(".status .zoom")).toHaveText("100%");
   await expect(page.getByLabel("Grid", { exact: true })).not.toBeChecked();
   await expect(page.getByLabel("Snap", { exact: true })).not.toBeChecked();
   await expect(page.getByLabel("Grid size")).toHaveValue("8");
 });
 
-test("[T-023] the zoom readout follows the view", async ({ page }) => {
+test("the zoom readout follows the view", async ({ page }) => {
   await page.keyboard.press("ControlOrMeta+=");
   await expect(page.locator(".status .zoom")).toHaveText("125%");
 });
 
-test("[T-023] the Grid toggle draws and removes the grid, and changing the size changes the cell", async ({ page }) => {
+test("the Grid toggle draws and removes the grid, and changing the size changes the cell", async ({ page }) => {
   await expect(page.locator(".canvas pattern")).toHaveCount(0);
   await page.getByLabel("Grid", { exact: true }).check();
   await expect(page.locator(".canvas pattern")).toHaveAttribute("width", "8");
@@ -85,13 +85,13 @@ test("[T-023] the Grid toggle draws and removes the grid, and changing the size 
   await expect(page.locator(".canvas pattern")).toHaveCount(0);
 });
 
-test("[T-023] the grid coarsens when zoomed out", async ({ page }) => {
+test("the grid coarsens when zoomed out", async ({ page }) => {
   await page.getByLabel("Grid", { exact: true }).check();
   for (let i = 0; i < 4; i++) await page.keyboard.press("ControlOrMeta+-");
   await expect(page.locator(".canvas pattern")).not.toHaveAttribute("width", "8");
 });
 
-test("[T-023] G toggles the grid and Shift+G toggles snap", async ({ page }) => {
+test("G toggles the grid and Shift+G toggles snap", async ({ page }) => {
   await page.keyboard.press("g");
   await expect(page.getByLabel("Grid", { exact: true })).toBeChecked();
   await page.keyboard.press("Shift+G");
@@ -100,12 +100,12 @@ test("[T-023] G toggles the grid and Shift+G toggles snap", async ({ page }) => 
   await expect(page.getByLabel("Grid", { exact: true })).not.toBeChecked();
 });
 
-test("[T-023] with snap off a drag is exact", async ({ page }) => {
+test("with snap off a drag is exact", async ({ page }) => {
   await drag(page, [90, 65], [103, 78]);
   expect(await layout(page, "a")).toMatchObject({ x: 53, y: 53 });
 });
 
-test("[T-023] with snap on a drag lands the top-left corner on the grid, in one undo step", async ({ page }) => {
+test("with snap on a drag lands the top-left corner on the grid, in one undo step", async ({ page }) => {
   await page.getByLabel("Snap", { exact: true }).check();
   await drag(page, [90, 65], [103, 78]);
   expect(await layout(page, "a")).toEqual({ id: "a", x: 56, y: 56, w: 100, h: 50 });
@@ -113,26 +113,26 @@ test("[T-023] with snap on a drag lands the top-left corner on the grid, in one 
   expect(await layout(page, "a")).toMatchObject({ x: 40, y: 40 });
 });
 
-test("[T-023] the snap follows the grid size", async ({ page }) => {
+test("the snap follows the grid size", async ({ page }) => {
   await page.getByLabel("Snap", { exact: true }).check();
   await page.getByLabel("Grid size").selectOption("16");
   await drag(page, [90, 65], [103, 78]);
   expect(await layout(page, "a")).toMatchObject({ x: 48, y: 48 });
 });
 
-test("[T-023] holding Alt while dragging bypasses snap", async ({ page }) => {
+test("holding Alt while dragging bypasses snap", async ({ page }) => {
   await page.getByLabel("Snap", { exact: true }).check();
   await drag(page, [90, 65], [103, 78], "Alt");
   expect(await layout(page, "a")).toMatchObject({ x: 53, y: 53 });
 });
 
-test("[T-023] with snap on a resize puts the dragged edges on the grid", async ({ page }) => {
+test("with snap on a resize puts the dragged edges on the grid", async ({ page }) => {
   await page.getByLabel("Snap", { exact: true }).check();
   await drag(page, [140, 90], [153, 103]);
   expect(await layout(page, "a")).toEqual({ id: "a", x: 40, y: 40, w: 112, h: 64 });
 });
 
-test("[T-023] arrow-key nudge ignores snap", async ({ page }) => {
+test("arrow-key nudge ignores snap", async ({ page }) => {
   await page.getByLabel("Snap", { exact: true }).check();
   await page.keyboard.press("ArrowRight");
   expect(await layout(page, "a")).toMatchObject({ x: 41, y: 40 });

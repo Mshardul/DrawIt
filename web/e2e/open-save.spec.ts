@@ -44,7 +44,7 @@ async function boot(page: import("@playwright/test").Page, files: Files): Promis
   }, files);
 }
 
-test("[T-016] opens the first diagram of the folder and draws it", async ({ page }) => {
+test("opens the first diagram of the folder and draws it", async ({ page }) => {
   await boot(page, { "a.drawit.kdl": good, "notes.txt": "x" });
   await expect(page.getByLabel("File").locator("option")).toHaveText(["a.drawit.kdl"]);
   await expect(page.locator('g[data-id="a"] text')).toHaveText("Alpha");
@@ -52,7 +52,7 @@ test("[T-016] opens the first diagram of the folder and draws it", async ({ page
   await expect(page.getByText("Unsaved changes")).toBeHidden();
 });
 
-test("[T-016] shows the unsaved indicator after an edit and Cmd/Ctrl+S saves and clears it", async ({ page }) => {
+test("shows the unsaved indicator after an edit and Cmd/Ctrl+S saves and clears it", async ({ page }) => {
   await boot(page, { "a.drawit.kdl": good });
   await page.evaluate(() => { (window as unknown as { hooks: Hooks }).hooks.edit(); });
   await expect(page.getByText("Unsaved changes")).toBeVisible();
@@ -63,13 +63,13 @@ test("[T-016] shows the unsaved indicator after an edit and Cmd/Ctrl+S saves and
   expect(saved).toBe(good.replace("a x=10", "a x=40"));
 });
 
-test("[T-016] opens another file from the list", async ({ page }) => {
+test("opens another file from the list", async ({ page }) => {
   await boot(page, { "a.drawit.kdl": good, "b.drawit.kdl": good.replace("Alpha", "Other") });
   await page.getByLabel("File").selectOption("b.drawit.kdl");
   await expect(page.locator('g[data-id="a"] text')).toHaveText("Other");
 });
 
-test("[T-016] refuses a file that is not valid KDL with its line and column, and never overwrites it", async ({ page }) => {
+test("refuses a file that is not valid KDL with its line and column, and never overwrites it", async ({ page }) => {
   await boot(page, { "a.drawit.kdl": good, "bad.drawit.kdl": bad });
   await page.getByLabel("File").selectOption("bad.drawit.kdl");
   await expect(page.getByRole("alert")).toContainText(/line \d+, column \d+/);
@@ -80,12 +80,12 @@ test("[T-016] refuses a file that is not valid KDL with its line and column, and
   await expect(page.locator('g[data-id="a"] text')).toHaveText("Alpha");
 });
 
-test("[T-016] a folder with no diagram files says so", async ({ page }) => {
+test("a folder with no diagram files says so", async ({ page }) => {
   await boot(page, { "notes.txt": "x" });
   await expect(page.getByRole("alert")).toContainText("No .drawit.kdl files");
 });
 
-test("[T-016] the app reads the session token from the URL fragment and talks to the server with it", async ({ page }) => {
+test("the app reads the session token from the URL fragment and talks to the server with it", async ({ page }) => {
   const seen: (string | undefined)[] = [];
   await page.route("**/api/files", async (route) => {
     seen.push(route.request().headers()["authorization"]);

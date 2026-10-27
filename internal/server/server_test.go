@@ -74,7 +74,7 @@ type listing struct {
 	} `json:"files"`
 }
 
-func TestT019_ListReturnsFilesRecursivelyInOrder(t *testing.T) {
+func TestListReturnsFilesRecursivelyInOrder(t *testing.T) {
 	h, dir := newServer(t)
 	writeFile(t, filepath.Join(dir, "b.drawit.kdl"), "bb")
 	writeFile(t, filepath.Join(dir, "a.drawit.kdl"), "a")
@@ -110,7 +110,7 @@ func TestT019_ListReturnsFilesRecursivelyInOrder(t *testing.T) {
 	}
 }
 
-func TestT019_ListOfEmptyFolderIsAnEmptyArray(t *testing.T) {
+func TestListOfEmptyFolderIsAnEmptyArray(t *testing.T) {
 	h, _ := newServer(t)
 	rec := do(h, http.MethodGet, "/api/files", nil)
 	if body := strings.TrimSpace(rec.Body.String()); body != `{"files":[]}` {
@@ -118,7 +118,7 @@ func TestT019_ListOfEmptyFolderIsAnEmptyArray(t *testing.T) {
 	}
 }
 
-func TestT019_ReadReturnsFileBytes(t *testing.T) {
+func TestReadReturnsFileBytes(t *testing.T) {
 	h, dir := newServer(t)
 	writeFile(t, filepath.Join(dir, "sub", "a.drawit.kdl"), "diagram version=1\n")
 
@@ -131,14 +131,14 @@ func TestT019_ReadReturnsFileBytes(t *testing.T) {
 	}
 }
 
-func TestT019_ReadOfMissingFileIs404(t *testing.T) {
+func TestReadOfMissingFileIs404(t *testing.T) {
 	h, _ := newServer(t)
 	if rec := do(h, http.MethodGet, "/api/file?path=nope.drawit.kdl", nil); rec.Code != http.StatusNotFound {
 		t.Fatalf("status = %d, want 404", rec.Code)
 	}
 }
 
-func TestT019_ReadOfDirectoryIsRefused(t *testing.T) {
+func TestReadOfDirectoryIsRefused(t *testing.T) {
 	h, dir := newServer(t)
 	if err := os.Mkdir(filepath.Join(dir, "sub"), 0o755); err != nil {
 		t.Fatal(err)
@@ -148,7 +148,7 @@ func TestT019_ReadOfDirectoryIsRefused(t *testing.T) {
 	}
 }
 
-func TestT019_WriteCreatesAndReplacesAFile(t *testing.T) {
+func TestWriteCreatesAndReplacesAFile(t *testing.T) {
 	h, dir := newServer(t)
 
 	if rec := do(h, http.MethodPut, "/api/file?path=a.drawit.kdl", strings.NewReader("one")); rec.Code != http.StatusNoContent {
@@ -165,7 +165,7 @@ func TestT019_WriteCreatesAndReplacesAFile(t *testing.T) {
 	}
 }
 
-func TestT019_WriteCreatesMissingFolders(t *testing.T) {
+func TestWriteCreatesMissingFolders(t *testing.T) {
 	h, dir := newServer(t)
 	if rec := do(h, http.MethodPut, "/api/file?path=assets/img/a.svg", strings.NewReader("<svg/>")); rec.Code != http.StatusNoContent {
 		t.Fatalf("status = %d, want 204", rec.Code)
@@ -175,7 +175,7 @@ func TestT019_WriteCreatesMissingFolders(t *testing.T) {
 	}
 }
 
-func TestT019_WriteLeavesNoTemporaryFiles(t *testing.T) {
+func TestWriteLeavesNoTemporaryFiles(t *testing.T) {
 	h, dir := newServer(t)
 	do(h, http.MethodPut, "/api/file?path=a.drawit.kdl", strings.NewReader("one"))
 	do(h, http.MethodPut, "/api/file?path=a.drawit.kdl", strings.NewReader("two"))
@@ -200,7 +200,7 @@ func (b *failingBody) Read(p []byte) (int, error) {
 	return 0, errors.New("connection reset")
 }
 
-func TestT019_FailedWriteKeepsTheOldFileAndLeavesNoTemporaryFiles(t *testing.T) {
+func TestFailedWriteKeepsTheOldFileAndLeavesNoTemporaryFiles(t *testing.T) {
 	h, dir := newServer(t)
 	writeFile(t, filepath.Join(dir, "a.drawit.kdl"), "original")
 
@@ -220,7 +220,7 @@ func TestT019_FailedWriteKeepsTheOldFileAndLeavesNoTemporaryFiles(t *testing.T) 
 	}
 }
 
-func TestT019_WriteOverADirectoryIsRefused(t *testing.T) {
+func TestWriteOverADirectoryIsRefused(t *testing.T) {
 	h, dir := newServer(t)
 	if err := os.Mkdir(filepath.Join(dir, "sub"), 0o755); err != nil {
 		t.Fatal(err)
@@ -231,7 +231,7 @@ func TestT019_WriteOverADirectoryIsRefused(t *testing.T) {
 	}
 }
 
-func TestT019_PathsOutsideTheFolderAreRefused(t *testing.T) {
+func TestPathsOutsideTheFolderAreRefused(t *testing.T) {
 	h, dir := newServer(t)
 	outside := filepath.Join(filepath.Dir(dir), "secret.txt")
 	writeFile(t, outside, "secret")
@@ -250,7 +250,7 @@ func TestT019_PathsOutsideTheFolderAreRefused(t *testing.T) {
 	}
 }
 
-func TestT019_MissingPathParameterIsRefused(t *testing.T) {
+func TestMissingPathParameterIsRefused(t *testing.T) {
 	h, _ := newServer(t)
 	if rec := do(h, http.MethodGet, "/api/file", nil); rec.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want 400", rec.Code)
@@ -264,7 +264,7 @@ func symlink(t *testing.T, target, link string) {
 	}
 }
 
-func TestT019_SymlinkLeadingOutsideCannotBeRead(t *testing.T) {
+func TestSymlinkLeadingOutsideCannotBeRead(t *testing.T) {
 	h, dir := newServer(t)
 	outside := filepath.Join(filepath.Dir(dir), "secret.txt")
 	writeFile(t, outside, "secret")
@@ -279,7 +279,7 @@ func TestT019_SymlinkLeadingOutsideCannotBeRead(t *testing.T) {
 	}
 }
 
-func TestT019_WriteThroughSymlinkNeverTouchesTheTarget(t *testing.T) {
+func TestWriteThroughSymlinkNeverTouchesTheTarget(t *testing.T) {
 	h, dir := newServer(t)
 	outside := filepath.Join(filepath.Dir(dir), "secret.txt")
 	writeFile(t, outside, "secret")
@@ -298,7 +298,7 @@ func TestT019_WriteThroughSymlinkNeverTouchesTheTarget(t *testing.T) {
 	}
 }
 
-func TestT019_ListSkipsSymlinks(t *testing.T) {
+func TestListSkipsSymlinks(t *testing.T) {
 	h, dir := newServer(t)
 	outside := filepath.Join(filepath.Dir(dir), "secret.txt")
 	writeFile(t, outside, "secret")
@@ -315,7 +315,7 @@ func TestT019_ListSkipsSymlinks(t *testing.T) {
 	}
 }
 
-func TestT019_UnsupportedMethodsAreRefused(t *testing.T) {
+func TestUnsupportedMethodsAreRefused(t *testing.T) {
 	h, _ := newServer(t)
 	for _, c := range []struct{ method, target string }{
 		{http.MethodPost, "/api/files"},
@@ -328,7 +328,7 @@ func TestT019_UnsupportedMethodsAreRefused(t *testing.T) {
 	}
 }
 
-func TestT019_ServesTheEmbeddedApp(t *testing.T) {
+func TestServesTheEmbeddedApp(t *testing.T) {
 	h, _ := newServer(t)
 	rec := do(h, http.MethodGet, "/", nil)
 	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "<title>DrawIt</title>") {
@@ -336,14 +336,14 @@ func TestT019_ServesTheEmbeddedApp(t *testing.T) {
 	}
 }
 
-func TestT019_UnknownAPIPathIs404NotTheApp(t *testing.T) {
+func TestUnknownAPIPathIs404NotTheApp(t *testing.T) {
 	h, _ := newServer(t)
 	if rec := do(h, http.MethodGet, "/api/nothing", nil); rec.Code != http.StatusNotFound {
 		t.Fatalf("status = %d, want 404", rec.Code)
 	}
 }
 
-func TestT019_AppAssetsAreNotReadableAsWorkspaceFiles(t *testing.T) {
+func TestAppAssetsAreNotReadableAsWorkspaceFiles(t *testing.T) {
 	h, dir := newServer(t)
 	writeFile(t, filepath.Join(dir, "private.drawit.kdl"), "mine")
 	if rec := do(h, http.MethodGet, "/private.drawit.kdl", nil); rec.Code != http.StatusNotFound {

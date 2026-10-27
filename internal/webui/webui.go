@@ -1,4 +1,4 @@
-// Package webui holds the built web app, embedded into the binary (decision A4).
+// Package webui holds the built web app, embedded into the binary.
 //
 // `pnpm build` in web/ writes the app to dist/app. Without a build the app folder is empty and
 // the server answers 404 for it.

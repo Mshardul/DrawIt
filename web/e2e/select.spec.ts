@@ -60,7 +60,7 @@ async function at(page: Page, x: number, y: number): Promise<{ x: number; y: num
   return { x: (r?.x ?? 0) + x, y: (r?.y ?? 0) + y };
 }
 
-test("[T-014] clicking an element selects it and draws its outline; clicking empty canvas clears", async ({ page }) => {
+test("clicking an element selects it and draws its outline; clicking empty canvas clears", async ({ page }) => {
   const a = await centre(page, "a");
   await page.mouse.click(a.x, a.y);
   expect(await selection(page)).toEqual(["a"]);
@@ -71,7 +71,7 @@ test("[T-014] clicking an element selects it and draws its outline; clicking emp
   await expect(page.locator(".selection")).toHaveCount(0);
 });
 
-test("[T-014] shift-click adds to the selection and shift-clicking again removes", async ({ page }) => {
+test("shift-click adds to the selection and shift-clicking again removes", async ({ page }) => {
   const a = await centre(page, "a");
   const b = await centre(page, "b");
   await page.mouse.click(a.x, a.y);
@@ -83,19 +83,19 @@ test("[T-014] shift-click adds to the selection and shift-clicking again removes
   expect(await selection(page)).toEqual(["b"]);
 });
 
-test("[T-014] a click on the corner of an ellipse's box misses it", async ({ page }) => {
+test("a click on the corner of an ellipse's box misses it", async ({ page }) => {
   const corner = await at(page, 242, 42);
   await page.mouse.click(corner.x, corner.y);
   expect(await selection(page)).toEqual([]);
 });
 
-test("[T-014] the frame and the edge are not selectable", async ({ page }) => {
+test("the frame and the edge are not selectable", async ({ page }) => {
   const inFrame = await at(page, 600, 400);
   await page.mouse.click(inFrame.x, inFrame.y);
   expect(await selection(page)).toEqual([]);
 });
 
-test("[T-014] drag-box selects what it overlaps, shows the box while dragging and skips locked elements", async ({ page }) => {
+test("drag-box selects what it overlaps, shows the box while dragging and skips locked elements", async ({ page }) => {
   const from = await at(page, 100, 20);
   const to = await at(page, 560, 70);
   await page.mouse.move(from.x, from.y);
@@ -108,7 +108,7 @@ test("[T-014] drag-box selects what it overlaps, shows the box while dragging an
   expect(await selection(page)).toEqual(["a", "b"]);
 });
 
-test("[T-014] a shift drag-box adds to the selection", async ({ page }) => {
+test("a shift drag-box adds to the selection", async ({ page }) => {
   const c = await centre(page, "a");
   await page.mouse.click(c.x, c.y);
   const from = await at(page, 200, 20);
@@ -122,14 +122,14 @@ test("[T-014] a shift drag-box adds to the selection", async ({ page }) => {
   expect(await selection(page)).toEqual(["a", "b"]);
 });
 
-test("[T-014] Cmd/Ctrl+A selects every unlocked drawn element and Escape clears", async ({ page }) => {
+test("Cmd/Ctrl+A selects every unlocked drawn element and Escape clears", async ({ page }) => {
   await page.keyboard.press("ControlOrMeta+a");
   expect(await selection(page)).toEqual(["a", "b"]);
   await page.keyboard.press("Escape");
   expect(await selection(page)).toEqual([]);
 });
 
-test("[T-014] undo restores the selection from before the command, and redo the one after", async ({ page }) => {
+test("undo restores the selection from before the command, and redo the one after", async ({ page }) => {
   const a = await centre(page, "a");
   await page.mouse.click(a.x, a.y);
   await page.evaluate(() => { (window as unknown as { hooks: Hooks }).hooks.moveAndSelect("b", 300, ["b"]); });
@@ -141,7 +141,7 @@ test("[T-014] undo restores the selection from before the command, and redo the 
   expect(await selection(page)).toEqual(["b"]);
 });
 
-test("[T-014] selecting does not make the file unsaved", async ({ page }) => {
+test("selecting does not make the file unsaved", async ({ page }) => {
   const a = await centre(page, "a");
   await page.mouse.click(a.x, a.y);
   await expect(page.getByText("Unsaved changes")).toBeHidden();

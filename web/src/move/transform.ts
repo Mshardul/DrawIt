@@ -1,4 +1,4 @@
-// Move and resize as pure functions from a document and a pointer delta to one command (spec 5.2).
+// Move and resize as pure functions from a document and a pointer delta to one command.
 // A drag previews by applying the command to a copy; release commits it, so one drag is one
 // undo step. Only drawn, unlocked elements transform; edges, frames, images and unknown elements
 // are not drawn and so never move.

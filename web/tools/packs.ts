@@ -1,4 +1,4 @@
-// Shape pack tools (spec 3, ticket T-022).
+// Shape pack tools.
 //
 //   node tools/packs.ts validate [packs-dir]              check every pack; exit 1 on any problem
 //   node tools/packs.ts contact-sheet [out] [packs-dir]   write the contact sheet page; refuses invalid packs

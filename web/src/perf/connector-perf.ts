@@ -1,11 +1,10 @@
-// Spike T-018: connectors on a generated 500-element file (decision A16). Edges are routed with
+// Connectors on a generated 500-element file. Edges are routed with
 // `routing.ts`; dragging a shape re-routes only the edges attached to it. Also hosts the
 // re-attach gesture: drag an edge's end handle onto a shape or onto empty canvas.
-// Throwaway measurement code; the real connectors belong to Phase 2.
 import type { Anchor, Point } from "../model/layout.ts";
 import type { Box } from "../render/boxes.ts";
 import { generateDiagram } from "../testing/generate-diagram.ts";
-import { attachTarget, type End, route, type ShapeKind, type Target } from "./routing.ts";
+import { attachTarget, type End, route, type ShapeKind, type Target } from "../connectors/routing.ts";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 const DEFAULT_W = 160;
@@ -18,7 +17,7 @@ interface Node {
   box: Box;
   shape: ShapeKind;
   group: SVGGElement;
-  /** Frames are regions for export, not things an edge attaches to (spec 5.3). */
+  /** Frames are regions for export, not things an edge attaches to. */
   frame: boolean;
 }
 
@@ -303,7 +302,7 @@ function runDrag(frames: number): Promise<DragRun> {
   });
 }
 
-const spike = {
+const connectorPerf = {
   runDrag,
   /** Elbow edges with a diagonal segment. */
   badElbows: (): number =>
@@ -331,4 +330,4 @@ const spike = {
     return { from: e.from, to: e.to, fromAnchor: e.fromAnchor, toAnchor: e.toAnchor, toPoint: e.toPoint };
   },
 };
-(window as unknown as { spike: typeof spike }).spike = spike;
+(window as unknown as { connectorPerf: typeof connectorPerf }).connectorPerf = connectorPerf;

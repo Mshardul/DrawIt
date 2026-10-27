@@ -1,5 +1,5 @@
-// Default sizes (spec 4.5: `w` and `h` fall back to the shape default). Shape packs (T-022) will
-// supply manifest sizes; until then these constants stand in, all multiples of 8.
+// Default sizes: `w` and `h` fall back to the shape default. These constants stand in for the
+// sizes in shape pack manifests, all multiples of 8.
 import type { DiagramElement, LayoutEntry } from "../model/index.ts";
 
 export const SHAPE_W = 160;

@@ -1,6 +1,6 @@
 // Pointer and key input for move and resize: drag a selected element or a handle, arrow-key nudge.
 // A drag previews on a copy of the document (the fast path: only transforms and sizes change on
-// screen) and commits one command on release, so it is one undo step (spec 5.2, decision A3).
+// screen) and commits one command on release, so it is one undo step.
 import { applyCommand, type Command } from "../commands/command.ts";
 import type { OpenFile } from "../app/workspace.ts";
 import type { DiagramDocument } from "../model/index.ts";

@@ -1,4 +1,4 @@
-// Elements without a layout line are placed in a grid on open (spec 4.5, decision F18); their
+// Elements without a layout line are placed in a grid on open; their
 // positions are written on save.
 import type { DiagramDocument } from "../model/index.ts";
 import { defaultSize } from "./size.ts";

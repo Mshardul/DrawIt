@@ -1,4 +1,4 @@
-// The shape pack validator (spec 3): schema, allowed SVG elements and attributes, no literal
+// The shape pack validator: schema, allowed SVG elements and attributes, no literal
 // colours, a closed outline, anchors and label inside the shape's bounds, valid cut lines. It
 // reports every problem it finds so an author fixes a pack in one pass.
 import { flatten, parsePath, pointOnOutline, type Polyline } from "./path.ts";

@@ -31,17 +31,17 @@ const sample = doc(
 );
 
 describe("selection", () => {
-  it("[T-014] a click hits the rectangle under the point", () => {
+  it("a click hits the rectangle under the point", () => {
     expect(hitTest(sample, { x: 50, y: 25 })).toBe("box");
     expect(hitTest(sample, { x: 150, y: 25 })).toBeNull();
   });
 
-  it("[T-014] a click on an ellipse corner misses, and on its body hits", () => {
+  it("a click on an ellipse corner misses, and on its body hits", () => {
     expect(hitTest(sample, { x: 202, y: 2 })).toBeNull();
     expect(hitTest(sample, { x: 250, y: 50 })).toBe("oval");
   });
 
-  it("[T-014] the topmost overlapping element wins", () => {
+  it("the topmost overlapping element wins", () => {
     const overlapping = doc(
       [
         { kind: "node", id: "under", shape: "rect" },
@@ -56,44 +56,44 @@ describe("selection", () => {
     expect(hitTest(overlapping, { x: 25, y: 25 })).toBe("under");
   });
 
-  it("[T-014] edges, frames, images and unknown elements are not hit", () => {
+  it("edges, frames, images and unknown elements are not hit", () => {
     expect(hitTest(sample, { x: 800, y: 800 })).toBeNull();
   });
 
-  it("[T-014] a text box is hit by its box, and a locked element can still be clicked", () => {
+  it("a text box is hit by its box, and a locked element can still be clicked", () => {
     expect(hitTest(sample, { x: 10, y: 210 })).toBe("note");
     expect(hitTest(sample, { x: 450, y: 25 })).toBe("lock");
   });
 
-  it("[T-014] a plain click selects one element, and an empty click clears", () => {
+  it("a plain click selects one element, and an empty click clears", () => {
     expect(clickSelection(["a"], "b", false)).toEqual(["b"]);
     expect(clickSelection(["a"], null, false)).toEqual([]);
   });
 
-  it("[T-014] a click on an already selected element keeps the selection for a drag", () => {
+  it("a click on an already selected element keeps the selection for a drag", () => {
     expect(clickSelection(["a", "b"], "b", false)).toEqual(["a", "b"]);
   });
 
-  it("[T-014] shift or Cmd/Ctrl click toggles an element and an empty additive click keeps the selection", () => {
+  it("shift or Cmd/Ctrl click toggles an element and an empty additive click keeps the selection", () => {
     expect(clickSelection(["a"], "b", true)).toEqual(["a", "b"]);
     expect(clickSelection(["a", "b"], "a", true)).toEqual(["b"]);
     expect(clickSelection(["a"], null, true)).toEqual(["a"]);
   });
 
-  it("[T-014] drag-box selects every drawn element it overlaps, in z-order, skipping locked ones", () => {
+  it("drag-box selects every drawn element it overlaps, in z-order, skipping locked ones", () => {
     expect(idsInRect(sample, { x: 90, y: 40, w: 130, h: 20 })).toEqual(["box", "oval"]);
     expect(idsInRect(sample, { x: 390, y: 0, w: 200, h: 100 })).toEqual([]);
   });
 
-  it("[T-014] drag-box accepts a rectangle dragged up and to the left", () => {
+  it("drag-box accepts a rectangle dragged up and to the left", () => {
     expect(idsInRect(sample, { x: 220, y: 60, w: -130, h: -20 })).toEqual(["box", "oval"]);
   });
 
-  it("[T-014] select all selects the drawn, unlocked elements", () => {
+  it("select all selects the drawn, unlocked elements", () => {
     expect(selectAll(sample)).toEqual(["box", "oval", "note"]);
   });
 
-  it("[T-014] undo and redo restore the selection", () => {
+  it("undo and redo restore the selection", () => {
     const history = new History(sample);
     history.selection = ["box"];
     history.execute({ type: "setLayout", changes: [{ id: "oval", set: { x: 300 } }] }, { selection: ["oval", "note"] });

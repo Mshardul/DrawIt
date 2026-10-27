@@ -1,5 +1,5 @@
-// Storage adapter (spec 6.1, decision A1): the one interface the app uses to reach files in the
-// opened workspace folder. Shaped after the local server's API, which T-021 implements over HTTP:
+// Storage adapter: the one interface the app uses to reach files in the
+// opened workspace folder. Shaped after the local server's API, which the HTTP adapter implements:
 //
 //   list   GET /api/files       { files: [{ path, size, modified }] }
 //   read   GET /api/file?path=  the file's bytes
@@ -51,7 +51,7 @@ export interface StorageAdapter {
   write(path: string, data: Uint8Array): Promise<void>;
   /**
    * Calls `listener` when a file changes in the workspace, including changes this adapter's
-   * own `write` makes: the app tells its own saves apart by content hash (decision E3).
+   * own `write` makes: the app tells its own saves apart by content hash.
    * Returns the function that stops listening.
    */
   watch(listener: (event: WatchEvent) => void): Unsubscribe;

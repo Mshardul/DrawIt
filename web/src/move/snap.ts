@@ -1,4 +1,4 @@
-// Grid snapping helpers (spec 5.2). The grid is a view setting, not document state; a grid size
+// Grid snapping helpers. The grid is a view setting, not document state; a grid size
 // of 0 means snapping is off.
 
 /** Smallest on-screen gap (px) between drawn grid lines. */

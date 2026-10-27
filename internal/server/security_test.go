@@ -23,7 +23,7 @@ func bearer(token string) map[string]string {
 	return map[string]string{"Authorization": "Bearer " + token}
 }
 
-func TestT020_UnexpectedHostIsRefused(t *testing.T) {
+func TestUnexpectedHostIsRefused(t *testing.T) {
 	h, _ := newServer(t)
 	for _, host := range []string{"evil.example:8080", "evil.example", "127.0.0.1", "127.0.0.1:9999", "localhost.evil.example:8080", ""} {
 		for _, target := range []string{"/", "/api/files"} {
@@ -34,7 +34,7 @@ func TestT020_UnexpectedHostIsRefused(t *testing.T) {
 	}
 }
 
-func TestT020_ListenerHostsAreAccepted(t *testing.T) {
+func TestListenerHostsAreAccepted(t *testing.T) {
 	h, _ := newServer(t)
 	for _, host := range []string{"127.0.0.1:8080", "localhost:8080", "LOCALHOST:8080"} {
 		if rec := send(h, http.MethodGet, "/api/files", host, bearer(testToken)); rec.Code != http.StatusOK {
@@ -43,7 +43,7 @@ func TestT020_ListenerHostsAreAccepted(t *testing.T) {
 	}
 }
 
-func TestT020_ForeignOriginIsRefused(t *testing.T) {
+func TestForeignOriginIsRefused(t *testing.T) {
 	h, _ := newServer(t)
 	for _, origin := range []string{"https://evil.example", "http://evil.example:8080", "null", "http://127.0.0.1:9999", "https://127.0.0.1:8080", "http://127.0.0.1:8080.evil.example"} {
 		h1 := bearer(testToken)
@@ -60,7 +60,7 @@ func TestT020_ForeignOriginIsRefused(t *testing.T) {
 	}
 }
 
-func TestT020_OwnOriginIsAccepted(t *testing.T) {
+func TestOwnOriginIsAccepted(t *testing.T) {
 	h, _ := newServer(t)
 	for _, origin := range []string{"http://127.0.0.1:8080", "http://localhost:8080"} {
 		header := bearer(testToken)
@@ -71,7 +71,7 @@ func TestT020_OwnOriginIsAccepted(t *testing.T) {
 	}
 }
 
-func TestT020_APIRequiresTheTokenHeader(t *testing.T) {
+func TestAPIRequiresTheTokenHeader(t *testing.T) {
 	h, _ := newServer(t)
 	for name, header := range map[string]map[string]string{
 		"no header":     nil,
@@ -96,14 +96,14 @@ func TestT020_APIRequiresTheTokenHeader(t *testing.T) {
 	}
 }
 
-func TestT020_TokenInTheQueryStringIsNotAccepted(t *testing.T) {
+func TestTokenInTheQueryStringIsNotAccepted(t *testing.T) {
 	h, _ := newServer(t)
 	if rec := send(h, http.MethodGet, "/api/files?token="+testToken, testHost, nil); rec.Code != http.StatusForbidden {
 		t.Fatalf("status = %d, want 403", rec.Code)
 	}
 }
 
-func TestT020_RefusedWriteChangesNothing(t *testing.T) {
+func TestRefusedWriteChangesNothing(t *testing.T) {
 	h, dir := newServer(t)
 	send(h, http.MethodPut, "/api/file?path=a.drawit.kdl", testHost, nil)
 	send(h, http.MethodPut, "/api/file?path=a.drawit.kdl", testHost, bearer("wrong"))
@@ -115,7 +115,7 @@ func TestT020_RefusedWriteChangesNothing(t *testing.T) {
 	}
 }
 
-func TestT020_AServerWithoutATokenRefusesTheAPI(t *testing.T) {
+func TestAServerWithoutATokenRefusesTheAPI(t *testing.T) {
 	_, dir := newServer(t)
 	root := openRoot(t, dir)
 	h := New(root, nil, Config{Hosts: []string{testHost}})
@@ -126,14 +126,14 @@ func TestT020_AServerWithoutATokenRefusesTheAPI(t *testing.T) {
 	}
 }
 
-func TestT020_TheAppLoadsWithoutAToken(t *testing.T) {
+func TestTheAppLoadsWithoutAToken(t *testing.T) {
 	h, _ := newServer(t)
 	if rec := send(h, http.MethodGet, "/", testHost, nil); rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200", rec.Code)
 	}
 }
 
-func TestT020_EveryResponseCarriesSecurityHeaders(t *testing.T) {
+func TestEveryResponseCarriesSecurityHeaders(t *testing.T) {
 	h, _ := newServer(t)
 	for name, rec := range map[string]*httptest.ResponseRecorder{
 		"app":          send(h, http.MethodGet, "/", testHost, nil),

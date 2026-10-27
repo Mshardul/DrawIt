@@ -13,7 +13,7 @@ const errorCodes: Record<number, StorageErrorCode> = {
   403: "refused",
 };
 
-/** The storage adapter over the local server's API (spec 6.1, decision A1). */
+/** The storage adapter over the local server's API. */
 export class HttpStorage implements StorageAdapter {
   readonly #token: string;
   readonly #fetch: typeof fetch;

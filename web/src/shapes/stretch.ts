@@ -1,4 +1,4 @@
-// Shape stretch (decision A15): the cut lines of a manifest map design coordinates to coordinates
+// Shape stretch: the cut lines of a manifest map design coordinates to coordinates
 // at the shape's size on the canvas. Parts outside the cut lines keep their size and move; parts
 // between scale. The mapping is applied to the numbers of the SVG, so no shape needs its own code.
 import { formatPath, type PathSegment, parsePath } from "./path.ts";
