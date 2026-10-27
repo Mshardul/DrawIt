@@ -34,7 +34,7 @@ Why DrawIt works the way it does. The spec states what DrawIt does; this file re
 | F9 | Styling | Theme tokens, classes, per-element overrides | One theme switch restyles a file; text styling stays on-theme | Raw values everywhere |
 | F10 | Assets | `assets/` folder, relative paths | Base64 embedding wrecks diffs | Embedding images in the file |
 | F11 | Comments | Whole-line comments kept; others dropped with a warning | Covers the common case at small cost | Full comment preservation; no comments |
-| F12 | Fonts | Three bundled OFL font families in v1 | Files and bundles render identically on every machine; weight and italic give emphasis without more families | System fonts, font CDNs |
+| F12 | Fonts | Three bundled OFL font families in v1: Inter (sans, diagram and UI text), Source Serif 4 (serif, infographic headings and prose), JetBrains Mono (monospace, technical labels) | Files and bundles render identically on every machine; weight and italic give emphasis without more families. Each family has regular, bold and italic and covers Latin, Greek and Cyrillic. Noto Sans is the likely addition when non-English text arrives; a handwritten family waits for demand | System fonts, font CDNs, IBM Plex Sans (overlaps Inter), Noto Sans in v1 (English only) |
 | F13 | Themes | One default theme in v1 | Token system in the format means more themes need no format change | Multiple themes in v1 |
 | F14 | Extension | `.drawit.kdl`, defined as one constant | Editors highlight KDL; DrawIt recognises its own files; the final name changes one constant | `.kdl`, custom extension |
 | F15 | Text model | Shape and edge labels are plain text in one style; styled text lives in separate text boxes; class and ERD shapes have no compartments | Text boxes need the wrapping engine anyway, so dropping labels would save little. Labels keep `node api "API Gateway"` as one readable line and one element per box | Text only in separate boxes (two elements per shape, text does not follow its shape), rich-text labels, structured compartments |
@@ -44,6 +44,7 @@ Why DrawIt works the way it does. The spec states what DrawIt does; this file re
 | F19 | Unknown content | Kept losslessly in content, re-emitted in canonical KDL | The formatter rewrites the file, so byte-for-byte cannot be promised | Byte-for-byte preservation |
 | F20 | Free edge ends | `-` in structure, the point in layout | An unattached end is a position, and positions live in layout, so dragging it edits one layout line. Deleting a shape frees its edge ends where they were; pasting an edge with one end copied does the same | Coordinates in structure, deleting edges with their shape |
 | F21 | Hand edits | Only KDL syntax is checked on open | The app guarantees what it writes is valid; authors own the validity of hand edits. Diagnostics are a v2 candidate | Validating references and versions on open |
+| F22 | Edge defaults | `route` straight, `head-start` none, `head-end` arrow | An edge reads as pointing from source to target without any styling, which is what most diagrams need | No heads by default; elbow by default |
 
 ## Architecture
 

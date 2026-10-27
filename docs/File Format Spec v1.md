@@ -200,7 +200,8 @@ Style holds all appearance.
 | Text | `font`, `size`, `weight`, `italic`, `underline`, `color`, `align`, `line-height` |
 | Edge | `route` (`straight`, `elbow`), `head-start`, `head-end` (`arrow`, `dot`, `none`) |
 
-- **Fonts:** three font families bundled with DrawIt (Open Font License), each with regular, bold and italic; no other fonts. Exports embed the fonts they use. No font CDN.
+- **Edge defaults:** `route` is `straight`, `head-start` is `none` and `head-end` is `arrow`.
+- **Fonts:** three font families bundled with DrawIt (Open Font License): Inter, Source Serif 4 and JetBrains Mono, each with regular, bold and italic; no other fonts. Exports embed the fonts they use. No font CDN.
 - **Plugin properties:** packs and plugins register additional typed properties; the validator knows every property.
 
 ### 4.5 Layout section
