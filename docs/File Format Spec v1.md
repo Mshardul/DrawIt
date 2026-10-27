@@ -277,7 +277,7 @@ A minimal canvas with floating toolbars.
 - Double-click a shape or edge to edit its label in place. Double-click empty canvas to create a text box right there; double-click a text box to edit it.
 - Formatting applies to the whole element and is stored in the style section.
 - Text boxes auto-size to content or have a fixed width and wrap.
-- Text renders as SVG with DrawIt's own line-breaking, measured with the canvas text API and segmented with `Intl.Segmenter`. Editing uses an overlay that measures text identically. `foreignObject` is not used.
+- Text renders as SVG with DrawIt's own line-breaking, measured with the canvas text API. Lines break only at spaces; a word wider than its box is split between characters found with `Intl.Segmenter`. SVG text and the canvas both use `text-rendering: geometricPrecision`. Editing uses an overlay that measures text identically. `foreignObject` is not used.
 
 ### 5.5 Undo and redo
 
