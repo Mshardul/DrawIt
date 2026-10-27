@@ -34,46 +34,36 @@ function report(label: string, browser: string, info: object): void {
   console.log(`frame diagnostic ${label} ${JSON.stringify({ browser, ...info })}`);
 }
 
-// Runs inside the page: one animation frame per entry, with an optional per-frame mutation.
-const measureFrames = (args: { frames: number; mutate: boolean }): Promise<number[]> =>
-  new Promise((resolve) => {
-    const out: number[] = [];
-    const rect = document.getElementById("probe");
-    let last = 0;
-    let i = 0;
-    const tick = (now: number): void => {
-      if (last !== 0) out.push(now - last);
-      last = now;
-      if (args.mutate && rect) rect.setAttribute("transform", `translate(${String(i % 200)} 0)`);
-      i += 1;
-      if (i > args.frames) resolve(out);
-      else requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
-  });
+interface Variant {
+  label: string;
+  selected: number;
+  scale?: number;
+  prepare?: string;
+}
 
-test("frame diagnostic: empty page", async ({ page, browserName }) => {
-  await page.setContent("<!doctype html><html><body></body></html>");
-  const frameMs = await page.evaluate(measureFrames, { frames: FRAMES, mutate: false });
-  const env = await page.evaluate(() => ({ cores: navigator.hardwareConcurrency, dpr: window.devicePixelRatio }));
-  report("empty", browserName, { ...env, ...pacing(frameMs) });
-});
+// Each variant changes one thing about the 100-shape drag so the slow part shows up by elimination.
+const VARIANTS: Variant[] = [
+  { label: "sel-10", selected: 10 },
+  { label: "sel-25", selected: 25 },
+  { label: "sel-50", selected: 50 },
+  { label: "sel-100", selected: 100 },
+  { label: "sel-100-dpr1", selected: 100, scale: 1 },
+  { label: "sel-100-no-markers", selected: 100, prepare: "document.querySelectorAll('path[marker-end]').forEach((p) => p.removeAttribute('marker-end'))" },
+  { label: "sel-100-edges-hidden", selected: 100, prepare: "document.querySelectorAll('path[marker-end]').forEach((p) => p.setAttribute('display', 'none'))" },
+  { label: "sel-100-will-change", selected: 100, prepare: "document.querySelectorAll('g[data-id]').forEach((g) => { g.style.willChange = 'transform'; })" },
+];
 
-test("frame diagnostic: one moving svg rect", async ({ page, browserName }) => {
-  await page.setContent(
-    '<!doctype html><html><body><svg width="800" height="600"><rect id="probe" width="50" height="50"/></svg></body></html>',
-  );
-  const frameMs = await page.evaluate(measureFrames, { frames: FRAMES, mutate: true });
-  report("one-rect", browserName, pacing(frameMs));
-});
-
-for (const selected of [1, 100]) {
-  test(`frame diagnostic: drag scene with ${String(selected)} selected`, async ({ page, browserName }) => {
-    await page.goto(`/drag-perf.html?select=${String(selected)}`);
+for (const variant of VARIANTS) {
+  test(`frame diagnostic: ${variant.label}`, async ({ browser, browserName }) => {
+    const context = await browser.newContext({ deviceScaleFactor: variant.scale ?? 2, viewport: { width: 1280, height: 720 } });
+    const page = await context.newPage();
+    await page.goto(`/drag-perf.html?select=${String(variant.selected)}`);
+    if (variant.prepare) await page.evaluate(variant.prepare);
     const run = await page.evaluate<DragRun, number>(
       (frames) => (window as unknown as { runDrag: (n: number) => Promise<DragRun> }).runDrag(frames),
       FRAMES,
     );
-    report(`scene-${String(selected)}`, browserName, pacing(run.frameMs));
+    report(variant.label, browserName, pacing(run.frameMs));
+    await context.close();
   });
 }
