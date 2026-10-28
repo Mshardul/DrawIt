@@ -2,6 +2,7 @@
 // history or the file. The renderer draws world coordinates into a wrapping group; the
 // shell sets that group's `transform` from `viewTransform`.
 import type { DiagramDocument } from "../model/index.ts";
+import type { TextMeasurer } from "../text/measure.ts";
 import { type Box, drawnBoxes } from "../render/boxes.ts";
 
 /** A world point appears on screen at `world * scale + (x, y)`. */
@@ -39,8 +40,8 @@ export function zoomAt(view: View, at: Pt, factor: number): View {
 }
 
 /** The box around every drawn element, or null when nothing is drawn. */
-export function documentBounds(doc: DiagramDocument): Box | null {
-  const boxes = drawnBoxes(doc);
+export function documentBounds(doc: DiagramDocument, measurer: TextMeasurer): Box | null {
+  const boxes = drawnBoxes(doc, measurer);
   if (boxes.length === 0) return null;
   const x0 = Math.min(...boxes.map((b) => b.x));
   const y0 = Math.min(...boxes.map((b) => b.y));

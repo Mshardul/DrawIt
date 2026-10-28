@@ -5,6 +5,7 @@
 import type { Command } from "../commands/command.ts";
 import type { DiagramDocument } from "../model/index.ts";
 import { drawnBoxes, type DrawnBox } from "../render/boxes.ts";
+import type { TextMeasurer } from "../text/measure.ts";
 import { snapTo } from "./snap.ts";
 
 /** Smallest width or height a resize leaves (one cell of the 8px design grid). */
@@ -15,17 +16,17 @@ export type Handle = "n" | "ne" | "e" | "se" | "s" | "sw" | "w" | "nw";
 const ALL_HANDLES: Handle[] = ["n", "ne", "e", "se", "s", "sw", "w", "nw"];
 const TEXT_HANDLES: Handle[] = ["e", "w"];
 
-const transformable = (doc: DiagramDocument, id: string): DrawnBox | undefined =>
-  drawnBoxes(doc).find((b) => b.element.id === id && !b.locked);
+const transformable = (doc: DiagramDocument, measurer: TextMeasurer, id: string): DrawnBox | undefined =>
+  drawnBoxes(doc, measurer).find((b) => b.element.id === id && !b.locked);
 
 /**
  * One command moving every transformable selected element by (dx, dy), rounded to whole px; null
  * if nothing moves. With a `grid` size the selection's top-left corner lands on the grid and the
  * elements keep their offsets from it.
  */
-export function moveCommand(doc: DiagramDocument, ids: string[], dx: number, dy: number, grid = 0): Command | null {
+export function moveCommand(doc: DiagramDocument, measurer: TextMeasurer, ids: string[], dx: number, dy: number, grid = 0): Command | null {
   const selected = new Set(ids);
-  const boxes = drawnBoxes(doc).filter((b) => selected.has(b.element.id) && !b.locked);
+  const boxes = drawnBoxes(doc, measurer).filter((b) => selected.has(b.element.id) && !b.locked);
   if (boxes.length === 0) return null;
   let rx = Math.round(dx);
   let ry = Math.round(dy);
@@ -49,17 +50,17 @@ const ARROWS: Record<string, [number, number]> = {
 };
 
 /** An arrow key moves the selection 1px, or 10px with shift. */
-export function nudgeCommand(doc: DiagramDocument, ids: string[], key: string, shift: boolean): Command | null {
+export function nudgeCommand(doc: DiagramDocument, measurer: TextMeasurer, ids: string[], key: string, shift: boolean): Command | null {
   const step = ARROWS[key];
   if (!step) return null;
   const distance = shift ? 10 : 1;
-  return moveCommand(doc, ids, step[0] * distance, step[1] * distance);
+  return moveCommand(doc, measurer, ids, step[0] * distance, step[1] * distance);
 }
 
 /** The handles to draw: eight for a lone shape, east and west for a lone text box, none otherwise or when locked. */
-export function handlesFor(doc: DiagramDocument, selection: string[]): { handle: Handle; x: number; y: number }[] {
+export function handlesFor(doc: DiagramDocument, measurer: TextMeasurer, selection: string[]): { handle: Handle; x: number; y: number }[] {
   const [id] = selection;
-  const box = selection.length === 1 && id !== undefined ? transformable(doc, id) : undefined;
+  const box = selection.length === 1 && id !== undefined ? transformable(doc, measurer, id) : undefined;
   if (!box) return [];
   const handles = box.element.kind === "text" ? TEXT_HANDLES : ALL_HANDLES;
   return handles.map((handle) => ({
@@ -75,8 +76,8 @@ export function handlesFor(doc: DiagramDocument, selection: string[]): { handle:
  * both written. A text box takes width only (its height follows its content). With a `grid` size
  * the dragged edges land on the grid.
  */
-export function resizeCommand(doc: DiagramDocument, id: string, handle: Handle, dx: number, dy: number, grid = 0): Command | null {
-  const box = transformable(doc, id);
+export function resizeCommand(doc: DiagramDocument, measurer: TextMeasurer, id: string, handle: Handle, dx: number, dy: number, grid = 0): Command | null {
+  const box = transformable(doc, measurer, id);
   if (!box) return null;
   const text = box.element.kind === "text";
   if (text && !TEXT_HANDLES.includes(handle)) return null;

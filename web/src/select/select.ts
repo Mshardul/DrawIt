@@ -3,6 +3,7 @@
 // unknown elements cannot be selected until they are drawn.
 import type { DiagramDocument } from "../model/index.ts";
 import { type Box, type DrawnBox, drawnBoxes } from "../render/boxes.ts";
+import type { TextMeasurer } from "../text/measure.ts";
 import type { Pt } from "../view/view.ts";
 
 function covers(box: DrawnBox, p: Pt): boolean {
@@ -18,8 +19,8 @@ function covers(box: DrawnBox, p: Pt): boolean {
 }
 
 /** The topmost drawn element whose outline contains the world point. Locked elements can be clicked. */
-export function hitTest(doc: DiagramDocument, p: Pt): string | null {
-  const boxes = drawnBoxes(doc);
+export function hitTest(doc: DiagramDocument, measurer: TextMeasurer, p: Pt): string | null {
+  const boxes = drawnBoxes(doc, measurer);
   for (let i = boxes.length - 1; i >= 0; i--) {
     const box = boxes[i];
     if (box && covers(box, p)) return box.element.id;
@@ -39,19 +40,19 @@ export function clickSelection(selection: string[], hit: string | null, additive
 }
 
 /** The unlocked drawn elements whose box overlaps the world rectangle, in z-order. Width and height may be negative. */
-export function idsInRect(doc: DiagramDocument, rect: Box): string[] {
+export function idsInRect(doc: DiagramDocument, measurer: TextMeasurer, rect: Box): string[] {
   const x0 = Math.min(rect.x, rect.x + rect.w);
   const x1 = Math.max(rect.x, rect.x + rect.w);
   const y0 = Math.min(rect.y, rect.y + rect.h);
   const y1 = Math.max(rect.y, rect.y + rect.h);
-  return drawnBoxes(doc)
+  return drawnBoxes(doc, measurer)
     .filter((b) => !b.locked && b.x <= x1 && b.x + b.w >= x0 && b.y <= y1 && b.y + b.h >= y0)
     .map((b) => b.element.id);
 }
 
 /** Every unlocked drawn element, in z-order. */
-export function selectAll(doc: DiagramDocument): string[] {
-  return drawnBoxes(doc)
+export function selectAll(doc: DiagramDocument, measurer: TextMeasurer): string[] {
+  return drawnBoxes(doc, measurer)
     .filter((b) => !b.locked)
     .map((b) => b.element.id);
 }

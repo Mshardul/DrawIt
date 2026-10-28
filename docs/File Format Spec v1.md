@@ -208,7 +208,7 @@ Style holds all appearance.
 
 Layout holds geometry only: one line per element, keyed by ID, owned by the canvas.
 
-- **Position and size:** `x`, `y` required; `w`, `h` optional, falling back to the shape default. Integers, in px at 1x zoom. Coordinates are absolute canvas positions.
+- **Position and size:** `x`, `y` required; `w`, `h` optional, falling back to the shape default. A text box uses only `w`: without it the box fits its content, with it the text wraps there, and the height is always the wrapped lines. Integers, in px at 1x zoom. Coordinates are absolute canvas positions.
 - **Lock:** `locked=#true`, optional.
 - **Edge anchors:** `from` and `to` take `auto` (default; nearest side, recomputed on move) or a side (`top`, `right`, `bottom`, `left`), optionally with a position along it: `left:0.3`.
 - **Free ends:** `from-point="x,y"` or `to-point="x,y"` for an end written as `-` in structure.
@@ -276,6 +276,7 @@ A minimal canvas with floating toolbars.
 
 - Text lives in two places. A **shape or edge label** is one per element, centered in the shape's label area. A **text box** is a separate floating element placed anywhere. Both are plain text with one style per element.
 - Double-click a shape or edge to edit its label in place. Double-click empty canvas to create a text box right there; double-click a text box to edit it.
+- While editing, the text is shown in a plain editor over the element, on the same lines as the drawn text. Enter adds a line break. Escape, Cmd/Ctrl+Enter or a click elsewhere ends editing and keeps the text. A text box with no text is removed. Typing is grouped by pauses into undo steps, and undo and redo work inside the editor.
 - Formatting applies to the whole element and is stored in the style section.
 - Text boxes auto-size to content or have a fixed width and wrap.
 - Text renders as SVG with DrawIt's own line-breaking, measured with the canvas text API. Lines break only at spaces; a word wider than its box is split between characters found with `Intl.Segmenter`. SVG text and the canvas both use `text-rendering: geometricPrecision`. Editing uses an overlay that measures text identically. `foreignObject` is not used.

@@ -7,6 +7,8 @@ html, body { margin: 0; height: 100%; font: 14px system-ui, sans-serif; color: #
 .error { padding: 8px 12px; background: #fde8e8; color: #7a1010; white-space: pre-wrap; }
 .canvas { flex: 1; width: 100%; min-height: 0; display: block; }
 .canvas { touch-action: none; }
+/* Lines are measured with every space they contain, so SVG must not collapse runs of spaces. The CSP rules out a style attribute. */
+.canvas text { white-space: pre; }
 .canvas.panning { cursor: grabbing; }
 .selection { stroke: #1a73e8; stroke-width: 1.5; pointer-events: none; }
 .marquee { fill: rgba(26, 115, 232, 0.12); stroke: #1a73e8; stroke-width: 1; stroke-dasharray: 4 3; pointer-events: none; }
@@ -19,3 +21,4 @@ html, body { margin: 0; height: 100%; font: 14px system-ui, sans-serif; color: #
 .status label { display: flex; align-items: center; gap: 4px; }
 .zoom { min-width: 4ch; font-variant-numeric: tabular-nums; }
 .grid-line { stroke: #d8d8d8; }
+.text-edit { position: fixed; margin: 0; padding: 0; border: 0; outline: 1px dashed #1a73e8; background: transparent; color: #1a1a1a; resize: none; overflow: hidden; white-space: pre; transform-origin: 0 0; text-rendering: geometricPrecision; z-index: 10; }

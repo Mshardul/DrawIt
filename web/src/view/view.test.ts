@@ -12,6 +12,7 @@ import {
   zoomAt,
   zoomToFit,
 } from "./view.ts";
+import { monoMeasurer } from "../testing/measurer.ts";
 
 const doc = (layout: DiagramDocument["layout"], elements: DiagramDocument["elements"]): DiagramDocument => ({
   version: 1,
@@ -68,13 +69,13 @@ describe("view transform", () => {
           { kind: "shape", id: "b", shape: "rect" },
           { kind: "frame", id: "f" },
         ],
-      ),
+      ), monoMeasurer,
     );
     expect(bounds).toEqual({ x: 10, y: 0, w: 350, h: 80 });
   });
 
   it("an empty document has no bounds", () => {
-    expect(documentBounds(doc([], []))).toBeNull();
+    expect(documentBounds(doc([], []), monoMeasurer)).toBeNull();
   });
 
   it("zoom to fit centres the bounds in the viewport with a margin", () => {

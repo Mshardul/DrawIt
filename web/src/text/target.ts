@@ -1,0 +1,67 @@
+// What the editing overlay edits: which field of which element, and where its text is drawn. Pure
+// functions over the document, built on the layout the renderer draws with.
+import type { Command } from "../commands/command.ts";
+import type { DiagramDocument } from "../model/index.ts";
+import type { ShapeLookup } from "../render/describe.ts";
+import { sizeOf } from "../render/size.ts";
+import { labelLayout, layoutTextBox, LINE_HEIGHT } from "../render/text-layout.ts";
+import type { Rect } from "../shapes/types.ts";
+import type { TextMeasurer } from "./measure.ts";
+
+export interface EditTarget {
+  id: string;
+  /** The element field the text is stored in. */
+  field: "label" | "content";
+  text: string;
+  /** The text as drawn, one entry per line. */
+  lines: string[];
+  /** Where the lines are drawn, in world coordinates. */
+  box: Rect;
+  align: "center" | "left";
+}
+
+/** The text of `id` and where it is drawn, or null for an element with no text to edit or one that is not drawn. */
+export function editTarget(doc: DiagramDocument, id: string, measurer: TextMeasurer, shapes?: ShapeLookup): EditTarget | null {
+  const element = doc.elements.find((e) => e.id === id);
+  const entry = doc.layout.find((e) => e.id === id);
+  if (!element || !entry) return null;
+  if (element.kind === "node") {
+    const size = sizeOf(element, entry, measurer);
+    if (!size) return null;
+    const text = element.label ?? element.id;
+    const { lines, top, area } = labelLayout(text, size, measurer, shapes?.(element.shape));
+    return {
+      id,
+      field: "label",
+      text,
+      lines,
+      box: { x: entry.x + area.x, y: entry.y + top, w: area.w, h: lines.length * LINE_HEIGHT },
+      align: "center",
+    };
+  }
+  if (element.kind === "text") {
+    const { w, h, lines } = layoutTextBox(element.content, entry.w, measurer);
+    return { id, field: "content", text: element.content, lines, box: { x: entry.x, y: entry.y, w, h }, align: "left" };
+  }
+  return null;
+}
+
+/** Sets the text of the field `editTarget` named. */
+export function setTextCommand(field: EditTarget["field"], id: string, value: string): Command {
+  return { type: "setElement", id, set: field === "label" ? { label: value } : { content: value } };
+}
+
+/** `text`, or `text-2`, `text-3` and so on: the first ID not in use. */
+export function newTextId(doc: DiagramDocument): string {
+  const used = new Set(doc.elements.map((e) => e.id));
+  if (!used.has("text")) return "text";
+  let n = 2;
+  while (used.has(`text-${String(n)}`)) n++;
+  return `text-${String(n)}`;
+}
+
+/** An empty text box with its top-left corner at `at`, rounded to whole pixels. */
+export function createTextCommand(doc: DiagramDocument, at: { x: number; y: number }): Command {
+  const id = newTextId(doc);
+  return { type: "add", items: [{ element: { kind: "text", id, content: "" }, layout: { id, x: Math.round(at.x), y: Math.round(at.y) } }] };
+}

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { DiagramDocument } from "../model/index.ts";
 import { describeOverlay } from "./overlay.ts";
+import { monoMeasurer } from "../testing/measurer.ts";
 
 const doc: DiagramDocument = {
   version: 1,
@@ -20,23 +21,23 @@ const doc: DiagramDocument = {
 
 describe("selection overlay", () => {
   it("outlines each selected element's box, keyed by ID", () => {
-    const nodes = describeOverlay(doc, ["a", "b"], null);
+    const nodes = describeOverlay(doc, monoMeasurer, ["a", "b"], null);
     expect(nodes.map((n) => n.attrs["data-id"])).toEqual(["select-a", "select-b"]);
     expect(nodes[0]?.attrs).toMatchObject({ x: 10, y: 20, width: 100, height: 50 });
     expect(nodes[1]?.attrs).toMatchObject({ x: 200, y: 0, width: 160, height: 80 });
   });
 
   it("skips ids that are gone or not drawn", () => {
-    expect(describeOverlay(doc, ["f", "missing"], null)).toEqual([]);
+    expect(describeOverlay(doc, monoMeasurer, ["f", "missing"], null)).toEqual([]);
   });
 
   it("draws the drag-box with a positive size however it was dragged", () => {
-    const [box] = describeOverlay(doc, [], { x: 50, y: 60, w: -30, h: -40 });
+    const [box] = describeOverlay(doc, monoMeasurer, [], { x: 50, y: 60, w: -30, h: -40 });
     expect(box?.attrs).toMatchObject({ "data-id": "marquee", x: 20, y: 20, width: 30, height: 40 });
   });
 
   it("a lone selected shape gets eight resize handles of constant screen size", () => {
-    const nodes = describeOverlay(doc, ["a"], null, 2);
+    const nodes = describeOverlay(doc, monoMeasurer, ["a"], null, 2);
     const handles = nodes.filter((n) => n.attrs["data-handle"] !== undefined);
     expect(handles.map((n) => n.attrs["data-handle"])).toHaveLength(8);
     const se = handles.find((n) => n.attrs["data-handle"] === "se");
@@ -45,6 +46,6 @@ describe("selection overlay", () => {
   });
 
   it("several selected elements get outlines but no handles", () => {
-    expect(describeOverlay(doc, ["a", "b"], null).some((n) => n.attrs["data-handle"] !== undefined)).toBe(false);
+    expect(describeOverlay(doc, monoMeasurer, ["a", "b"], null).some((n) => n.attrs["data-handle"] !== undefined)).toBe(false);
   });
 });

@@ -5,6 +5,7 @@ import { applyCommand, type Command } from "../commands/command.ts";
 import type { OpenFile } from "../app/workspace.ts";
 import type { DiagramDocument } from "../model/index.ts";
 import { hitTest } from "../select/select.ts";
+import type { TextMeasurer } from "../text/measure.ts";
 import { screenToWorld, type Pt, type View } from "../view/view.ts";
 import { type Handle, moveCommand, nudgeCommand, resizeCommand } from "./transform.ts";
 
@@ -15,6 +16,7 @@ export interface TransformInputHost {
   target: SVGSVGElement;
   getView(): View;
   getFile(): OpenFile | null;
+  measurer: TextMeasurer;
   /** Grid size to snap drags to, or 0 when snap is off. */
   getGrid(): number;
   /** Draws this document instead of the file's until set back to null. */
@@ -60,8 +62,8 @@ export function attachTransformInput(host: TransformInputHost): () => void {
     const dx = now.x - d.world.x;
     const dy = now.y - d.world.y;
     return d.action.kind === "move"
-      ? moveCommand(file.document, file.history.selection, dx, dy, grid)
-      : resizeCommand(file.document, d.action.id, d.action.handle, dx, dy, grid);
+      ? moveCommand(file.document, host.measurer, file.history.selection, dx, dy, grid)
+      : resizeCommand(file.document, host.measurer, d.action.id, d.action.handle, dx, dy, grid);
   };
   const cancel = (): void => {
     if (!drag) return;
@@ -87,7 +89,7 @@ export function attachTransformInput(host: TransformInputHost): () => void {
       return;
     }
     if (event.shiftKey || event.metaKey || event.ctrlKey) return;
-    const hit = hitTest(file.document, p);
+    const hit = hitTest(file.document, host.measurer, p);
     if (hit !== null && file.history.selection.includes(hit)) drag = { ...base, action: { kind: "move" } };
   };
   const onPointerMove = (event: PointerEvent): void => {
@@ -123,7 +125,7 @@ export function attachTransformInput(host: TransformInputHost): () => void {
     }
     if (drag || event.metaKey || event.ctrlKey || event.altKey) return;
     const { selection } = file.history;
-    const command = nudgeCommand(file.document, selection, event.key, event.shiftKey);
+    const command = nudgeCommand(file.document, host.measurer, selection, event.key, event.shiftKey);
     if (!command) return;
     event.preventDefault();
     // Held or repeated nudges of the same selection are one undo step.

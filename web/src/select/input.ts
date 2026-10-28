@@ -1,6 +1,7 @@
 // Pointer and key input for selection: click, shift/Cmd/Ctrl-click, drag-box, select all, clear.
 // The selection lives in the open file's history (so undo restores it); this module only changes it.
 import type { Box } from "../render/boxes.ts";
+import type { TextMeasurer } from "../text/measure.ts";
 import { screenToWorld, type View } from "../view/view.ts";
 import type { OpenFile } from "../app/workspace.ts";
 import { clickSelection, hitTest, idsInRect, selectAll } from "./select.ts";
@@ -12,6 +13,7 @@ export interface SelectInputHost {
   target: SVGSVGElement;
   getView(): View;
   getFile(): OpenFile | null;
+  measurer: TextMeasurer;
   /** The drag-box in world coordinates, or null when none is shown. */
   setMarquee(box: Box | null): void;
   /** Redraw after the selection changed. */
@@ -43,7 +45,7 @@ export function attachSelectInput(host: SelectInputHost): () => void {
     const additive = event.shiftKey || event.metaKey || event.ctrlKey;
     box = target.getBoundingClientRect();
     const p = world(event);
-    const hit = hitTest(file.document, p);
+    const hit = hitTest(file.document, host.measurer, p);
     target.setPointerCapture(event.pointerId);
     press = { pointer: event.pointerId, start: p, hit, base: file.history.selection, additive, box: false, dragged: false };
     select(file, clickSelection(file.history.selection, hit, additive));
@@ -56,10 +58,10 @@ export function attachSelectInput(host: SelectInputHost): () => void {
     if (!press.dragged && Math.hypot(p.x - press.start.x, p.y - press.start.y) * scale < DRAG_THRESHOLD) return;
     press.dragged = true;
     // A press that began on an element is the start of a move, not of a drag-box.
-    if (!press.box && hitTest(file.document, press.start) !== null) return;
+    if (!press.box && hitTest(file.document, host.measurer, press.start) !== null) return;
     press.box = true;
     const dragBox = { x: press.start.x, y: press.start.y, w: p.x - press.start.x, h: p.y - press.start.y };
-    const inside = idsInRect(file.document, dragBox);
+    const inside = idsInRect(file.document, host.measurer, dragBox);
     select(file, press.additive ? [...press.base, ...inside.filter((id) => !press?.base.includes(id))] : inside);
     host.setMarquee(dragBox);
     host.refresh();
@@ -79,7 +81,7 @@ export function attachSelectInput(host: SelectInputHost): () => void {
     if (!file || t instanceof HTMLInputElement || t instanceof HTMLSelectElement || t instanceof HTMLTextAreaElement) return;
     if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "a") {
       event.preventDefault();
-      select(file, selectAll(file.document));
+      select(file, selectAll(file.document, host.measurer));
     } else if (event.key === "Escape") {
       select(file, []);
     }

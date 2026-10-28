@@ -29,17 +29,21 @@ test.beforeEach(async ({ page }) => {
     const load = <T>(path: string) => import(path) as Promise<T>;
     const { describeDiagram } = await load<typeof import("../src/render/describe.ts")>("/src/render/describe.ts");
     const { mount } = await load<typeof import("../src/render/mount.ts")>("/src/render/mount.ts");
+    const { loadFonts } = await load<typeof import("../src/text/fonts.ts")>("/src/text/fonts.ts");
+    const { createTextMeasurer } = await load<typeof import("../src/text/measure.ts")>("/src/text/measure.ts");
+    await loadFonts();
+    const measurer = createTextMeasurer();
     document.body.style.margin = "0";
     document.body.innerHTML = '<svg id="canvas" xmlns="http://www.w3.org/2000/svg" width="1200" height="800"></svg>';
     const canvas = document.getElementById("canvas") as unknown as SVGSVGElement;
     (window as unknown as { page: Page }).page = {
       render: (doc) => {
-        mount(canvas, describeDiagram(doc));
+        mount(canvas, describeDiagram(doc, measurer));
       },
       frame: (doc, moved) => {
         const moving = { ...doc, layout: doc.layout.map((e, i) => (i < moved ? { ...e, x: e.x + 1 } : e)) };
         const t0 = performance.now();
-        mount(canvas, describeDiagram(moving));
+        mount(canvas, describeDiagram(moving, measurer));
         return performance.now() - t0;
       },
     };

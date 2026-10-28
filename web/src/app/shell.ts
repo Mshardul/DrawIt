@@ -9,6 +9,9 @@ import { describeOverlay } from "../render/overlay.ts";
 import { attachTransformInput } from "../move/input.ts";
 import { attachSelectInput } from "../select/input.ts";
 import { type StorageAdapter, StorageError } from "../storage/adapter.ts";
+import { loadFonts } from "../text/fonts.ts";
+import { attachTextEdit, type TextEdit } from "../text/edit.ts";
+import { createTextMeasurer } from "../text/measure.ts";
 import { attachViewInput } from "../view/input.ts";
 import { documentBounds, IDENTITY, type View, viewTransform, zoomToFit } from "../view/view.ts";
 import { type OpenFile, openFile, workspaceFiles } from "./workspace.ts";
@@ -55,6 +58,8 @@ export interface Shell {
 
 /** Builds the app in `root`, lists the folder and opens its first diagram if there is one. */
 export async function startShell(root: HTMLElement, storage: StorageAdapter): Promise<Shell> {
+  await loadFonts();
+  const measurer = createTextMeasurer();
   const picker = el("select", { ariaLabel: "File" });
   const name = el("span", { className: "name" });
   const unsaved = el("span", { className: "unsaved", textContent: "Unsaved changes", hidden: true });
@@ -102,6 +107,9 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter): Pr
   // A drag draws this copy of the document; the file's own document changes only on release.
   let preview: DiagramDocument | null = null;
   let opening = Promise.resolve();
+  // The element whose text an editor is showing; the renderer leaves that text out.
+  let editing: string | null = null;
+  let textEdit: TextEdit | null = null;
 
   const showError = (message: string | null): void => {
     error.hidden = message === null;
@@ -110,18 +118,19 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter): Pr
 
   const drawOverlay = (): void => {
     const doc = preview ?? current?.document;
-    mount(overlay, current && doc ? describeOverlay(doc, current.history.selection, marquee, view.scale) : []);
+    mount(overlay, current && doc ? describeOverlay(doc, measurer, current.history.selection, marquee, view.scale) : []);
   };
 
   const redraw = (changed?: ReadonlySet<string>): void => {
     const doc = preview ?? current?.document;
-    if (changed && doc) patch(elements, describeDiagram(doc, changed));
-    else mount(elements, doc ? describeDiagram(doc) : []);
+    const hideText = editing === null ? undefined : new Set([editing]);
+    if (changed && doc) patch(elements, describeDiagram(doc, measurer, { only: changed, ...(hideText && { hideText }) }));
+    else mount(elements, doc ? describeDiagram(doc, measurer, hideText && { hideText }) : []);
     drawOverlay();
   };
 
-  const refresh = (): void => {
-    redraw();
+  const refresh = (changed?: ReadonlySet<string>): void => {
+    redraw(changed);
     name.textContent = current?.path ?? "";
     unsaved.hidden = !current?.dirty;
     saveButton.disabled = !current;
@@ -145,10 +154,11 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter): Pr
     drawGrid();
     // Handles keep their screen size, so they depend on the scale.
     drawOverlay();
+    textEdit?.reposition();
   };
   const fit = (): void => {
     const box = canvas.getBoundingClientRect();
-    setView(zoomToFit(current ? documentBounds(current.document) : null, { w: box.width, h: box.height }, 48));
+    setView(zoomToFit(current ? documentBounds(current.document, measurer) : null, { w: box.width, h: box.height }, 48));
   };
 
   const doOpen = async (path: string): Promise<void> => {
@@ -156,8 +166,9 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter): Pr
       picker.value = current.path;
       return;
     }
+    textEdit?.close();
     try {
-      const result = await openFile(storage, path);
+      const result = await openFile(storage, path, measurer);
       if (result.ok) {
         current = result.file;
         showError(null);
@@ -210,6 +221,7 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter): Pr
     target: canvas,
     getView: () => view,
     getFile: () => current,
+    measurer,
     setMarquee: (box) => {
       marquee = box;
     },
@@ -219,6 +231,7 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter): Pr
     target: canvas,
     getView: () => view,
     getFile: () => current,
+    measurer,
     getGrid: () => (grid.snap ? grid.size : 0),
     setPreview: (doc) => {
       preview = doc;
@@ -226,11 +239,22 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter): Pr
     redraw: (changed) => { redraw(changed); },
     refresh,
   });
+  textEdit = attachTextEdit({
+    target: canvas,
+    parent: root,
+    getView: () => view,
+    getFile: () => current,
+    measurer,
+    setEditing: (id) => {
+      editing = id;
+    },
+    refresh,
+  });
   attachViewInput({
     target: canvas,
     getView: () => view,
     setView,
-    getBounds: () => (current ? documentBounds(current.document) : null),
+    getBounds: () => (current ? documentBounds(current.document, measurer) : null),
   });
 
   picker.addEventListener("change", () => {

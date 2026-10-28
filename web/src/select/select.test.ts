@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { History } from "../commands/history.ts";
 import type { DiagramDocument, DiagramElement, LayoutEntry } from "../model/index.ts";
 import { clickSelection, hitTest, idsInRect, selectAll } from "./select.ts";
+import { monoMeasurer } from "../testing/measurer.ts";
 
 const doc = (elements: DiagramElement[], layout: LayoutEntry[]): DiagramDocument => ({
   version: 1,
@@ -32,13 +33,13 @@ const sample = doc(
 
 describe("selection", () => {
   it("a click hits the rectangle under the point", () => {
-    expect(hitTest(sample, { x: 50, y: 25 })).toBe("box");
-    expect(hitTest(sample, { x: 150, y: 25 })).toBeNull();
+    expect(hitTest(sample, monoMeasurer, { x: 50, y: 25 })).toBe("box");
+    expect(hitTest(sample, monoMeasurer, { x: 150, y: 25 })).toBeNull();
   });
 
   it("a click on an ellipse corner misses, and on its body hits", () => {
-    expect(hitTest(sample, { x: 202, y: 2 })).toBeNull();
-    expect(hitTest(sample, { x: 250, y: 50 })).toBe("oval");
+    expect(hitTest(sample, monoMeasurer, { x: 202, y: 2 })).toBeNull();
+    expect(hitTest(sample, monoMeasurer, { x: 250, y: 50 })).toBe("oval");
   });
 
   it("the topmost overlapping element wins", () => {
@@ -52,17 +53,17 @@ describe("selection", () => {
         { id: "over", x: 50, y: 50, w: 100, h: 100 },
       ],
     );
-    expect(hitTest(overlapping, { x: 75, y: 75 })).toBe("over");
-    expect(hitTest(overlapping, { x: 25, y: 25 })).toBe("under");
+    expect(hitTest(overlapping, monoMeasurer, { x: 75, y: 75 })).toBe("over");
+    expect(hitTest(overlapping, monoMeasurer, { x: 25, y: 25 })).toBe("under");
   });
 
   it("edges, frames, images and unknown elements are not hit", () => {
-    expect(hitTest(sample, { x: 800, y: 800 })).toBeNull();
+    expect(hitTest(sample, monoMeasurer, { x: 800, y: 800 })).toBeNull();
   });
 
   it("a text box is hit by its box, and a locked element can still be clicked", () => {
-    expect(hitTest(sample, { x: 10, y: 210 })).toBe("note");
-    expect(hitTest(sample, { x: 450, y: 25 })).toBe("lock");
+    expect(hitTest(sample, monoMeasurer, { x: 10, y: 210 })).toBe("note");
+    expect(hitTest(sample, monoMeasurer, { x: 450, y: 25 })).toBe("lock");
   });
 
   it("a plain click selects one element, and an empty click clears", () => {
@@ -81,16 +82,16 @@ describe("selection", () => {
   });
 
   it("drag-box selects every drawn element it overlaps, in z-order, skipping locked ones", () => {
-    expect(idsInRect(sample, { x: 90, y: 40, w: 130, h: 20 })).toEqual(["box", "oval"]);
-    expect(idsInRect(sample, { x: 390, y: 0, w: 200, h: 100 })).toEqual([]);
+    expect(idsInRect(sample, monoMeasurer, { x: 90, y: 40, w: 130, h: 20 })).toEqual(["box", "oval"]);
+    expect(idsInRect(sample, monoMeasurer, { x: 390, y: 0, w: 200, h: 100 })).toEqual([]);
   });
 
   it("drag-box accepts a rectangle dragged up and to the left", () => {
-    expect(idsInRect(sample, { x: 220, y: 60, w: -130, h: -20 })).toEqual(["box", "oval"]);
+    expect(idsInRect(sample, monoMeasurer, { x: 220, y: 60, w: -130, h: -20 })).toEqual(["box", "oval"]);
   });
 
   it("select all selects the drawn, unlocked elements", () => {
-    expect(selectAll(sample)).toEqual(["box", "oval", "note"]);
+    expect(selectAll(sample, monoMeasurer)).toEqual(["box", "oval", "note"]);
   });
 
   it("undo and redo restore the selection", () => {

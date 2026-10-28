@@ -5,6 +5,7 @@ import { writeDiagram } from "../kdl/write.ts";
 import type { DiagramDocument } from "../model/index.ts";
 import { placeUnplaced } from "../render/place.ts";
 import { type StorageAdapter, writeText } from "../storage/adapter.ts";
+import type { TextMeasurer } from "../text/measure.ts";
 
 /** DrawIt's own files. */
 export const FILE_EXTENSION = ".drawit.kdl";
@@ -61,11 +62,11 @@ export type OpenResult =
  * Reads and parses a file. A file that fails to parse is refused with its line and column and is
  * never opened, so it can never be saved over. Storage errors reject.
  */
-export async function openFile(storage: StorageAdapter, path: string): Promise<OpenResult> {
+export async function openFile(storage: StorageAdapter, path: string, measurer: TextMeasurer): Promise<OpenResult> {
   const text = new TextDecoder().decode(await storage.read(path));
   try {
     const { document, warnings } = readDiagram(text);
-    return { ok: true, file: new OpenFile(path, placeUnplaced(document)), warnings };
+    return { ok: true, file: new OpenFile(path, placeUnplaced(document, measurer)), warnings };
   } catch (error) {
     if (error instanceof KdlSyntaxError) {
       return { ok: false, path, error: { path, message: error.message, line: error.line, column: error.column } };

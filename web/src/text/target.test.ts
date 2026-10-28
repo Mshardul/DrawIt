@@ -1,0 +1,111 @@
+import { describe, expect, it } from "vitest";
+import { applyCommand } from "../commands/command.ts";
+import type { DiagramDocument, DiagramElement, LayoutEntry } from "../model/index.ts";
+import { LINE_HEIGHT } from "../render/text-layout.ts";
+import { monoMeasurer } from "../testing/measurer.ts";
+import { createTextCommand, editTarget, newTextId, setTextCommand } from "./target.ts";
+
+const doc = (elements: DiagramElement[], layout: LayoutEntry[]): DiagramDocument => ({
+  version: 1,
+  plugins: [],
+  elements,
+  layout,
+  style: { theme: { name: "default", colors: {}, fonts: {}, sizes: {}, spaces: {} }, classes: [], overrides: [] },
+});
+
+describe("edit target", () => {
+  it("a node edits its label, wrapped in its box and centred", () => {
+    const d = doc([{ kind: "node", id: "a", label: "aaaa bbbb cccc", shape: "rect" }], [{ id: "a", x: 20, y: 10, w: 100, h: 60 }]);
+    expect(editTarget(d, "a", monoMeasurer)).toEqual({
+      id: "a",
+      field: "label",
+      text: "aaaa bbbb cccc",
+      lines: ["aaaa bbbb", "cccc"],
+      box: { x: 20, y: 10 + 30 - LINE_HEIGHT, w: 100, h: 2 * LINE_HEIGHT },
+      align: "center",
+    });
+  });
+
+  it("a node without a label edits its ID, which is what it shows", () => {
+    const d = doc([{ kind: "node", id: "a", shape: "rect" }], [{ id: "a", x: 0, y: 0, w: 100, h: 60 }]);
+    expect(editTarget(d, "a", monoMeasurer)).toMatchObject({ field: "label", text: "a" });
+  });
+
+  it("a text box with no width edits its content at its own corner, as wide as the text", () => {
+    const d = doc([{ kind: "text", id: "t", content: "ab\nabcd" }], [{ id: "t", x: 5, y: 6 }]);
+    expect(editTarget(d, "t", monoMeasurer)).toEqual({
+      id: "t",
+      field: "content",
+      text: "ab\nabcd",
+      lines: ["ab", "abcd"],
+      box: { x: 5, y: 6, w: 40, h: 2 * LINE_HEIGHT },
+      align: "left",
+    });
+  });
+
+  it("a text box with a width wraps there", () => {
+    const d = doc([{ kind: "text", id: "t", content: "aa bb cc dd" }], [{ id: "t", x: 0, y: 0, w: 50 }]);
+    expect(editTarget(d, "t", monoMeasurer)).toMatchObject({ lines: ["aa bb", "cc dd"], box: { w: 50, h: 2 * LINE_HEIGHT } });
+  });
+
+  it("uses a pack shape's label rectangle when the shape has a manifest", () => {
+    const d = doc([{ kind: "node", id: "a", label: "ab", shape: "arch.database" }], [{ id: "a", x: 100, y: 200, w: 96, h: 112 }]);
+    const shapes = () => ({ label: { x: 8, y: 40, w: 80, h: 56 }, size: { w: 96, h: 112 }, keepAspect: false }) as never;
+    const target = editTarget(d, "a", monoMeasurer, shapes);
+    expect(target?.box).toEqual({ x: 108, y: 200 + 68 - LINE_HEIGHT / 2, w: 80, h: LINE_HEIGHT });
+  });
+
+  it("has nothing to edit for elements without text, or that are not drawn", () => {
+    const d = doc(
+      [
+        { kind: "shape", id: "s", shape: "rect" },
+        { kind: "edge", id: "e", from: "a", to: "a" },
+        { kind: "frame", id: "f" },
+        { kind: "node", id: "unplaced", shape: "rect" },
+      ],
+      [
+        { id: "s", x: 0, y: 0 },
+        { id: "f", x: 0, y: 0 },
+      ],
+    );
+    for (const id of ["s", "e", "f", "unplaced", "missing"]) expect(editTarget(d, id, monoMeasurer), id).toBeNull();
+  });
+});
+
+describe("text commands", () => {
+  it("set a node's label or a text box's content", () => {
+    expect(setTextCommand("label", "a", "Hi")).toEqual({ type: "setElement", id: "a", set: { label: "Hi" } });
+    expect(setTextCommand("content", "t", "Hi")).toEqual({ type: "setElement", id: "t", set: { content: "Hi" } });
+  });
+
+  it("create a text box at a point, with no text yet", () => {
+    const d = doc([], []);
+    const command = createTextCommand(d, { x: 30, y: 40 });
+    const after = applyCommand(d, command).document;
+    expect(after.elements).toEqual([{ kind: "text", id: "text", content: "" }]);
+    expect(after.layout).toEqual([{ id: "text", x: 30, y: 40 }]);
+  });
+
+  it("round the point to whole pixels", () => {
+    const after = applyCommand(doc([], []), createTextCommand(doc([], []), { x: 30.4, y: 40.6 })).document;
+    expect(after.layout[0]).toMatchObject({ x: 30, y: 41 });
+  });
+});
+
+describe("new text ID", () => {
+  it("is text, then text-2, text-3 around IDs in use", () => {
+    expect(newTextId(doc([], []))).toBe("text");
+    expect(newTextId(doc([{ kind: "text", id: "text", content: "" }], []))).toBe("text-2");
+    expect(
+      newTextId(
+        doc(
+          [
+            { kind: "text", id: "text", content: "" },
+            { kind: "node", id: "text-2", shape: "rect" },
+          ],
+          [],
+        ),
+      ),
+    ).toBe("text-3");
+  });
+});
