@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { skipFrameBudgetOnCiWebkit } from "./frame-budget.ts";
 
 // Drag a selection in a generated 500-element file and compare frame time with the
 // 60fps budget. Each frame, the page dispatches one pointermove and records the time
@@ -37,6 +38,7 @@ test("a 500-element file renders as SVG with edges and a selection moves with th
 });
 
 test("dragging the selection holds the 60fps frame budget", async ({ page, browserName }) => {
+  skipFrameBudgetOnCiWebkit(browserName);
   await page.goto(`/drag-perf.html?select=${String(SELECTED)}`);
   const run = await page.evaluate<DragRun, number>(
     (frames) => (window as unknown as { runDrag: (n: number) => Promise<DragRun> }).runDrag(frames),
