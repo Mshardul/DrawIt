@@ -21,6 +21,9 @@ test("every bundled face is loaded once the shell has started", async ({ page })
 test("each family and weight draws with its own face in Latin, Greek and Cyrillic", async ({ page }) => {
   const widths = await page.evaluate(() => {
     const ctx = document.createElement("canvas").getContext("2d") as CanvasRenderingContext2D;
+    // As the app measures: without it, Linux rounds each advance to a whole pixel, and two families whose
+    // widths differ by under a pixel (Inter and Source Serif 4 bold "Wiggle") can tie.
+    ctx.textRendering = "geometricPrecision";
     const samples = ["Wiggle", "Ωμέγα", "Привет"];
     const out: Record<string, number[]> = {};
     for (const family of ["Inter", "Source Serif 4", "JetBrains Mono"]) {

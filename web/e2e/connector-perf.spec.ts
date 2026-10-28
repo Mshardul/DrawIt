@@ -39,8 +39,12 @@ function percentile(values: number[], p: number): number {
   return sorted[Math.min(sorted.length - 1, Math.ceil(p * sorted.length) - 1)] ?? 0;
 }
 
-const run = (page: Page): Promise<DragRun> =>
-  page.evaluate<DragRun, number>((frames) => (window as unknown as { connectorPerf: ConnectorPerf }).connectorPerf.runDrag(frames), FRAMES);
+// A check of where edges end up needs a few frames, not the long run the frame budget measures; on a slow
+// runner 240 frames can outlast the test timeout.
+const CHECK_FRAMES = 30;
+
+const run = (page: Page, frames: number): Promise<DragRun> =>
+  page.evaluate<DragRun, number>((n) => (window as unknown as { connectorPerf: ConnectorPerf }).connectorPerf.runDrag(n), frames);
 
 test.beforeEach(async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
@@ -59,7 +63,7 @@ test("a 500-element file routes every edge, and every elbow is made of right ang
 
 test("dragging a shape keeps all its edges attached to its outline", async ({ page }) => {
   await page.goto("/connector-perf.html?mode=hub");
-  const drag = await run(page);
+  const drag = await run(page, CHECK_FRAMES);
   expect(drag.moved).toBeGreaterThan(0);
   expect(drag.rerouted).toBeGreaterThanOrEqual(HUB_EDGES);
   const gap = await page.evaluate(() => (window as unknown as { connectorPerf: ConnectorPerf }).connectorPerf.hubGap());
