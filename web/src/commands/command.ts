@@ -1,7 +1,7 @@
 // Command layer: the only way a document changes.
 // Commands are plain, ID-addressed data; applying one returns the new document plus Immer
 // forward and inverse patches. Nothing here knows about the UI.
-import { applyPatches as immerApplyPatches, enablePatches, produceWithPatches } from "immer";
+import { applyPatches as immerApplyPatches, current, enablePatches, produceWithPatches } from "immer";
 import type { Draft, Patch } from "immer";
 import { isValidId } from "../model/index.ts";
 import type { DiagramDocument, DiagramElement, LayoutEntry, StyleProps } from "../model/index.ts";
@@ -162,13 +162,22 @@ function setElement(doc: Doc, command: SetElementCommand): void {
 }
 
 function setLayout(doc: Doc, command: SetLayoutCommand): void {
+  // Index once: scanning the draft arrays for each change costs changes x elements proxy reads,
+  // and a drag applies this command on every pointer move.
+  const known = new Set(current(doc.elements).map((e) => e.id));
+  const at = new Map<string, number>();
+  current(doc.layout).forEach((e, i) => {
+    if (!at.has(e.id)) at.set(e.id, i);
+  });
   for (const { id, set, unset: keys } of command.changes) {
-    element(doc, id);
-    let entry = doc.layout.find((e) => e.id === id);
-    if (!entry) {
-      entry = doc.layout[doc.layout.push({ id, x: 0, y: 0 }) - 1];
-      if (!entry) continue;
+    if (!known.has(id)) throw new CommandError(`No element "${id}"`);
+    let index = at.get(id);
+    if (index === undefined) {
+      index = doc.layout.push({ id, x: 0, y: 0 }) - 1;
+      at.set(id, index);
     }
+    const entry = doc.layout[index];
+    if (!entry) continue;
     Object.assign(entry, set);
     unset(entry, keys);
   }

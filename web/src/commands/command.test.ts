@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import type { DiagramDocument } from "../model/index.ts";
+import { generateDiagram } from "../testing/generate-diagram.ts";
 import { CommandError, applyCommand, applyPatches } from "./command.ts";
 import type { Command } from "./command.ts";
 
@@ -122,6 +123,28 @@ describe("command layer", () => {
     before.layout = [];
     const { document } = applyCommand(before, { type: "setLayout", changes: [{ id: "a", set: { x: 3, y: 4 } }] });
     expect(document.layout).toEqual([{ id: "a", x: 3, y: 4 }]);
+  });
+
+  it("setLayout reads each ID a bounded number of times however many elements it moves", () => {
+    const big = generateDiagram({ count: 500 });
+    let reads = 0;
+    const counted = <T extends { id: string }>(item: T): T => {
+      const { id, ...rest } = item;
+      return Object.defineProperty({ ...rest }, "id", {
+        enumerable: true,
+        get: () => {
+          reads += 1;
+          return id;
+        },
+      }) as T;
+    };
+    const doc: DiagramDocument = { ...big, elements: big.elements.map(counted), layout: big.layout.map(counted) };
+    const moved = doc.layout.filter((_, i) => i % 5 === 0).map((e) => ({ id: e.id, set: { x: 1, y: 2 } }));
+    reads = 0;
+    const { document } = applyCommand(doc, { type: "setLayout", changes: moved });
+    expect(document.layout.filter((e) => e.x === 1 && e.y === 2)).toHaveLength(100);
+    // Scanning both arrays once per change would read about 100 * 500 IDs.
+    expect(reads).toBeLessThan(4 * (doc.elements.length + doc.layout.length));
   });
 
   it("setLayout of an unknown element fails", () => {
