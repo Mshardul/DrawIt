@@ -2,42 +2,20 @@
 // worked out from the layout of the elements at its ends.
 import type { DiagramDocument, DiagramElement, EdgeElement, LayoutEntry, Point, StyleProps } from "../model/index.ts";
 import { elementsById, layoutById } from "../model/lookup.ts";
-import type { ArrowHead, Route } from "../model/style.ts";
 import { elementBox, outlineKind } from "../render/boxes.ts";
+import { styleOf } from "../style/of.ts";
 import type { TextMeasurer } from "../text/measure.ts";
 import { type End, route } from "./routing.ts";
-
-export interface EdgeStyle {
-  route: Route;
-  headStart: ArrowHead;
-  headEnd: ArrowHead;
-}
 
 export interface RoutedEdge {
   edge: EdgeElement;
   /** The polyline from the start of the edge to its end. */
   points: Point[];
-  style: EdgeStyle;
+  /** The resolved style of the edge. */
+  style: StyleProps;
   locked: boolean;
   /** Where the label sits along the path (0..1); absent when the layout gives none. */
   labelAt?: number;
-}
-
-const DEFAULT_STYLE: EdgeStyle = { route: "straight", headStart: "none", headEnd: "arrow" };
-
-const pick = (props: StyleProps | undefined): Partial<EdgeStyle> => {
-  const out: Partial<EdgeStyle> = {};
-  if (props?.route !== undefined) out.route = props.route;
-  if (props?.headStart !== undefined) out.headStart = props.headStart;
-  if (props?.headEnd !== undefined) out.headEnd = props.headEnd;
-  return out;
-};
-
-/** The edge properties after the defaults, then the edge's class, then its own overrides; the last to set one wins. */
-export function edgeStyle(doc: DiagramDocument, edge: EdgeElement): EdgeStyle {
-  const cls = edge.class === undefined ? undefined : doc.style.classes.find((c) => c.name === edge.class);
-  const own = doc.style.overrides.find((o) => o.id === edge.id);
-  return { ...DEFAULT_STYLE, ...pick(cls?.props), ...pick(own?.props) };
 }
 
 /**
@@ -66,9 +44,10 @@ export function routedEdges(doc: DiagramDocument, measurer: TextMeasurer, only?:
     const from = endOf(edge, entry, "from");
     const to = endOf(edge, entry, "to");
     if (!from || !to) continue;
-    const style = edgeStyle(doc, edge);
+    const style = styleOf(doc, edge);
+    const kind = style.route ?? "straight";
     const via = entry?.via;
-    const points = route(from, to, via ? { route: style.route, via } : { route: style.route });
+    const points = route(from, to, via ? { route: kind, via } : { route: kind });
     out.set(edge.id, { edge, points, style, locked: entry?.locked === true, ...(entry?.labelAt !== undefined && { labelAt: entry.labelAt }) });
   }
   return out;

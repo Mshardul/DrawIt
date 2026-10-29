@@ -86,6 +86,9 @@ The shape library is categorised and searchable, in the left sidebar. Shapes shi
 | Infographic | Badges, banners, numbered steps, timeline markers, ribbons |
 | Arrows and lines | Block arrows, curved arrows, brackets, dividers |
 
+- **Creating:** the sidebar lists shapes by category, with search over names and tags and a preview of each. Clicking a shape arms it; a click on the canvas places it at its default size and a drag sizes it. Rectangle and ellipse are built in and listed alongside the pack shapes.
+- **Unknown shapes:** a node that names a shape no pack provides is drawn as a dashed placeholder showing the shape name, at its layout size or, when the layout gives no `w` and `h`, at the standard default size, and is kept in the file untouched.
+- **Selecting:** a click selects a shape inside its outline or within a few screen px of it; drag-box uses bounding boxes.
 - **Original shapes only:** no vendor icon sets (AWS, GCP, Azure) are bundled.
 - **Growth:** packs are added and extended without changes to the core.
 - **Packs:** `core` (basic, flowchart, arrows and lines; names need no prefix), `arch`, `net`, `c4`, `info`.
@@ -95,10 +98,10 @@ The shape library is categorised and searchable, in the left sidebar. Shapes shi
   - `anchors` are the default attach points for `auto`: `top`, `right`, `bottom` and `left`, each a point on the outline (the side midpoint, or where the outline meets the side's centre line), plus an optional `extra` list.
   - `label` is the rectangle where text is centred.
 - **Stretch:** optional x and y cut lines, two per axis (`"stretch": { "x": [a, b], "y": [c, d] }`). Parts outside them keep their size and move; parts between them scale. A target narrower than the fixed parts shrinks them together. With no cut lines the whole shape scales. `keepAspect` locks the ratio, as for icons, and excludes cut lines. A circle or ellipse lies inside one zone of each stretched axis.
-- **SVG rules:** only `path`, `rect`, `circle`, `ellipse`, `polygon`, `line`, `polyline` and `g`. No text, filters, images, styles, scripts or external references. Paths use absolute `M`, `L`, `H`, `V`, `C`, `Q` and `Z`. No literal colours: each element has a role in `data-role` (`fill`, `stroke` or `detail`) and takes its colour from the theme and classes. Stroke width comes from style.
+- **SVG rules:** only `path`, `rect`, `circle`, `ellipse`, `polygon`, `line`, `polyline` and `g`. No text, filters, images, styles, scripts or external references. Paths use absolute `M`, `L`, `H`, `V`, `C`, `Q` and `Z`. No literal colours: each element has a role in `data-role` (`fill`, `stroke` or `detail`) and takes its colour from the theme and classes. A `fill` part takes the element's fill, a `stroke` part its stroke, and a `detail` part its stroke, drawn at two thirds of the stroke width. Stroke width comes from style.
 - **Look:** flat outline plus fill, round joins and caps, an 8px design grid, default sizes in multiples of 8. Icon shapes share one canvas size and level of detail. Containers share one corner radius.
 - **Validation:** `pnpm validate:packs` checks every pack for schema, allowed elements and attributes, literal colours, roles, a closed outline, anchors on the outline and inside the shape's bounds, a label inside the bounds, and cut lines.
-- **Contact sheet:** `pnpm contact-sheet` writes one page showing every shape at its default size, stretched wide and narrow, in light and dark, with a view of its outline, anchors and label area.
+- **Contact sheet:** `pnpm contact-sheet` writes one page showing every shape at its default size, stretched wide and narrow, in light and dark, with a view of its outline, anchors and label area. It draws each part by the same role rules as the app, including `detail` in the stroke colour at two thirds of the stroke width.
 
 ## 4. File format
 
@@ -190,7 +193,41 @@ Style holds all appearance.
 - **Tokens:** values written as `$name` resolve from the theme (`fill=$primary`).
 - **Classes:** `class <name> <props…>` defines reusable styles, referenced from structure.
 - **Per-element overrides:** `el <id> <props…>` sets appearance for one element. Every line in this section starts with a keyword (`theme`, `class`, `el`), so an ID can never be mistaken for one, and plugins can add keywords without breaking existing files.
-- **Resolution order (last wins):** shape defaults → theme → classes in listed order → per-element overrides.
+- **Resolution:** properties merge in the order built-in defaults for the element kind, then the element's class, then its own `el` override; the last to set a property wins. Then each `$token` is replaced from the file's theme, which is a dictionary of tokens and not a layer of properties. A well-known token that the file's theme lacks takes the built-in theme's value; a token that nothing defines leaves the property unset, so the element shows its default for it.
+- **Well-known tokens:** the built-in default theme defines these, and a file's theme may redefine them or add more.
+
+| Kind | Tokens and built-in values |
+|---|---|
+| Colours | `primary` #1f4e79, `accent` #e8732a, `ink` #1a1a1a, `paper` #ffffff, `surface` #dbe8f5, `line` #1f4e79 |
+| Fonts | `body` Inter, `heading` Inter, `mono` JetBrains Mono |
+| Sizes | `small` 12, `body` 14, `h3` 18, `h2` 24, `h1` 36, `stroke` 1.5, `leading` 24 |
+| Spaces | `sm` 4, `md` 8, `lg` 16 |
+
+- **Default look:** what an element has when nothing in the file sets a property. `paper` is the background behind edge labels.
+
+| Property | Node | Shape | Text box | Edge |
+|---|---|---|---|---|
+| `fill` | `$surface` | `$surface` | none | none |
+| `stroke` | `$line` | `$line` | none | `$ink` |
+| `stroke-width` | `$stroke` | `$stroke` | none | `$stroke` |
+| `dash` | `solid` | `solid` | none | `solid` |
+| `radius` | 0 | 0 | 0 | none |
+| `opacity` | 1 | 1 | 1 | 1 |
+| `shadow` | none | none | none | none |
+| `font` | `$body` | none | `$body` | `$body` |
+| `size` | `$body` | none | `$body` | `$body` |
+| `weight` | 400 | none | 400 | 400 |
+| `italic`, `underline` | off | none | off | off |
+| `color` | `$ink` | none | `$ink` | `$ink` |
+| `align` | `center` | none | `left` | `center` |
+| `line-height` | `$leading` | none | `$leading` | `$leading` |
+| `route`, `head-start`, `head-end` | none | none | none | `straight`, `none`, `arrow` |
+
+- **Values:** `radius` applies to the built-in rectangle and to text boxes; a pack shape takes its corners from its cut lines.
+  - `dash` is `solid`, `dashed` or `dotted`.
+  - A gradient `fill` is written as one quoted string, `"linear(<angle>, <stop>, <stop>…)"`: an angle in degrees and two or more stops. A stop is a colour or a colour token, optionally followed by a position from 0 to 1 (`$accent 0.7`); a stop with no position is spaced evenly between its neighbours.
+  - `shadow` is one quoted string, `"<dx> <dy> <blur> <colour>"`, one per element; the colour may be a token.
+  - The formatter prints these strings with one space after each comma or between fields, an integer angle, positions and numbers without trailing zeros, and colours and tokens as written. A value that does not parse is kept as written and skipped when drawing.
 
 | Group | Properties |
 | --- | --- |
@@ -200,9 +237,8 @@ Style holds all appearance.
 | Text | `font`, `size`, `weight`, `italic`, `underline`, `color`, `align`, `line-height` |
 | Edge | `route` (`straight`, `elbow`), `head-start`, `head-end` (`arrow`, `dot`, `none`) |
 
-- **Edge defaults:** `route` is `straight`, `head-start` is `none` and `head-end` is `arrow`.
 - **Fonts:** three font families bundled with DrawIt (Open Font License): Inter, Source Serif 4 and JetBrains Mono, each with regular, bold and italic; no other fonts. Exports embed the fonts they use. No font CDN.
-- **Plugin properties:** packs and plugins register additional typed properties; the validator knows every property.
+- **Plugin properties (after v1):** code plugins register additional typed properties. In v1 the properties are the ones listed here, and the validator knows each of them.
 
 ### 4.5 Layout section
 
@@ -274,6 +310,7 @@ A minimal canvas with floating toolbars.
 - **Moving:** moving elements also moves the bend points and free ends of a selected edge and of an edge with both ends on the moving elements. An edge with an end that stays keeps its bend points.
 - **Re-attaching:** dragging an end handle of the selected edge onto an element attaches the end there, at the side and position along it nearest the pointer, never `auto`; dragging it onto empty canvas or a frame makes it a free end at the pointer. The edge keeps its ID and its bend points, and the other end is unchanged. Dropping onto the element at the other end, or leaving the end where it was, changes nothing; a locked edge cannot be dragged. Escape cancels the drag.
 - **Bend points:** a lone selected edge shows a handle on each bend point. Alt-click on its path, within a few screen px, adds a point there, placed in the list by its position along the path. Dragging a handle moves the point; Alt-click on a handle removes it, and removing the last one leaves the edge with no `via`. Each edit is one command, and Escape cancels a drag. Alt-click on an edge that is not selected only selects it, and a locked edge cannot be edited. Double-click is never a connector gesture: it edits text.
+- **Attaching to a shape from a pack:** a side and position such as `left:0.3` means the point where a line from that spot on the shape's bounding box, running straight inward, first meets the outline; where it meets none, the point on the bounding box. Auto anchors use the shape's manifest anchors. An elbow route leaves that point along the direction of the bounding-box side it is attached to.
 - Deleting an element detaches its edges: each attached end stays where it was, as a free end.
 
 ### 5.4 Text
@@ -339,12 +376,12 @@ One TypeScript app runs in any desktop browser and talks only to a local Go bina
 Packs and plugins add vocabulary; they never change what existing syntax means.
 
 - **Core (always on):** document model, KDL read/write, formatter, commands, undo, the three sections, theme and tokens, primitives (rectangle, ellipse, line, text, image, frame, edge), SVG and PNG export.
-- **Packs (v1):** data only (SVG plus manifest): shape packs and themes. Packs load from a local folder.
+- **Packs (v1):** data only (SVG plus manifest): shape packs and themes. Packs are bundled with the app and always on.
 - **Extensions (after v1):** code that adds element types, canvas tools, layout engines, importers and exporters.
-- **Declaration:** each file lists the packs and plugins it uses, with versions. A missing or disabled one is offered for enabling; until then its elements render as placeholders and are kept losslessly. Disabling never deletes content.
+- **Declaration:** the `plugins` header lists the packs and plugins a file uses, with versions. The app keeps and writes the header; in v1 it does not act on it, and it is the hook for enabling and version checks when code plugins arrive. A shape no pack provides is drawn as a placeholder (section 3) and kept losslessly.
 - **Manifest:** id, version, API version, kind, dependencies, and what it provides: shapes, element types, commands, typed style properties.
 - **Boundaries:** packs and plugins import only from the public `plugin-api` package; render functions return SVG node trees, never DOM; documents change only through commands.
-- **Source:** all packs and plugins are in-house. No marketplace, network access or auto-updates.
+- **Source:** all packs and plugins are in-house. No marketplace, network access or auto-updates, and no user pack folder in v1.
 - **First-party extensions** use the same public `plugin-api` as any other plugin; charts are the first.
 - **Charts (after v1):** hand-rolled SVG using d3-scale and d3-shape for the maths only, styled by the theme.
 

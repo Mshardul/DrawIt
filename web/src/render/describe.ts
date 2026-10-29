@@ -4,9 +4,11 @@
 import { headShape } from "../connectors/heads.ts";
 import { edgeLabelLayout } from "../connectors/label.ts";
 import { type RoutedEdge, routedEdges } from "../connectors/edges.ts";
-import type { DiagramDocument, DiagramElement } from "../model/index.ts";
+import type { DiagramDocument, DiagramElement, StyleProps } from "../model/index.ts";
 import { elementsById, layoutById } from "../model/lookup.ts";
 import type { ShapeManifest } from "../shapes/types.ts";
+import { styleOf, themeColour } from "../style/of.ts";
+import { COLOUR } from "../style/values.ts";
 import { svgTextAttrs, type TextMeasurer } from "../text/measure.ts";
 import { outlineKind, stackOrder } from "./boxes.ts";
 import { sizeOf } from "./size.ts";
@@ -32,10 +34,29 @@ export interface DescribeOptions {
 /** Finds the manifest of a shape by the name written in the file, or undefined for a shape that has none. */
 export type ShapeLookup = (shape: string) => ShapeManifest | undefined;
 
-const FILL = "#dbe8f5";
-const STROKE = "#1f4e79";
 const INK = "#1a1a1a";
-const EDGE_WIDTH = 1.5;
+
+/** A resolved colour as an SVG paint; anything that is not a plain colour draws as none. */
+const paint = (value: unknown): string => (typeof value === "string" && COLOUR.test(value) ? value : "none");
+
+const numeric = (value: unknown): number | undefined => (typeof value === "number" ? value : undefined);
+
+/** The fill, stroke and corner attributes of an outline. */
+function outlineAttrs(style: StyleProps): SvgNode["attrs"] {
+  const width = numeric(style.strokeWidth);
+  return { fill: paint(style.fill), stroke: paint(style.stroke), ...(width !== undefined && { "stroke-width": width }) };
+}
+
+/** Opacity on the element's group, written only when the element is not fully opaque. */
+function opacityAttrs(style: StyleProps): SvgNode["attrs"] {
+  const opacity = numeric(style.opacity);
+  return opacity !== undefined && opacity !== 1 ? { opacity } : {};
+}
+
+function cornerAttrs(style: StyleProps): SvgNode["attrs"] {
+  const radius = numeric(style.radius);
+  return radius ? { rx: radius, ry: radius } : {};
+}
 
 const node = (tag: string, attrs: SvgNode["attrs"], children: SvgNode[] = [], text?: string): SvgNode =>
   text === undefined ? { tag, attrs, children } : { tag, attrs, children, text };
@@ -64,20 +85,34 @@ function labelNodes(label: string, w: number, h: number, measurer: TextMeasurer,
   return lineNodes(lines, x, top, "middle");
 }
 
-function body(element: DiagramElement, w: number, h: number, measurer: TextMeasurer, shapes: ShapeLookup | undefined, hideText: boolean): SvgNode[] | null {
+function body(
+  element: DiagramElement,
+  style: StyleProps,
+  w: number,
+  h: number,
+  measurer: TextMeasurer,
+  shapes: ShapeLookup | undefined,
+  hideText: boolean,
+): SvgNode[] | null {
   switch (element.kind) {
     case "node":
     case "shape": {
       const outline =
         outlineKind(element) === "ellipse"
-          ? node("ellipse", { cx: w / 2, cy: h / 2, rx: w / 2, ry: h / 2, fill: FILL, stroke: STROKE })
-          : node("rect", { width: w, height: h, fill: FILL, stroke: STROKE });
+          ? node("ellipse", { cx: w / 2, cy: h / 2, rx: w / 2, ry: h / 2, ...outlineAttrs(style) })
+          : node("rect", { width: w, height: h, ...cornerAttrs(style), ...outlineAttrs(style) });
       const label =
         element.kind === "node" && !hideText ? labelNodes(element.label ?? element.id, w, h, measurer, shapes?.(element.shape)) : [];
       return [outline, ...label];
     }
-    case "text":
-      return hideText ? [] : lineNodes(layoutTextBox(element.content, w, measurer).lines, 0, 0, "start");
+    case "text": {
+      const background =
+        style.fill !== undefined || style.stroke !== undefined
+          ? [node("rect", { width: w, height: h, ...cornerAttrs(style), ...outlineAttrs(style) })]
+          : [];
+      const lines = hideText ? [] : lineNodes(layoutTextBox(element.content, w, measurer).lines, 0, 0, "start");
+      return [...background, ...lines];
+    }
     default:
       return null;
   }
@@ -86,10 +121,9 @@ function body(element: DiagramElement, w: number, h: number, measurer: TextMeasu
 const fmt = (n: number): string => String(n);
 
 /** The background behind a label, so the line does not run through the text, and its room around the text. */
-const PAPER = "#ffffff";
 const LABEL_PAD = 4;
 
-function labelNodesOnEdge({ edge, points, labelAt }: RoutedEdge, measurer: TextMeasurer): SvgNode[] {
+function labelNodesOnEdge({ edge, points, labelAt }: RoutedEdge, measurer: TextMeasurer, paper: string): SvgNode[] {
   const layout = edge.label ? edgeLabelLayout(points, labelAt, edge.label, measurer) : null;
   if (!layout) return [];
   const { box, lines } = layout;
@@ -98,26 +132,32 @@ function labelNodesOnEdge({ edge, points, labelAt }: RoutedEdge, measurer: TextM
     y: box.y - LABEL_PAD,
     width: box.w + 2 * LABEL_PAD,
     height: box.h + 2 * LABEL_PAD,
-    fill: PAPER,
+    fill: paper,
   });
   return [background, ...lineNodes(lines, box.x + box.w / 2, box.y, "middle")];
 }
 
-function edgeNode(routed: RoutedEdge, measurer: TextMeasurer, hideText: boolean): SvgNode {
+function edgeNode(routed: RoutedEdge, measurer: TextMeasurer, hideText: boolean, paper: string): SvgNode {
   const { edge, points, style } = routed;
+  const stroke = paint(style.stroke);
+  const width = numeric(style.strokeWidth);
   const path = node("path", {
     d: points.map((p, i) => `${i === 0 ? "M" : "L"}${fmt(p.x)} ${fmt(p.y)}`).join(""),
     fill: "none",
-    stroke: INK,
-    "stroke-width": EDGE_WIDTH,
+    stroke,
+    ...(width !== undefined && { "stroke-width": width }),
     "stroke-linejoin": "round",
   });
-  const heads = [headShape(style.headStart, points, "start"), headShape(style.headEnd, points, "end")].flatMap((head) => {
+  const heads = [headShape(style.headStart ?? "none", points, "start"), headShape(style.headEnd ?? "none", points, "end")].flatMap((head) => {
     if (!head) return [];
-    if (head.kind === "dot") return [node("circle", { cx: head.centre.x, cy: head.centre.y, r: head.r, fill: INK })];
-    return [node("polygon", { points: head.points.map((p) => `${fmt(p.x)},${fmt(p.y)}`).join(" "), fill: INK })];
+    if (head.kind === "dot") return [node("circle", { cx: head.centre.x, cy: head.centre.y, r: head.r, fill: stroke })];
+    return [node("polygon", { points: head.points.map((p) => `${fmt(p.x)},${fmt(p.y)}`).join(" "), fill: stroke })];
   });
-  return node("g", { "data-id": edge.id }, [path, ...heads, ...(hideText ? [] : labelNodesOnEdge(routed, measurer))]);
+  return node("g", { "data-id": edge.id, ...opacityAttrs(style) }, [
+    path,
+    ...heads,
+    ...(hideText ? [] : labelNodesOnEdge(routed, measurer, paper)),
+  ]);
 }
 
 /**
@@ -131,6 +171,7 @@ export function describeDiagram(doc: DiagramDocument, measurer: TextMeasurer, op
   const elements = elementsById(doc);
   const entries = layoutById(doc);
   const edges = routedEdges(doc, measurer, only);
+  const paper = themeColour(doc, "paper") ?? "#ffffff";
   const out: SvgNode[] = [];
   for (const id of stackOrder(doc)) {
     if (only && !only.has(id)) continue;
@@ -138,15 +179,17 @@ export function describeDiagram(doc: DiagramDocument, measurer: TextMeasurer, op
     if (!element) continue;
     if (element.kind === "edge") {
       const routed = edges.get(id);
-      if (routed) out.push(edgeNode(routed, measurer, hideText?.has(id) === true));
+      if (routed) out.push(edgeNode(routed, measurer, hideText?.has(id) === true, paper));
       continue;
     }
     const entry = entries.get(id);
     const size = sizeOf(element, entry, measurer);
     if (!entry || !size) continue;
-    const children = body(element, size.w, size.h, measurer, shapes, hideText?.has(element.id) === true);
+    const style = styleOf(doc, element);
+    const children = body(element, style, size.w, size.h, measurer, shapes, hideText?.has(element.id) === true);
     if (!children) continue;
-    out.push(node("g", { "data-id": element.id, transform: `translate(${fmt(entry.x)} ${fmt(entry.y)})` }, children));
+    const attrs = { "data-id": element.id, transform: `translate(${fmt(entry.x)} ${fmt(entry.y)})`, ...opacityAttrs(style) };
+    out.push(node("g", attrs, children));
   }
   return out;
 }

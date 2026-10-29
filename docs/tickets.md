@@ -8,13 +8,14 @@ The table has one fixed set of columns and plain-text cells. Changing a column i
 
 - **Columns:** ID, Phase, Title, Description, Depends on, Story Points, Status, Created on, Updated on.
 - **ID:** `T-NNN`, never reused.
+- **Phase:** `0` to `7`.
 - **Depends on:** comma-separated IDs, or `none`.
 - **Story Points:** one of `1`, `2`, `3`, `5` or `8`.
 - **Status:** `todo`, `doing`, `done` or `blocked`.
 - **Created on / Updated on:** `YYYY-MM-DD` and nothing else. Created on never changes; Updated on is the day any field last changed.
 - **Cells:** plain text. No emoji, arrows or other symbols.
 
-Phases 0, 1 and 2 are broken into tickets. Later phases are outlined and get tickets as they come up.
+Phases 0 to 4 are broken into tickets. Later phases are outlined and get tickets as they come up.
 
 ## Phases
 
@@ -23,9 +24,11 @@ Phases 0, 1 and 2 are broken into tickets. Later phases are outlined and get tic
 | 0 | Foundation: document model, KDL round-trip, formatter, commands, test harness. Four risk spikes: KDL parser, text wrapping, drag performance, connectors. |
 | 1 | Minimal editor: local Go server (file access, security), SVG renderer, select, move, resize, save. |
 | 2 | Connectors and text. |
-| 3 | Styling and shape packs: one ticket per shape category, built in parallel from the shape standard (T-022). Category work can start before the renderer exists. |
-| 4 | Workspace, files, file watching, preferences, clipboard, export. |
-| 5 | Polish: performance budgets, in-app documentation, release. |
+| 3 | Styling: theme, classes and overrides resolved from the style section, drawn on shapes, edges and text, and edited from a style panel with a colour picker. |
+| 4 | Shape packs: pack loader, pack shapes drawn, hit-tested and routed by their outlines, shape library sidebar and creation tool, and one ticket per shape category, built in parallel from the shape standard (T-022). Category work can start before the renderer exists. |
+| 5 | Editing commands: delete, duplicate, bring to front and send to back, align and distribute, lock, frames, images. |
+| 6 | Workspace, files, file watching, preferences, clipboard, export. |
+| 7 | Polish: performance budgets, in-app documentation, release. |
 
 ## Tickets
 
@@ -65,3 +68,31 @@ Phases 0, 1 and 2 are broken into tickets. Later phases are outlined and get tic
 | T-033 | 2 | Bend points | Alt-click the path of a selected edge to add a bend point, drag a point to move it, Alt-click a point to remove it. Each edit is one undoable command that writes the via list. Bend points are kept when the ends move. | T-031 | 3 | done | 2026-10-27 | 2026-10-29 |
 | T-034 | 2 | Edge labels | Edge labels drawn at their position along the path and moving with it, dragged along the path, edited with the text overlay. | T-029, T-026, T-027 | 5 | done | 2026-10-27 | 2026-10-29 |
 | T-035 | 2 | Phase 2 performance check | In Chromium and WebKit, on a generated 500-element file with labels and routed edges: dragging a selection and resizing a shape with attached edges stay inside the 60fps budget (spec 7.1). Resize re-routes only the attached edges and measures a label again only when its width changed. | T-034 | 3 | done | 2026-10-27 | 2026-10-29 |
+| T-036 | 3 | Style resolution | Resolve the style section to one style per element: properties merge in the order built-in defaults, the element's class, its override; then tokens are replaced from the theme, a well-known token the file lacks from the built-in theme. A token nothing defines leaves the property unset. Pure functions over the model. | T-002 | 5 | done | 2026-10-29 | 2026-10-29 |
+| T-037 | 3 | Default theme and token vocabulary | The built-in default theme with the well-known tokens and values, and the default look per element kind, both as laid out in spec 4.4, and the fallback for well-known tokens a file's theme lacks. | T-036, T-024 | 3 | done | 2026-10-29 | 2026-10-29 |
+| T-038 | 3 | Style value parsing | Parse and print dash, gradient (with optional stop positions) and shadow values in the canonical form of spec 4.4. A value that does not parse is kept as written and skipped when drawing. | T-002 | 3 | done | 2026-10-29 | 2026-10-29 |
+| T-039 | 3 | Property registry | Typed registry of the style properties in spec 4.4 with group, value type and accepted values. The style panel and the validator read it. | T-036 | 3 | done | 2026-10-29 | 2026-10-29 |
+| T-040 | 3 | Render fill, stroke and opacity | Draw fill, stroke, stroke width, radius and opacity from the resolved style on shapes, text boxes and edges, with the colours of the default theme. The renderer holds no state. | T-037, T-012, T-029 | 5 | doing | 2026-10-29 | 2026-10-29 |
+| T-041 | 3 | Style commands | Set or clear one property on the selection as one undoable command. Each writes `el` override lines; clearing a property removes it from its line, and a line with no property left is dropped, so the element returns to its class and the theme. | T-036, T-006, T-014 | 3 | todo | 2026-10-29 | 2026-10-29 |
+| T-042 | 3 | Style panel: fill and stroke | Panel for the selection, built from the property registry, with fill, stroke, stroke width, radius and opacity. Radius is shown for the built-in rectangle and for text boxes only. Mixed values are shown as mixed. Edits go through the style commands. | T-039, T-040, T-041 | 5 | todo | 2026-10-29 | 2026-10-29 |
+| T-043 | 3 | Colour picker | Colour picker for fill, stroke and text colour. It offers the well-known theme tokens first and raw colours second. Recent colours are kept for the session only. | T-042 | 5 | todo | 2026-10-29 | 2026-10-29 |
+| T-044 | 3 | Render text styles | Apply font, size, weight, italic, underline, colour, alignment and line height from the resolved style to labels, text boxes and edge labels. Measuring, wrapping and the editing overlay use the same style, so they match the display. | T-037, T-026, T-027, T-034 | 5 | todo | 2026-10-29 | 2026-10-29 |
+| T-045 | 3 | Panel: text fields | Text properties in the style panel. | T-042, T-044 | 3 | todo | 2026-10-29 | 2026-10-29 |
+| T-046 | 3 | Render dash, gradient and shadow | Draw dash, gradient fill and shadow from the resolved style. Gradient and shadow definitions are part of the rendered tree, built once and not recomputed per pointer move, so SVG export can reuse them. While a drag would break the frame budget, it is drawn without filters and the committed render keeps them. | T-038, T-040 | 5 | todo | 2026-10-29 | 2026-10-29 |
+| T-047 | 3 | Panel: dash, gradient and shadow fields | Dash, gradient and shadow properties in the style panel. | T-042, T-046 | 3 | todo | 2026-10-29 | 2026-10-29 |
+| T-048 | 3 | Phase 3 performance check | In Chromium and WebKit, on a generated 500-element file with shadows, gradients and styled text: dragging a selection and resizing a shape stay inside the 60fps budget (spec 7.1). | T-044, T-046 | 3 | todo | 2026-10-29 | 2026-10-29 |
+| T-049 | 4 | Pack loader | Load the bundled packs through a source of pack files, check them with the shape validator, resolve `<pack>.<id>` names (`core` shapes need no prefix) and apply the stretch for an element size, cached by shape and size. Report shape names no pack provides. Pure code, no renderer. | T-022 | 5 | todo | 2026-10-29 | 2026-10-29 |
+| T-050 | 4 | Render pack shapes and placeholders | Draw nodes and shapes from their pack SVG at the element size, coloured by role from the resolved style. An unknown shape is a dashed placeholder showing its name, at its layout size, or the standard default size when the layout has none. Labels use the manifest label rectangle. | T-049, T-040, T-026 | 5 | todo | 2026-10-29 | 2026-10-29 |
+| T-051 | 4 | Pack outlines for hit-testing and straight routing | Flatten the outline once per shape and size. Shape hit-testing is inside the outline plus a margin, and straight edges clip to the outline. Moving or resizing a shape re-routes only its edges. | T-049, T-028, T-031 | 5 | todo | 2026-10-29 | 2026-10-29 |
+| T-052 | 4 | Shape library sidebar | Left sidebar listing shapes by category with search over names and tags, and lazily rendered previews. Rectangle and ellipse are listed as built-in entries. | T-049, T-050 | 5 | todo | 2026-10-29 | 2026-10-29 |
+| T-053 | 4 | Shape creation tool | Clicking a shape in the sidebar arms the tool: a click places the node at its default size and a drag sizes it, as one undoable command. The node gets an unused ID built from the shape's ID without its pack prefix, such as `load-balancer`. | T-052, T-006 | 3 | todo | 2026-10-29 | 2026-10-29 |
+| T-054 | 4 | Shapes: basic | In the `core` pack: rounded-rect, circle, diamond, triangle, pentagon, hexagon, octagon, star, callout, callout-round, bracket and brace. Each has a name and tags, to the shape standard. | T-022, T-063 | 8 | todo | 2026-10-29 | 2026-10-29 |
+| T-055 | 4 | Shapes: flowchart | In the `core` pack: process, decision, terminator, data, document, manual-input and connector. Each has a name and tags, to the shape standard. | T-022, T-063 | 5 | todo | 2026-10-29 | 2026-10-29 |
+| T-056 | 4 | Shapes: arrows and lines | In the `core` pack: arrow-right, arrow-left, arrow-up, arrow-down, arrow-double, arrow-curved, arrow-u-turn and divider. Each has a name and tags, to the shape standard. | T-022, T-063 | 5 | todo | 2026-10-29 | 2026-10-29 |
+| T-057 | 4 | Shapes: architecture | In the `arch` pack: server, database, cache, queue, cdn, load-balancer, gateway, dns, firewall, storage-bucket, function, container, client, browser, mobile, user and cloud. Icon shapes share one canvas size and level of detail. | T-022, T-063 | 8 | todo | 2026-10-29 | 2026-10-29 |
+| T-058 | 4 | Shapes: network | In the `net` pack: router, switch, vpn, internet, subnet and on-prem. Each has a name and tags, to the shape standard. | T-022, T-063 | 5 | todo | 2026-10-29 | 2026-10-29 |
+| T-059 | 4 | Shapes: C4 | In the `c4` pack: person, software-system, container, component and boundary. The boundary stretches with fixed corners. | T-022, T-063 | 5 | todo | 2026-10-29 | 2026-10-29 |
+| T-060 | 4 | Shapes: infographic | In the `info` pack: banner, badge, numbered-step, timeline-marker and ribbon. Each has a name and tags, to the shape standard. | T-022, T-063 | 5 | todo | 2026-10-29 | 2026-10-29 |
+| T-061 | 4 | Phase 4 performance check | In Chromium and WebKit, on a generated 500-element file of pack shapes with routed edges: dragging a selection and resizing a shape with attached edges stay inside the 60fps budget (spec 7.1). | T-050, T-062 | 3 | todo | 2026-10-29 | 2026-10-29 |
+| T-062 | 4 | Pack attachment and elbow exits | A side and position attach where a line inward from the bounding box first meets the pack outline, with the bounding-box point as fallback (spec 5.3). Auto anchors use the manifest anchors, a re-attach drop writes the side and position, and an elbow route leaves the attachment point along the direction of its bounding-box side. | T-051, T-032 | 5 | todo | 2026-10-29 | 2026-10-29 |
+| T-063 | 4 | Contact sheet role rules | The contact sheet draws each part by the app's role rules: `detail` in the stroke colour at two thirds of the stroke width, `fill` and `stroke` from the element's fill and stroke. Category reviews then show what the app draws. | T-022 | 2 | todo | 2026-10-29 | 2026-10-29 |

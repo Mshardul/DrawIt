@@ -367,3 +367,116 @@ describe("SVG renderer, text being edited", () => {
     expect(describeDiagram(d, monoMeasurer, { only: new Set(["b"]) }).map((g) => g.attrs["data-id"])).toEqual(["b"]);
   });
 });
+
+describe("SVG renderer, fill, stroke and opacity", () => {
+  const withStyle = (
+    elements: DiagramElement[],
+    layout: LayoutEntry[],
+    style: Partial<DiagramDocument["style"]>,
+  ): DiagramDocument => {
+    const d = doc(elements, layout);
+    return { ...d, style: { ...d.style, ...style } };
+  };
+  const box = (id: string): LayoutEntry => ({ id, x: 0, y: 0, w: 100, h: 50 });
+  const group = (d: DiagramDocument, id: string): SvgNode =>
+    describeDiagram(d, monoMeasurer).find((g) => g.attrs["data-id"] === id) as SvgNode;
+  const a: DiagramElement = { kind: "node", id: "a", shape: "rect" };
+
+  it("draws a node with the colours of the default theme", () => {
+    expect(find(group(doc([a], [box("a")]), "a"), "rect")?.attrs).toMatchObject({
+      fill: "#dbe8f5",
+      stroke: "#1f4e79",
+      "stroke-width": 1.5,
+    });
+  });
+
+  it("takes fill, stroke and stroke width from an override, raw or by token", () => {
+    const d = withStyle([a], [box("a")], {
+      overrides: [{ id: "a", props: { fill: "#ff0000", stroke: "$accent", strokeWidth: 4 } }],
+    });
+    expect(find(group(d, "a"), "rect")?.attrs).toMatchObject({ fill: "#ff0000", stroke: "#e8732a", "stroke-width": 4 });
+  });
+
+  it("takes a colour from a class and from the file's own theme", () => {
+    const d = withStyle([{ ...a, class: "warm" }], [box("a")], {
+      theme: { name: "default", colors: { accent: "#00ff00" }, fonts: {}, sizes: {}, spaces: {} },
+      classes: [{ name: "warm", props: { fill: "$accent" } }],
+    });
+    expect(find(group(d, "a"), "rect")?.attrs["fill"]).toBe("#00ff00");
+  });
+
+  it("draws no fill where a token is defined nowhere", () => {
+    const d = withStyle([a], [box("a")], { overrides: [{ id: "a", props: { fill: "$nowhere" } }] });
+    expect(find(group(d, "a"), "rect")?.attrs["fill"]).toBe("none");
+  });
+
+  it("rounds the corners of a rectangle by radius", () => {
+    const d = withStyle([a], [box("a")], { overrides: [{ id: "a", props: { radius: 8 } }] });
+    expect(find(group(d, "a"), "rect")?.attrs).toMatchObject({ rx: 8, ry: 8 });
+  });
+
+  it("leaves the corners square by default", () => {
+    expect(find(group(doc([a], [box("a")]), "a"), "rect")?.attrs["rx"]).toBeUndefined();
+  });
+
+  it("sets opacity on the element's group only when it is not 1", () => {
+    const faded = withStyle([a], [box("a")], { overrides: [{ id: "a", props: { opacity: 0.4 } }] });
+    expect(group(faded, "a").attrs["opacity"]).toBe(0.4);
+    expect(group(doc([a], [box("a")]), "a").attrs["opacity"]).toBeUndefined();
+  });
+
+  it("draws an ellipse with the same fill and stroke", () => {
+    const e: DiagramElement = { kind: "node", id: "e", shape: "ellipse" };
+    const d = withStyle([e], [box("e")], { overrides: [{ id: "e", props: { fill: "#123456" } }] });
+    expect(find(group(d, "e"), "ellipse")?.attrs).toMatchObject({ fill: "#123456", stroke: "#1f4e79" });
+  });
+
+  it("draws a text box with no background by default", () => {
+    const t: DiagramElement = { kind: "text", id: "t", content: "Hi" };
+    expect(find(group(doc([t], [{ id: "t", x: 0, y: 0, w: 100 }]), "t"), "rect")).toBeUndefined();
+  });
+
+  it("draws a text box background, rounded, when the style gives it a fill or stroke", () => {
+    const t: DiagramElement = { kind: "text", id: "t", content: "Hi" };
+    const d = withStyle([t], [{ id: "t", x: 0, y: 0, w: 100 }], {
+      overrides: [{ id: "t", props: { fill: "$surface", stroke: "$ink", radius: 6 } }],
+    });
+    const g = group(d, "t");
+    expect(g.children[0]?.tag).toBe("rect");
+    expect(find(g, "rect")?.attrs).toMatchObject({ fill: "#dbe8f5", stroke: "#1a1a1a", rx: 6, height: LINE_HEIGHT });
+  });
+
+  describe("edges", () => {
+    const b: DiagramElement = { kind: "node", id: "b", shape: "rect" };
+    const e: DiagramElement = { kind: "edge", id: "a->b", from: "a", to: "b", label: "Hi" };
+    const layout: LayoutEntry[] = [box("a"), { id: "b", x: 300, y: 0, w: 100, h: 50 }];
+
+    it("draws the path and its arrowhead in the ink colour at the default width", () => {
+      const g = group(doc([a, b, e], layout), "a->b");
+      expect(find(g, "path")?.attrs).toMatchObject({ stroke: "#1a1a1a", "stroke-width": 1.5 });
+      expect(find(g, "polygon")?.attrs["fill"]).toBe("#1a1a1a");
+    });
+
+    it("takes stroke and width from the style, for the line and its heads", () => {
+      const d = withStyle([a, b, e], layout, {
+        overrides: [{ id: "a->b", props: { stroke: "$accent", strokeWidth: 3, headStart: "dot" } }],
+      });
+      const g = group(d, "a->b");
+      expect(find(g, "path")?.attrs).toMatchObject({ stroke: "#e8732a", "stroke-width": 3 });
+      expect(find(g, "polygon")?.attrs["fill"]).toBe("#e8732a");
+      expect(find(g, "circle")?.attrs["fill"]).toBe("#e8732a");
+    });
+
+    it("sets opacity on the edge's group", () => {
+      const d = withStyle([a, b, e], layout, { overrides: [{ id: "a->b", props: { opacity: 0.5 } }] });
+      expect(group(d, "a->b").attrs["opacity"]).toBe(0.5);
+    });
+
+    it("draws the label background in the paper colour of the theme", () => {
+      const d = withStyle([a, b, e], layout, {
+        theme: { name: "default", colors: { paper: "#fafafa" }, fonts: {}, sizes: {}, spaces: {} },
+      });
+      expect(find(group(d, "a->b"), "rect")?.attrs["fill"]).toBe("#fafafa");
+    });
+  });
+});

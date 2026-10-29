@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import type { DiagramDocument, DiagramElement, EdgeElement, LayoutEntry, StyleProps } from "../model/index.ts";
 import { LINE_HEIGHT } from "../render/text-layout.ts";
 import { monoMeasurer } from "../testing/measurer.ts";
-import { edgesAttachedTo, edgeStyle, routedEdges } from "./edges.ts";
+import { styleOf } from "../style/of.ts";
+import { edgesAttachedTo, routedEdges } from "./edges.ts";
 
 const doc = (elements: DiagramElement[], layout: LayoutEntry[], style: Partial<DiagramDocument["style"]> = {}): DiagramDocument => ({
   version: 1,
@@ -24,13 +25,13 @@ describe("edge style", () => {
   const props = (p: StyleProps): DiagramDocument["style"]["classes"] => [{ name: "fancy", props: p }];
 
   it("an edge with no style is straight, with no head at the start and an arrow at the end", () => {
-    expect(edgeStyle(doc([a, b, edge()], twoNodes), edge())).toEqual({ route: "straight", headStart: "none", headEnd: "arrow" });
+    expect(styleOf(doc([a, b, edge()], twoNodes), edge())).toMatchObject({ route: "straight", headStart: "none", headEnd: "arrow" });
   });
 
   it("a class overrides the defaults property by property", () => {
     const e = edge({ class: "fancy" });
     const d = doc([a, b, e], twoNodes, { classes: props({ route: "elbow", headStart: "dot" }) });
-    expect(edgeStyle(d, e)).toEqual({ route: "elbow", headStart: "dot", headEnd: "arrow" });
+    expect(styleOf(d, e)).toMatchObject({ route: "elbow", headStart: "dot", headEnd: "arrow" });
   });
 
   it("a per-element override wins over the class", () => {
@@ -39,12 +40,12 @@ describe("edge style", () => {
       classes: props({ route: "elbow", headEnd: "dot" }),
       overrides: [{ id: "a->b", props: { headEnd: "none" } }],
     });
-    expect(edgeStyle(d, e)).toEqual({ route: "elbow", headStart: "none", headEnd: "none" });
+    expect(styleOf(d, e)).toMatchObject({ route: "elbow", headStart: "none", headEnd: "none" });
   });
 
   it("a class that is not defined changes nothing", () => {
     const e = edge({ class: "missing" });
-    expect(edgeStyle(doc([a, b, e], twoNodes), e).route).toBe("straight");
+    expect(styleOf(doc([a, b, e], twoNodes), e).route).toBe("straight");
   });
 });
 
