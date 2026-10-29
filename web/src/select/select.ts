@@ -2,6 +2,7 @@
 // renderer draws: shapes and text boxes by their boxes, edges by their routed paths, in one
 // z-order. Frames, images and unknown elements cannot be selected until they are drawn.
 import { routedEdges } from "../connectors/edges.ts";
+import { edgeLabelLayout } from "../connectors/label.ts";
 import { distanceToPath, pathTouchesRect } from "../connectors/path.ts";
 import type { DiagramDocument } from "../model/index.ts";
 import { type Box, type DrawnBox, drawnBoxes, outlineKind, stackOrder } from "../render/boxes.ts";
@@ -44,12 +45,15 @@ function pickables(doc: DiagramDocument, measurer: TextMeasurer): Pickable[] {
   const out: Pickable[] = [];
   for (const id of stackOrder(doc)) {
     const edge = edges.get(id);
+    const label = edge?.edge.label ? edgeLabelLayout(edge.points, edge.labelAt, edge.edge.label, measurer)?.box : undefined;
     const picked =
       boxes.get(id) ??
       (edge && {
         id,
         locked: edge.locked,
-        covers: (p: Pt, reach: number) => distanceToPath(edge.points, p) <= reach,
+        covers: (p: Pt, reach: number) =>
+          distanceToPath(edge.points, p) <= reach ||
+          (label !== undefined && p.x >= label.x && p.x <= label.x + label.w && p.y >= label.y && p.y <= label.y + label.h),
         overlaps: (r: Box) => pathTouchesRect(edge.points, r),
       });
     if (picked) out.push(picked);

@@ -109,3 +109,43 @@ describe("new text ID", () => {
     ).toBe("text-3");
   });
 });
+
+describe("edit target of an edge label", () => {
+  const nodes: LayoutEntry[] = [
+    { id: "a", x: 0, y: 0, w: 100, h: 50 },
+    { id: "b", x: 300, y: 0, w: 100, h: 50 },
+  ];
+  const edge = (label?: string): DiagramElement => ({ kind: "edge", id: "e", from: "a", to: "b", ...(label !== undefined && { label }) });
+  const elements = (label?: string): DiagramElement[] => [{ kind: "node", id: "a", shape: "rect" }, { kind: "node", id: "b", shape: "rect" }, edge(label)];
+
+  it("is the label where it is drawn on the path, centred, even when the edge has no layout entry", () => {
+    expect(editTarget(doc(elements("Hi"), nodes), "e", monoMeasurer)).toEqual({
+      id: "e",
+      field: "edgeLabel",
+      text: "Hi",
+      lines: ["Hi"],
+      box: { x: 190, y: 13, w: 20, h: LINE_HEIGHT },
+      align: "center",
+    });
+  });
+
+  it("follows the label position in the layout", () => {
+    const d = doc(elements("Hi"), [...nodes, { id: "e", x: 0, y: 0, labelAt: 0.25 }]);
+    expect(editTarget(d, "e", monoMeasurer)?.box).toEqual({ x: 140, y: 13, w: 20, h: LINE_HEIGHT });
+  });
+
+  it("is an empty text, in a small box on the middle of the path, for an edge with no label", () => {
+    expect(editTarget(doc(elements(), nodes), "e", monoMeasurer)).toMatchObject({ text: "", lines: [""], box: { x: 196, y: 13, w: 8 } });
+  });
+
+  it("is null for an edge that is not drawn", () => {
+    expect(editTarget(doc(elements("Hi"), nodes.slice(0, 1)), "e", monoMeasurer)).toBeNull();
+  });
+
+  it("sets the label, and removes it when emptied so the file keeps no empty label", () => {
+    expect(setTextCommand("edgeLabel", "e", "Hi")).toEqual({ type: "setElement", id: "e", set: { label: "Hi" } });
+    const d = doc(elements("Hi"), nodes);
+    const emptied = applyCommand(d, setTextCommand("edgeLabel", "e", "")).document;
+    expect(emptied.elements.find((e) => e.id === "e")).not.toHaveProperty("label");
+  });
+});

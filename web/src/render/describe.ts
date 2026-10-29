@@ -2,8 +2,10 @@
 // data, not DOM, so it needs no browser to test; `mount` puts it on the page. The renderer holds
 // no state: the same document always gives the same tree.
 import { headShape } from "../connectors/heads.ts";
+import { edgeLabelLayout } from "../connectors/label.ts";
 import { type RoutedEdge, routedEdges } from "../connectors/edges.ts";
-import type { DiagramDocument, DiagramElement, LayoutEntry } from "../model/index.ts";
+import type { DiagramDocument, DiagramElement } from "../model/index.ts";
+import { elementsById, layoutById } from "../model/lookup.ts";
 import type { ShapeManifest } from "../shapes/types.ts";
 import { svgTextAttrs, type TextMeasurer } from "../text/measure.ts";
 import { outlineKind, stackOrder } from "./boxes.ts";
@@ -83,7 +85,26 @@ function body(element: DiagramElement, w: number, h: number, measurer: TextMeasu
 
 const fmt = (n: number): string => String(n);
 
-function edgeNode({ edge, points, style }: RoutedEdge): SvgNode {
+/** The background behind a label, so the line does not run through the text, and its room around the text. */
+const PAPER = "#ffffff";
+const LABEL_PAD = 4;
+
+function labelNodesOnEdge({ edge, points, labelAt }: RoutedEdge, measurer: TextMeasurer): SvgNode[] {
+  const layout = edge.label ? edgeLabelLayout(points, labelAt, edge.label, measurer) : null;
+  if (!layout) return [];
+  const { box, lines } = layout;
+  const background = node("rect", {
+    x: box.x - LABEL_PAD,
+    y: box.y - LABEL_PAD,
+    width: box.w + 2 * LABEL_PAD,
+    height: box.h + 2 * LABEL_PAD,
+    fill: PAPER,
+  });
+  return [background, ...lineNodes(lines, box.x + box.w / 2, box.y, "middle")];
+}
+
+function edgeNode(routed: RoutedEdge, measurer: TextMeasurer, hideText: boolean): SvgNode {
+  const { edge, points, style } = routed;
   const path = node("path", {
     d: points.map((p, i) => `${i === 0 ? "M" : "L"}${fmt(p.x)} ${fmt(p.y)}`).join(""),
     fill: "none",
@@ -96,7 +117,7 @@ function edgeNode({ edge, points, style }: RoutedEdge): SvgNode {
     if (head.kind === "dot") return [node("circle", { cx: head.centre.x, cy: head.centre.y, r: head.r, fill: INK })];
     return [node("polygon", { points: head.points.map((p) => `${fmt(p.x)},${fmt(p.y)}`).join(" "), fill: INK })];
   });
-  return node("g", { "data-id": edge.id }, [path, ...heads]);
+  return node("g", { "data-id": edge.id }, [path, ...heads, ...(hideText ? [] : labelNodesOnEdge(routed, measurer))]);
 }
 
 /**
@@ -107,9 +128,8 @@ function edgeNode({ edge, points, style }: RoutedEdge): SvgNode {
  */
 export function describeDiagram(doc: DiagramDocument, measurer: TextMeasurer, options: DescribeOptions = {}): SvgNode[] {
   const { only, shapes, hideText } = options;
-  const elements = new Map(doc.elements.map((e) => [e.id, e]));
-  const entries = new Map<string, LayoutEntry>();
-  for (const entry of doc.layout) if (!entries.has(entry.id)) entries.set(entry.id, entry);
+  const elements = elementsById(doc);
+  const entries = layoutById(doc);
   const edges = routedEdges(doc, measurer, only);
   const out: SvgNode[] = [];
   for (const id of stackOrder(doc)) {
@@ -118,7 +138,7 @@ export function describeDiagram(doc: DiagramDocument, measurer: TextMeasurer, op
     if (!element) continue;
     if (element.kind === "edge") {
       const routed = edges.get(id);
-      if (routed) out.push(edgeNode(routed));
+      if (routed) out.push(edgeNode(routed, measurer, hideText?.has(id) === true));
       continue;
     }
     const entry = entries.get(id);

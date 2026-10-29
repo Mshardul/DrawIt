@@ -2,11 +2,18 @@
 // `describeDiagram` it is data and holds no state. Each node is keyed by `data-id` so `mount`
 // can reconcile it; strokes keep their screen width at any zoom.
 import { routedEdges } from "../connectors/edges.ts";
+import { edgeLabelLayout } from "../connectors/label.ts";
 import type { DiagramDocument, Point } from "../model/index.ts";
 import type { TextMeasurer } from "../text/measure.ts";
 import { type Box, drawnBoxes, stackOrder } from "./boxes.ts";
 import { handlesFor } from "../move/transform.ts";
 import type { SvgNode } from "./describe.ts";
+
+/**
+ * What a press on the selected edge's own handles hits: an end, a bend point or the label. Their
+ * drags belong to the inputs that own them, not to selection or to moving the edge.
+ */
+export const EDGE_HANDLE_SELECTOR = "[data-end], [data-bend], [data-label]";
 
 /** Side of a resize handle in screen px. */
 const HANDLE_PX = 8;
@@ -46,6 +53,14 @@ export function describeOverlay(
   const ends = lone && ([["from", lone.points[0]], ["to", lone.points.at(-1)]] as const);
   for (const [end, p] of ends ?? []) {
     if (p) out.push(node({ "data-id": `end-${end}`, "data-end": end, class: "handle", x: p.x - size / 2, y: p.y - size / 2, width: size, height: size }));
+  }
+  const bends = lone ? doc.layout.find((e) => e.id === lone.edge.id)?.via : undefined;
+  bends?.forEach((p, i) => {
+    out.push(node({ "data-id": `bend-${String(i)}`, "data-bend": i, class: "handle bend", x: p.x - size / 2, y: p.y - size / 2, width: size, height: size }));
+  });
+  const label = lone?.edge.label ? edgeLabelLayout(lone.points, lone.labelAt, lone.edge.label, measurer)?.box : undefined;
+  if (label) {
+    out.push(node({ "data-id": "label-grip", "data-label": "edge", class: "label-grip", x: label.x, y: label.y, width: label.w, height: label.h, fill: "transparent" }));
   }
   for (const h of handlesFor(doc, measurer, selection)) {
     out.push(

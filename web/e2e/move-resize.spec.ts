@@ -180,7 +180,7 @@ test("nudging does nothing without a selection and skips locked elements", async
   await expect(page.getByText("Unsaved changes")).toBeHidden();
 });
 
-test("dragging 100 selected elements of a 500-element file stays inside the frame budget", async ({ page }) => {
+test("dragging 100 selected elements of a 500-element file stays inside the frame budget @budget", async ({ page }) => {
   await page.evaluate(async () => {
     const load = <T>(path: string) => import(path) as Promise<T>;
     const { generateDiagram } = await load<typeof import("../src/testing/generate-diagram.ts")>("/src/testing/generate-diagram.ts");

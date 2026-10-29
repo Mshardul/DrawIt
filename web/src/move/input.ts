@@ -5,6 +5,7 @@ import { applyCommand, type Command } from "../commands/command.ts";
 import type { OpenFile } from "../app/workspace.ts";
 import type { Tool } from "../connectors/input.ts";
 import type { DiagramDocument } from "../model/index.ts";
+import { EDGE_HANDLE_SELECTOR } from "../render/overlay.ts";
 import { hitTest } from "../select/select.ts";
 import type { TextMeasurer } from "../text/measure.ts";
 import { screenToWorld, type Pt, type View } from "../view/view.ts";
@@ -87,6 +88,8 @@ export function attachTransformInput(host: TransformInputHost): () => void {
       return;
     }
     if (event.shiftKey || event.metaKey || event.ctrlKey) return;
+    // The edge's own handles sit on it; their drags are not a move of the edge.
+    if (event.target instanceof Element && event.target.closest(EDGE_HANDLE_SELECTOR)) return;
     const hit = hitTest(file.document, host.measurer, p, host.getView().scale);
     if (hit !== null && file.history.selection.includes(hit)) drag = { ...base, action: { kind: "move" } };
   };

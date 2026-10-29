@@ -1,6 +1,7 @@
 // Edges as the document describes them: the style an edge resolves to and the path it takes,
 // worked out from the layout of the elements at its ends.
 import type { DiagramDocument, DiagramElement, EdgeElement, LayoutEntry, Point, StyleProps } from "../model/index.ts";
+import { elementsById, layoutById } from "../model/lookup.ts";
 import type { ArrowHead, Route } from "../model/style.ts";
 import { elementBox, outlineKind } from "../render/boxes.ts";
 import type { TextMeasurer } from "../text/measure.ts";
@@ -18,6 +19,8 @@ export interface RoutedEdge {
   points: Point[];
   style: EdgeStyle;
   locked: boolean;
+  /** Where the label sits along the path (0..1); absent when the layout gives none. */
+  labelAt?: number;
 }
 
 const DEFAULT_STYLE: EdgeStyle = { route: "straight", headStart: "none", headEnd: "arrow" };
@@ -42,9 +45,8 @@ export function edgeStyle(doc: DiagramDocument, edge: EdgeElement): EdgeStyle {
  * with a box, or whose free end has no point in the layout, cannot be drawn and is left out.
  */
 export function routedEdges(doc: DiagramDocument, measurer: TextMeasurer, only?: ReadonlySet<string>): Map<string, RoutedEdge> {
-  const elements = new Map(doc.elements.map((e) => [e.id, e]));
-  const entries = new Map<string, LayoutEntry>();
-  for (const entry of doc.layout) if (!entries.has(entry.id)) entries.set(entry.id, entry);
+  const elements = elementsById(doc);
+  const entries = layoutById(doc);
 
   const endOf = (edge: EdgeElement, entry: LayoutEntry | undefined, which: "from" | "to"): End | null => {
     const id = edge[which];
@@ -67,7 +69,7 @@ export function routedEdges(doc: DiagramDocument, measurer: TextMeasurer, only?:
     const style = edgeStyle(doc, edge);
     const via = entry?.via;
     const points = route(from, to, via ? { route: style.route, via } : { route: style.route });
-    out.set(edge.id, { edge, points, style, locked: entry?.locked === true });
+    out.set(edge.id, { edge, points, style, locked: entry?.locked === true, ...(entry?.labelAt !== undefined && { labelAt: entry.labelAt }) });
   }
   return out;
 }

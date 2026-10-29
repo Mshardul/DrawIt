@@ -39,7 +39,8 @@ pnpm dev                 # Vite dev server
 pnpm lint
 pnpm typecheck
 pnpm test                # Vitest
-pnpm test:e2e            # Playwright: Chromium, Firefox, WebKit
+pnpm test:e2e            # Playwright: Chromium, Firefox, WebKit; frame-budget tests (@budget) run last, one at a time
+E2E_BROWSERS=chromium,webkit pnpm test:e2e   # leave a browser out
 
 cd ..
 go test ./...

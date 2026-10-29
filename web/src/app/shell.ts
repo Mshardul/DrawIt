@@ -1,6 +1,9 @@
 // The app's DOM, built by hand (no UI framework). One toolbar, an error banner and the canvas.
 // All state lives in the open `OpenFile`; the DOM is redrawn from it.
 import { attachEdgeInput, type Tool } from "../connectors/input.ts";
+import { attachBendInput } from "../connectors/bend-input.ts";
+import { attachLabelInput } from "../connectors/label-input.ts";
+import { attachReattachInput } from "../connectors/reattach-input.ts";
 import type { DiagramDocument, Point } from "../model/index.ts";
 import type { Box } from "../render/boxes.ts";
 import { describeDiagram } from "../render/describe.ts";
@@ -237,6 +240,20 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter): Pr
   setView(IDENTITY);
   setGrid({});
   setTool("select");
+  // Before selection: an Alt-click adds a bend point only to an edge that was already selected, and
+  // the selection input changes the selection on the same press.
+  attachBendInput({
+    target: canvas,
+    getView: () => view,
+    getFile: () => current,
+    measurer,
+    getTool: () => tool,
+    setPreview: (doc) => {
+      preview = doc;
+    },
+    redraw: (changed) => { redraw(changed); },
+    refresh,
+  });
   attachSelectInput({
     target: canvas,
     getView: () => view,
@@ -255,6 +272,30 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter): Pr
     measurer,
     getTool: () => tool,
     getGrid: () => (grid.snap ? grid.size : 0),
+    setPreview: (doc) => {
+      preview = doc;
+    },
+    redraw: (changed) => { redraw(changed); },
+    refresh,
+  });
+  attachLabelInput({
+    target: canvas,
+    getView: () => view,
+    getFile: () => current,
+    measurer,
+    getTool: () => tool,
+    setPreview: (doc) => {
+      preview = doc;
+    },
+    redraw: (changed) => { redraw(changed); },
+    refresh,
+  });
+  attachReattachInput({
+    target: canvas,
+    getView: () => view,
+    getFile: () => current,
+    measurer,
+    getTool: () => tool,
     setPreview: (doc) => {
       preview = doc;
     },

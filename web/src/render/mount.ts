@@ -1,12 +1,16 @@
-// Puts `describeDiagram` output on the page. It keeps no state of its own: the DOM it finds under
-// `root` is what it compares with. Groups are matched by `data-id`, so a drag that only changes
-// `transform` touches one attribute (the fast path for drags) and an element whose content is
-// unchanged keeps its DOM nodes.
+// Puts `describeDiagram` output on the page. Groups are matched by `data-id`, so a drag that only
+// changes `transform` touches one attribute (the fast path for drags) and an element whose content
+// is unchanged keeps its DOM nodes. Two caches keep a drag's frames cheap: the groups under each
+// root by ID, so a patch does not scan every child, and the content each group was built from, so
+// an unchanged group is not written to at all. Both are filled by `mount`; change the children of a
+// mounted root by other means and `patch` will not find them until the next `mount`.
 import type { SvgNode } from "./describe.ts";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
-/** Holds the serialised children a group was last built from, so unchanged content is not rebuilt. */
-const CONTENT = "data-content";
+/** The serialised children each group was last built from. */
+const builtFrom = new WeakMap<Element, string>();
+/** The groups under a root by `data-id`, as `mount` or the first `patch` found them. */
+const groupsOf = new WeakMap<Element, Map<string, Element>>();
 
 function build(spec: SvgNode): SVGElement {
   const el = document.createElementNS(SVG_NS, spec.tag);
@@ -23,12 +27,39 @@ function setAttrs(el: Element, attrs: SvgNode["attrs"]): void {
   }
 }
 
-/** Brings `el` in line with `spec`, rebuilding its children only when their content changed. */
+/**
+ * Brings the children of `el` in line with `specs`. A child with the tag its spec names is kept and
+ * only its attributes, text and children are rewritten: an edge that moves keeps its path, label
+ * background and label text, and the browser has no new nodes to lay out. Any other child is rebuilt.
+ */
+function reconcile(el: Element, specs: SvgNode[]): void {
+  const have = Array.from(el.children);
+  specs.forEach((spec, i) => {
+    const child = have[i];
+    if (child?.localName !== spec.tag) {
+      if (child) child.replaceWith(build(spec));
+      else el.append(build(spec));
+      return;
+    }
+    for (const name of child.getAttributeNames()) if (!(name in spec.attrs)) child.removeAttribute(name);
+    setAttrs(child, spec.attrs);
+    if (spec.text !== undefined) {
+      if (child.textContent !== spec.text) child.textContent = spec.text;
+    } else if (spec.children.length === 0 && child.childNodes.length > 0) {
+      child.replaceChildren();
+    }
+    reconcile(child, spec.children);
+  });
+  for (const extra of have.slice(specs.length)) extra.remove();
+}
+
+/** Brings `el` in line with `spec`, touching its children only when their content changed. */
 function update(el: Element, spec: SvgNode): void {
   const content = JSON.stringify(spec.children);
   setAttrs(el, spec.attrs);
-  if (el.getAttribute(CONTENT) !== content) el.replaceChildren(...spec.children.map(build));
-  el.setAttribute(CONTENT, content);
+  if (builtFrom.get(el) === content) return;
+  reconcile(el, spec.children);
+  builtFrom.set(el, content);
 }
 
 const idOf = (spec: SvgNode): string => String(spec.attrs["data-id"]);
@@ -45,6 +76,7 @@ function childrenById(root: Element): Map<string, Element> {
 /** Makes the children of `root` match `groups`, in order. */
 export function mount(root: Element, groups: SvgNode[]): void {
   const existing = childrenById(root);
+  const mounted = new Map<string, Element>();
   let previous: Element | null = null as Element | null;
   for (const spec of groups) {
     let el = existing.get(idOf(spec));
@@ -53,13 +85,15 @@ export function mount(root: Element, groups: SvgNode[]): void {
       update(el, spec);
     } else {
       el = build(spec);
-      el.setAttribute(CONTENT, JSON.stringify(spec.children));
+      builtFrom.set(el, JSON.stringify(spec.children));
     }
+    mounted.set(idOf(spec), el);
     const expectedPosition: Element | null = previous ? previous.nextElementSibling : root.firstElementChild;
     if (expectedPosition !== el) root.insertBefore(el, expectedPosition);
     previous = el;
   }
   for (const stale of existing.values()) stale.remove();
+  groupsOf.set(root, mounted);
 }
 
 /**
@@ -68,9 +102,13 @@ export function mount(root: Element, groups: SvgNode[]): void {
  * visit the other elements.
  */
 export function patch(root: Element, groups: SvgNode[]): void {
-  const existing = childrenById(root);
+  let known = groupsOf.get(root);
+  if (!known) {
+    known = childrenById(root);
+    groupsOf.set(root, known);
+  }
   for (const spec of groups) {
-    const el = existing.get(idOf(spec));
-    if (el) update(el, spec);
+    const el = known.get(idOf(spec));
+    if (el?.parentNode === root) update(el, spec);
   }
 }

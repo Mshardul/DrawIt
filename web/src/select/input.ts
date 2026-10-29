@@ -1,6 +1,7 @@
 // Pointer and key input for selection: click, shift/Cmd/Ctrl-click, drag-box, select all, clear.
 // The selection lives in the open file's history (so undo restores it); this module only changes it.
 import type { Box } from "../render/boxes.ts";
+import { EDGE_HANDLE_SELECTOR } from "../render/overlay.ts";
 import type { TextMeasurer } from "../text/measure.ts";
 import type { Tool } from "../connectors/input.ts";
 import { screenToWorld, type View } from "../view/view.ts";
@@ -43,8 +44,8 @@ export function attachSelectInput(host: SelectInputHost): () => void {
   const onPointerDown = (event: PointerEvent): void => {
     const file = host.getFile();
     if (event.button !== 0 || !file || host.getTool() !== "select") return;
-    // A press on a resize or edge-end handle belongs to the input that owns the handle, not to selection.
-    if (event.target instanceof Element && event.target.closest("[data-handle], [data-end]")) return;
+    // A press on a handle belongs to the input that owns the handle, not to selection.
+    if (event.target instanceof Element && event.target.closest(`[data-handle], ${EDGE_HANDLE_SELECTOR}`)) return;
     const additive = event.shiftKey || event.metaKey || event.ctrlKey;
     box = target.getBoundingClientRect();
     const p = world(event);

@@ -80,6 +80,35 @@ describe("selection overlay, edges", () => {
     expect(nodes.some((n) => n.attrs["data-end"] !== undefined)).toBe(false);
   });
 
+  const bent: DiagramDocument = { ...withEdge, layout: [...withEdge.layout, { id: "e", x: 0, y: 0, via: [{ x: 150, y: 200 }, { x: 250, y: 200 }] }] };
+
+  it("a lone selected edge gets a handle on each bend point, numbered in order, of constant screen size", () => {
+    const bends = describeOverlay(bent, monoMeasurer, ["e"], null, 2).filter((n) => n.attrs["data-bend"] !== undefined);
+    expect(bends.map((n) => n.attrs["data-bend"])).toEqual([0, 1]);
+    expect(bends[0]?.attrs).toMatchObject({ x: 148, y: 198, width: 4, height: 4 });
+    expect(bends[1]?.attrs).toMatchObject({ x: 248, y: 198 });
+  });
+
+  it("an edge with no bend points, or selected with other elements, shows no bend handles", () => {
+    const has = (nodes: ReturnType<typeof describeOverlay>) => nodes.some((n) => n.attrs["data-bend"] !== undefined);
+    expect(has(describeOverlay(withEdge, monoMeasurer, ["e"], null))).toBe(false);
+    expect(has(describeOverlay(bent, monoMeasurer, ["a", "e"], null))).toBe(false);
+  });
+
+  const labelled: DiagramDocument = { ...withEdge, elements: withEdge.elements.map((e) => (e.id === "e" && e.kind === "edge" ? { ...e, label: "Hi" } : e)) };
+  const gripOf = (nodes: ReturnType<typeof describeOverlay>) => nodes.filter((n) => n.attrs["data-label"] !== undefined);
+
+  it("a lone selected edge with a label gets a grip over the label to drag it by", () => {
+    const [grip, ...rest] = gripOf(describeOverlay(labelled, monoMeasurer, ["e"], null));
+    expect(rest).toEqual([]);
+    expect(grip).toMatchObject({ tag: "rect", attrs: { class: "label-grip", width: 20, height: 24 } });
+  });
+
+  it("an edge with no label, or selected with other elements, has no label grip", () => {
+    expect(gripOf(describeOverlay(withEdge, monoMeasurer, ["e"], null))).toEqual([]);
+    expect(gripOf(describeOverlay(labelled, monoMeasurer, ["a", "e"], null))).toEqual([]);
+  });
+
   it("outlines follow z-order, with edges and shapes together", () => {
     const layout = [...doc.layout.slice(0, 1), { id: "e", x: 0, y: 0 }, ...doc.layout.slice(1)];
     const nodes = describeOverlay({ ...withEdge, layout }, monoMeasurer, ["b", "e", "a"], null);

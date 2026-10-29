@@ -84,7 +84,7 @@ test("drawing again updates in place: a moved element keeps its DOM node, a remo
   expect(result).toEqual({ same: true, transform: "translate(99 20)", order: ["note", "box"] });
 });
 
-test("redrawing 500 elements with 100 moved holds the frame budget", async ({ page }) => {
+test("redrawing 500 elements with 100 moved holds the frame budget @budget", async ({ page }) => {
   const median = await page.evaluate(async () => {
     const load = <T>(path: string) => import(path) as Promise<T>;
     const { generateDiagram } = await load<typeof import("../src/testing/generate-diagram.ts")>(

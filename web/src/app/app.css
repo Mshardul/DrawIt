@@ -17,7 +17,9 @@ html, body { margin: 0; height: 100%; font: 14px system-ui, sans-serif; color: #
 .draft { fill: none; stroke: #1a73e8; stroke-width: 1.5; stroke-dasharray: 4 3; pointer-events: none; }
 .marquee { fill: rgba(26, 115, 232, 0.12); stroke: #1a73e8; stroke-width: 1; stroke-dasharray: 4 3; pointer-events: none; }
 .handle { fill: #fff; stroke: #1a73e8; stroke-width: 1.5; vector-effect: non-scaling-stroke; }
-.handle[data-handle="n"], .handle[data-handle="s"] { cursor: ns-resize; }
+.handle[data-bend] { cursor: move; }
+.label-grip { stroke: none; cursor: grab; }
+.handle[data-handle="n"],.handle[data-handle="s"] { cursor: ns-resize; }
 .handle[data-handle="e"], .handle[data-handle="w"] { cursor: ew-resize; }
 .handle[data-handle="ne"], .handle[data-handle="sw"] { cursor: nesw-resize; }
 .handle[data-handle="nw"], .handle[data-handle="se"] { cursor: nwse-resize; }

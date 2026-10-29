@@ -268,17 +268,18 @@ A minimal canvas with floating toolbars.
 - Anchors default to `auto`; a fixed side or a point along a side is explicit.
 - Routing is straight or elbow. Manual bend points are kept; endpoints always recompute.
 - Arrowheads at either end.
-- Edge labels sit at a position along the path and move with it.
+- **Edge labels:** a label is centred on the point `label-at` of the way along the path (the middle when absent) and moves with the path. It is drawn over a background in the canvas colour, in one line per line break, and is never wrapped. The label's box counts as part of the edge for clicks. A lone selected edge shows a grip over its label: dragging it sets `label-at` to the nearest point of the path, in hundredths, as one command, and Escape cancels. A locked edge's label cannot be dragged.
 - **Drawing:** with the line tool, drag from an element or from empty canvas to an element or to empty canvas. An end on an element is attached with an `auto` anchor; an end on empty canvas is a free end. The new edge is selected and the tool returns to select. Dragging from an element to itself draws nothing.
 - **Selecting:** a click within a few screen px of an edge's path selects it, and a lone selected edge shows a handle on each end. Edges and shapes share one z-order for clicks. Drag-box selects every edge it touches; select all includes edges; locked edges are skipped by both.
 - **Moving:** moving elements also moves the bend points and free ends of a selected edge and of an edge with both ends on the moving elements. An edge with an end that stays keeps its bend points.
-- Dragging an end re-attaches it to another element or detaches it to a free point.
+- **Re-attaching:** dragging an end handle of the selected edge onto an element attaches the end there, at the side and position along it nearest the pointer, never `auto`; dragging it onto empty canvas or a frame makes it a free end at the pointer. The edge keeps its ID and its bend points, and the other end is unchanged. Dropping onto the element at the other end, or leaving the end where it was, changes nothing; a locked edge cannot be dragged. Escape cancels the drag.
+- **Bend points:** a lone selected edge shows a handle on each bend point. Alt-click on its path, within a few screen px, adds a point there, placed in the list by its position along the path. Dragging a handle moves the point; Alt-click on a handle removes it, and removing the last one leaves the edge with no `via`. Each edit is one command, and Escape cancels a drag. Alt-click on an edge that is not selected only selects it, and a locked edge cannot be edited. Double-click is never a connector gesture: it edits text.
 - Deleting an element detaches its edges: each attached end stays where it was, as a free end.
 
 ### 5.4 Text
 
 - Text lives in two places. A **shape or edge label** is one per element, centered in the shape's label area. A **text box** is a separate floating element placed anywhere. Both are plain text with one style per element.
-- Double-click a shape or edge to edit its label in place. Double-click empty canvas to create a text box right there; double-click a text box to edit it.
+- Double-click a shape or edge to edit its label in place; an edge with no label starts an empty one, and an edge whose label is emptied has no label. Double-click empty canvas to create a text box right there; double-click a text box to edit it.
 - While editing, the text is shown in a plain editor over the element, on the same lines as the drawn text. Enter adds a line break. Escape, Cmd/Ctrl+Enter or a click elsewhere ends editing and keeps the text. A text box with no text is removed. Typing is grouped by pauses into undo steps, and undo and redo work inside the editor.
 - Formatting applies to the whole element and is stored in the style section.
 - Text boxes auto-size to content or have a fixed width and wrap.

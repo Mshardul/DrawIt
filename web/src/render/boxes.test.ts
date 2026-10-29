@@ -95,4 +95,13 @@ describe("stack order", () => {
   it("leaves out layout entries for elements that do not exist", () => {
     expect(stackOrder(doc([a], [{ id: "ghost", x: 0, y: 0 }, { id: "a", x: 0, y: 0 }]))).toEqual(["a"]);
   });
+
+  it("is worked out once for documents that share both arrays, as a drag preview does", () => {
+    const e: DiagramElement = { kind: "edge", id: "e", from: "a", to: "b" };
+    const elements = [a, b, e];
+    const layout: LayoutEntry[] = [{ id: "a", x: 0, y: 0 }, { id: "b", x: 0, y: 0 }];
+    expect(stackOrder({ ...doc(elements, layout), title: "other" })).toBe(stackOrder(doc(elements, layout)));
+    expect(stackOrder(doc(elements, [...layout]))).toEqual(stackOrder(doc(elements, layout)));
+    expect(stackOrder(doc(elements, [...layout]))).not.toBe(stackOrder(doc(elements, layout)));
+  });
 });

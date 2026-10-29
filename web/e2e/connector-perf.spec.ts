@@ -101,7 +101,7 @@ test("dropping an edge's end on empty canvas detaches it to a free point", async
 });
 
 for (const mode of ["hub", "selection"] as const) {
-  test(`dragging ${mode === "hub" ? "one shape with 20 edges" : "100 shapes with their edges"} holds the 60fps frame budget`, async ({ page, browserName }) => {
+  test(`dragging ${mode === "hub" ? "one shape with 20 edges" : "100 shapes with their edges"} holds the 60fps frame budget @budget`, async ({ page, browserName }) => {
     skipFrameBudgetOnCiWebkit(browserName);
     await page.goto(`/connector-perf.html?mode=${mode}&select=${String(SELECTED)}`);
     const drag = await page.evaluate<DragRun, number>(

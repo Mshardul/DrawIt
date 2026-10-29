@@ -37,7 +37,7 @@ test("a 500-element file renders as SVG with edges and a selection moves with th
   expect(run.moved).toBeGreaterThan(0);
 });
 
-test("dragging the selection holds the 60fps frame budget", async ({ page, browserName }) => {
+test("dragging the selection holds the 60fps frame budget @budget", async ({ page, browserName }) => {
   skipFrameBudgetOnCiWebkit(browserName);
   await page.goto(`/drag-perf.html?select=${String(SELECTED)}`);
   const run = await page.evaluate<DragRun, number>(

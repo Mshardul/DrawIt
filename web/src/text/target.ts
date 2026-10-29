@@ -1,6 +1,8 @@
 // What the editing overlay edits: which field of which element, and where its text is drawn. Pure
 // functions over the document, built on the layout the renderer draws with.
 import type { Command } from "../commands/command.ts";
+import { routedEdges } from "../connectors/edges.ts";
+import { edgeLabelLayout } from "../connectors/label.ts";
 import { type DiagramDocument, unusedId } from "../model/index.ts";
 import type { ShapeLookup } from "../render/describe.ts";
 import { sizeOf } from "../render/size.ts";
@@ -11,7 +13,7 @@ import type { TextMeasurer } from "./measure.ts";
 export interface EditTarget {
   id: string;
   /** The element field the text is stored in. */
-  field: "label" | "content";
+  field: "label" | "content" | "edgeLabel";
   text: string;
   /** The text as drawn, one entry per line. */
   lines: string[];
@@ -24,6 +26,12 @@ export interface EditTarget {
 export function editTarget(doc: DiagramDocument, id: string, measurer: TextMeasurer, shapes?: ShapeLookup): EditTarget | null {
   const element = doc.elements.find((e) => e.id === id);
   const entry = doc.layout.find((e) => e.id === id);
+  if (element?.kind === "edge") {
+    const routed = routedEdges(doc, measurer, new Set([id])).get(id);
+    const text = element.label ?? "";
+    const layout = routed && edgeLabelLayout(routed.points, routed.labelAt, text, measurer);
+    return layout ? { id, field: "edgeLabel", text, lines: layout.lines, box: layout.box, align: "center" } : null;
+  }
   if (!element || !entry) return null;
   if (element.kind === "node") {
     const size = sizeOf(element, entry, measurer);
@@ -46,9 +54,14 @@ export function editTarget(doc: DiagramDocument, id: string, measurer: TextMeasu
   return null;
 }
 
-/** Sets the text of the field `editTarget` named. */
+/**
+ * Sets the text of the field `editTarget` named. An edge with an empty label has no label, where a
+ * node with an empty label keeps it, because a node with none shows its ID.
+ */
 export function setTextCommand(field: EditTarget["field"], id: string, value: string): Command {
-  return { type: "setElement", id, set: field === "label" ? { label: value } : { content: value } };
+  if (field === "content") return { type: "setElement", id, set: { content: value } };
+  if (field === "edgeLabel" && value === "") return { type: "setElement", id, unset: ["label"] };
+  return { type: "setElement", id, set: { label: value } };
 }
 
 /** `text`, or `text-2`, `text-3` and so on: the first ID not in use. */

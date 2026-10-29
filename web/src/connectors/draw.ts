@@ -11,7 +11,7 @@ import { attachTarget, type End, route, type Target } from "./routing.ts";
 export type DrawEnd = { id: string } | { point: Point };
 
 /** Shapes and text boxes an edge can attach to, bottom to top. Frames are regions, not things to connect. */
-function targets(doc: DiagramDocument, measurer: TextMeasurer): Target[] {
+export function attachTargets(doc: DiagramDocument, measurer: TextMeasurer): Target[] {
   return drawnBoxes(doc, measurer).map(({ x, y, w, h, element }) => ({ id: element.id, box: { x, y, w, h }, shape: outlineKind(element) }));
 }
 
@@ -19,7 +19,7 @@ const roundPoint = (p: Point): Point => ({ x: Math.round(p.x), y: Math.round(p.y
 
 /** The topmost shape or text box under the world point, or the point itself, rounded to whole px. */
 export function drawEndAt(doc: DiagramDocument, measurer: TextMeasurer, p: Point): DrawEnd {
-  const hit = attachTarget(targets(doc, measurer), p);
+  const hit = attachTarget(attachTargets(doc, measurer), p);
   return hit ? { id: hit.id } : { point: roundPoint(p) };
 }
 
@@ -48,7 +48,7 @@ export function newEdgeCommand(doc: DiagramDocument, from: DrawEnd, to: DrawEnd)
 /** The straight line shown while dragging; empty while both ends are still the same element. */
 export function draftPath(doc: DiagramDocument, measurer: TextMeasurer, from: DrawEnd, to: DrawEnd): Point[] {
   if (sameEnd(from, to)) return [];
-  const boxes = new Map(targets(doc, measurer).map((t) => [t.id, t]));
+  const boxes = new Map(attachTargets(doc, measurer).map((t) => [t.id, t]));
   const endOf = (e: DrawEnd): End | null => {
     if (!("id" in e)) return { point: e.point };
     const t = boxes.get(e.id);

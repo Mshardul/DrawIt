@@ -181,6 +181,42 @@ describe("SVG renderer, edges", () => {
     expect(find(edgeGroup(d), "path")?.attrs["d"]).toBe("M100 25L200 25L200 125L300 125");
   });
 
+  const labelled = (label: string | undefined, entry: Partial<LayoutEntry> = {}, hide = false): SvgNode => {
+    const edge: DiagramElement = { kind: "edge", id: "a->b", from: "a", to: "b", ...(label !== undefined && { label }) };
+    const d = doc([a, b, edge], [...nodes, { id: "a->b", x: 0, y: 0, ...entry }]);
+    return describeDiagram(d, monoMeasurer, hide ? { hideText: new Set(["a->b"]) } : {}).find((g) => g.attrs["data-id"] === "a->b") as SvgNode;
+  };
+
+  it("draws a label centred on the middle of the path, over a background that breaks the line", () => {
+    const g = labelled("Hi");
+    expect(texts(g)).toEqual(["Hi"]);
+    expect(find(g, "text")?.attrs).toMatchObject({ x: 200, y: 25, "text-anchor": "middle" });
+    expect(g.children.map((c) => c.tag).slice(-2)).toEqual(["rect", "text"]);
+    expect(find(g, "rect")?.attrs).toMatchObject({ x: 186, y: 9, width: 28, height: 32, fill: "#ffffff" });
+  });
+
+  it("puts the label at its position along the path", () => {
+    expect(find(labelled("Hi", { labelAt: 0.25 }), "text")?.attrs).toMatchObject({ x: 150, y: 25 });
+  });
+
+  it("draws one line of text per line break and never wraps", () => {
+    expect(texts(labelled("a\nbb"))).toEqual(["a", "bb"]);
+  });
+
+  it("draws nothing for a missing or empty label", () => {
+    for (const g of [labelled(undefined), labelled("")]) {
+      expect(find(g, "text")).toBeUndefined();
+      expect(find(g, "rect")).toBeUndefined();
+    }
+  });
+
+  it("leaves out the label, and its background, while its text is being edited", () => {
+    const g = labelled("Hi", {}, true);
+    expect(find(g, "text")).toBeUndefined();
+    expect(find(g, "rect")).toBeUndefined();
+    expect(find(g, "path")).toBeDefined();
+  });
+
   it("does not draw an edge it cannot route", () => {
     const d = doc([a, { kind: "edge", id: "a->b", from: "a", to: "b" }], [nodes[0] as LayoutEntry]);
     expect(describeDiagram(d, monoMeasurer).map((g) => g.attrs["data-id"])).toEqual(["a"]);

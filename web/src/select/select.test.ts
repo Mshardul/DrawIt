@@ -164,3 +164,27 @@ describe("selection", () => {
     expect(history.selection).toEqual(["oval", "note"]);
   });
 });
+
+describe("selection of a labelled edge", () => {
+  const labelled = doc(
+    sample.elements.map((e) => (e.id === "e" && e.kind === "edge" ? { ...e, label: "label here" } : e)),
+    sample.layout,
+  );
+
+  it("a click on the label hits the edge, even where the path is further away than the pointer reach", () => {
+    expect(hitTest(sample, monoMeasurer, { x: 120, y: 27 })).toBeNull();
+    expect(hitTest(labelled, monoMeasurer, { x: 120, y: 27 })).toBe("e");
+  });
+
+  it("a click outside the label and away from the path still misses", () => {
+    expect(hitTest(labelled, monoMeasurer, { x: 120, y: 15 })).toBeNull();
+  });
+
+  it("a shape drawn above the edge is hit before the label under it", () => {
+    const over = doc(
+      [...labelled.elements, { kind: "node", id: "cover", shape: "rect" }],
+      [...labelled.layout, { id: "cover", x: 110, y: 20, w: 60, h: 30 }],
+    );
+    expect(hitTest(over, monoMeasurer, { x: 120, y: 27 })).toBe("cover");
+  });
+});
