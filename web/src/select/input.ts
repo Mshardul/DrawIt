@@ -2,6 +2,7 @@
 // The selection lives in the open file's history (so undo restores it); this module only changes it.
 import type { Box } from "../render/boxes.ts";
 import type { TextMeasurer } from "../text/measure.ts";
+import type { Tool } from "../connectors/input.ts";
 import { screenToWorld, type View } from "../view/view.ts";
 import type { OpenFile } from "../app/workspace.ts";
 import { clickSelection, hitTest, idsInRect, selectAll } from "./select.ts";
@@ -14,6 +15,8 @@ export interface SelectInputHost {
   getView(): View;
   getFile(): OpenFile | null;
   measurer: TextMeasurer;
+  /** Selecting by pointer works only while the select tool is current. */
+  getTool(): Tool;
   /** The drag-box in world coordinates, or null when none is shown. */
   setMarquee(box: Box | null): void;
   /** Redraw after the selection changed. */
@@ -39,13 +42,13 @@ export function attachSelectInput(host: SelectInputHost): () => void {
 
   const onPointerDown = (event: PointerEvent): void => {
     const file = host.getFile();
-    if (event.button !== 0 || !file) return;
-    // A press on a resize handle belongs to the transform input, not to selection.
-    if (event.target instanceof Element && event.target.closest("[data-handle]")) return;
+    if (event.button !== 0 || !file || host.getTool() !== "select") return;
+    // A press on a resize or edge-end handle belongs to the input that owns the handle, not to selection.
+    if (event.target instanceof Element && event.target.closest("[data-handle], [data-end]")) return;
     const additive = event.shiftKey || event.metaKey || event.ctrlKey;
     box = target.getBoundingClientRect();
     const p = world(event);
-    const hit = hitTest(file.document, host.measurer, p);
+    const hit = hitTest(file.document, host.measurer, p, host.getView().scale);
     target.setPointerCapture(event.pointerId);
     press = { pointer: event.pointerId, start: p, hit, base: file.history.selection, additive, box: false, dragged: false };
     select(file, clickSelection(file.history.selection, hit, additive));
@@ -58,7 +61,7 @@ export function attachSelectInput(host: SelectInputHost): () => void {
     if (!press.dragged && Math.hypot(p.x - press.start.x, p.y - press.start.y) * scale < DRAG_THRESHOLD) return;
     press.dragged = true;
     // A press that began on an element is the start of a move, not of a drag-box.
-    if (!press.box && hitTest(file.document, host.measurer, press.start) !== null) return;
+    if (!press.box && hitTest(file.document, host.measurer, press.start, scale) !== null) return;
     press.box = true;
     const dragBox = { x: press.start.x, y: press.start.y, w: p.x - press.start.x, h: p.y - press.start.y };
     const inside = idsInRect(file.document, host.measurer, dragBox);

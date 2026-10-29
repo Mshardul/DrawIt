@@ -7,6 +7,15 @@ export function isValidId(id: string): boolean {
   return ID_PATTERN.test(id);
 }
 
+/** `base`, or `base-2`, `base-3` and so on: the first ID that no element uses. */
+export function unusedId(elements: readonly { id: string }[], base: string): string {
+  const used = new Set(elements.map((e) => e.id));
+  if (!used.has(base)) return base;
+  let n = 2;
+  while (used.has(`${base}-${String(n)}`)) n++;
+  return `${base}-${String(n)}`;
+}
+
 export interface PluginRef {
   id: string;
   version: number;

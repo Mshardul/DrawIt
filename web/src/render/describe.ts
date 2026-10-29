@@ -1,9 +1,12 @@
 // The renderer's output: a tree of SVG nodes describing a document. It is
 // data, not DOM, so it needs no browser to test; `mount` puts it on the page. The renderer holds
 // no state: the same document always gives the same tree.
-import type { DiagramDocument, DiagramElement } from "../model/index.ts";
+import { headShape } from "../connectors/heads.ts";
+import { type RoutedEdge, routedEdges } from "../connectors/edges.ts";
+import type { DiagramDocument, DiagramElement, LayoutEntry } from "../model/index.ts";
 import type { ShapeManifest } from "../shapes/types.ts";
 import { svgTextAttrs, type TextMeasurer } from "../text/measure.ts";
+import { outlineKind, stackOrder } from "./boxes.ts";
 import { sizeOf } from "./size.ts";
 import { DEFAULT_TEXT_STYLE, labelLayout, layoutTextBox, LINE_HEIGHT } from "./text-layout.ts";
 
@@ -30,6 +33,7 @@ export type ShapeLookup = (shape: string) => ShapeManifest | undefined;
 const FILL = "#dbe8f5";
 const STROKE = "#1f4e79";
 const INK = "#1a1a1a";
+const EDGE_WIDTH = 1.5;
 
 const node = (tag: string, attrs: SvgNode["attrs"], children: SvgNode[] = [], text?: string): SvgNode =>
   text === undefined ? { tag, attrs, children } : { tag, attrs, children, text };
@@ -63,7 +67,7 @@ function body(element: DiagramElement, w: number, h: number, measurer: TextMeasu
     case "node":
     case "shape": {
       const outline =
-        element.shape === "ellipse"
+        outlineKind(element) === "ellipse"
           ? node("ellipse", { cx: w / 2, cy: h / 2, rx: w / 2, ry: h / 2, fill: FILL, stroke: STROKE })
           : node("rect", { width: w, height: h, fill: FILL, stroke: STROKE });
       const label =
@@ -77,23 +81,52 @@ function body(element: DiagramElement, w: number, h: number, measurer: TextMeasu
   }
 }
 
+const fmt = (n: number): string => String(n);
+
+function edgeNode({ edge, points, style }: RoutedEdge): SvgNode {
+  const path = node("path", {
+    d: points.map((p, i) => `${i === 0 ? "M" : "L"}${fmt(p.x)} ${fmt(p.y)}`).join(""),
+    fill: "none",
+    stroke: INK,
+    "stroke-width": EDGE_WIDTH,
+    "stroke-linejoin": "round",
+  });
+  const heads = [headShape(style.headStart, points, "start"), headShape(style.headEnd, points, "end")].flatMap((head) => {
+    if (!head) return [];
+    if (head.kind === "dot") return [node("circle", { cx: head.centre.x, cy: head.centre.y, r: head.r, fill: INK })];
+    return [node("polygon", { points: head.points.map((p) => `${fmt(p.x)},${fmt(p.y)}`).join(" "), fill: INK })];
+  });
+  return node("g", { "data-id": edge.id }, [path, ...heads]);
+}
+
 /**
- * Describes the drawable elements in layout order, which is z-order. Each element is
- * a `g` carrying its ID in `data-id`. Rectangles, ellipses and text boxes are drawn; edges
- * (routing is separate), frames, images, unknown elements and elements without a layout entry are not.
+ * Describes the drawable elements bottom to top, which is z-order: the layout order, with edges
+ * that have no layout entry on top. Each element is a `g` carrying its ID in `data-id`. Rectangles,
+ * ellipses, text boxes and edges are drawn; frames, images, unknown elements, elements without
+ * a layout entry and edges that cannot be routed are not.
  */
 export function describeDiagram(doc: DiagramDocument, measurer: TextMeasurer, options: DescribeOptions = {}): SvgNode[] {
   const { only, shapes, hideText } = options;
   const elements = new Map(doc.elements.map((e) => [e.id, e]));
+  const entries = new Map<string, LayoutEntry>();
+  for (const entry of doc.layout) if (!entries.has(entry.id)) entries.set(entry.id, entry);
+  const edges = routedEdges(doc, measurer, only);
   const out: SvgNode[] = [];
-  for (const entry of doc.layout) {
-    if (only && !only.has(entry.id)) continue;
-    const element = elements.get(entry.id);
-    const size = element && sizeOf(element, entry, measurer);
-    if (!element || !size) continue;
+  for (const id of stackOrder(doc)) {
+    if (only && !only.has(id)) continue;
+    const element = elements.get(id);
+    if (!element) continue;
+    if (element.kind === "edge") {
+      const routed = edges.get(id);
+      if (routed) out.push(edgeNode(routed));
+      continue;
+    }
+    const entry = entries.get(id);
+    const size = sizeOf(element, entry, measurer);
+    if (!entry || !size) continue;
     const children = body(element, size.w, size.h, measurer, shapes, hideText?.has(element.id) === true);
     if (!children) continue;
-    out.push(node("g", { "data-id": element.id, transform: `translate(${String(entry.x)} ${String(entry.y)})` }, children));
+    out.push(node("g", { "data-id": element.id, transform: `translate(${fmt(entry.x)} ${fmt(entry.y)})` }, children));
   }
   return out;
 }

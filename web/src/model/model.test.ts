@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, expectTypeOf, it } from "vitest";
-import { ID_PATTERN, isValidId } from "./index.ts";
+import { ID_PATTERN, isValidId, unusedId } from "./index.ts";
 import type {
   Anchor,
   DiagramDocument,
@@ -10,7 +10,7 @@ import type {
   StyleProps,
 } from "./index.ts";
 
-// The spec example, expressed as a model value.
+// The example diagram, expressed as a model value.
 const example: DiagramDocument = {
   version: 1,
   title: "Order flow",
@@ -67,7 +67,7 @@ const example: DiagramDocument = {
 };
 
 describe("document model", () => {
-  it("holds the spec example in structure, style and layout", () => {
+  it("holds the example diagram in structure, style and layout", () => {
     expect(example.elements).toHaveLength(10);
     expect(example.style.classes.map((c) => c.name)).toEqual(["accent", "boundary"]);
     expect(example.layout.map((e) => e.id)).toEqual(["overview", "api", "publish", "loose"]);
@@ -109,5 +109,18 @@ describe("document model", () => {
       const code = text.replace(/\/\/.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "");
       expect(code, file).not.toMatch(/\b(document|window|HTMLElement|SVGElement)\b/);
     }
+  });
+});
+
+describe("unused IDs", () => {
+  const taken = (...ids: string[]) => ids.map((id) => ({ kind: "text" as const, id, content: "" }));
+
+  it("is the base when nothing uses it", () => {
+    expect(unusedId(taken("other"), "edge")).toBe("edge");
+  });
+
+  it("numbers from 2 and takes the first number left", () => {
+    expect(unusedId(taken("edge"), "edge")).toBe("edge-2");
+    expect(unusedId(taken("edge", "edge-2", "edge-4"), "edge")).toBe("edge-3");
   });
 });

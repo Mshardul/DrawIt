@@ -113,20 +113,18 @@ describe("SVG renderer, basic elements", () => {
     expect(out.map((g) => g.attrs["data-id"])).toEqual(["b", "a"]);
   });
 
-  it("skips edges, frames, images, unknown elements, elements with no layout entry and layout entries with no element", () => {
+  it("skips frames, images, unknown elements, elements with no layout entry and layout entries with no element", () => {
     const out = describeDiagram(
       doc(
         [
           { kind: "node", id: "a", shape: "rect" },
           { kind: "node", id: "unplaced", shape: "rect" },
-          { kind: "edge", id: "e", from: "a", to: "a" },
           { kind: "frame", id: "f" },
           { kind: "image", id: "i", src: "assets/x.png" },
           { kind: "unknown", id: "u", node: { name: "chart", args: [], props: {}, children: [] } },
         ],
         [
           { id: "a", x: 0, y: 0 },
-          { id: "e", x: 0, y: 0 },
           { id: "f", x: 0, y: 0 },
           { id: "i", x: 0, y: 0 },
           { id: "u", x: 0, y: 0 },
@@ -143,6 +141,54 @@ describe("SVG renderer, basic elements", () => {
     const before = structuredClone(d);
     expect(describeDiagram(d, monoMeasurer)).toEqual(describeDiagram(d, monoMeasurer));
     expect(d).toEqual(before);
+  });
+});
+
+describe("SVG renderer, edges", () => {
+  const a: DiagramElement = { kind: "node", id: "a", shape: "rect" };
+  const b: DiagramElement = { kind: "node", id: "b", shape: "rect" };
+  const e: DiagramElement = { kind: "edge", id: "a->b", from: "a", to: "b" };
+  const nodes: LayoutEntry[] = [
+    { id: "a", x: 0, y: 0, w: 100, h: 50 },
+    { id: "b", x: 300, y: 0, w: 100, h: 50 },
+  ];
+  const edgeGroup = (d: DiagramDocument): SvgNode => describeDiagram(d, monoMeasurer).find((g) => g.attrs["data-id"] === "a->b") as SvgNode;
+
+  it("draws an edge as a group with its path, and an arrow at the end by default", () => {
+    const g = edgeGroup(doc([a, b, e], nodes));
+    expect(find(g, "path")?.attrs).toMatchObject({ d: "M100 25L300 25", fill: "none" });
+    expect(find(g, "polygon")?.attrs["points"]).toBe("300,25 290,29 290,21");
+    expect(g.attrs["transform"]).toBeUndefined();
+  });
+
+  it("draws the edge in layout order with the shapes, and an edge with no layout entry on top", () => {
+    const layout = [nodes[0] as LayoutEntry, { id: "a->b", x: 0, y: 0 }, nodes[1] as LayoutEntry];
+    expect(describeDiagram(doc([a, b, e], layout), monoMeasurer).map((g) => g.attrs["data-id"])).toEqual(["a", "a->b", "b"]);
+    expect(describeDiagram(doc([a, b, e], nodes), monoMeasurer).map((g) => g.attrs["data-id"])).toEqual(["a", "b", "a->b"]);
+  });
+
+  it("draws a head at each end as the style says", () => {
+    const d = doc([a, b, e], nodes);
+    d.style.overrides.push({ id: "a->b", props: { headStart: "dot", headEnd: "none" } });
+    const g = edgeGroup(d);
+    expect(find(g, "polygon")).toBeUndefined();
+    expect(find(g, "circle")?.attrs).toMatchObject({ cx: 96, cy: 25, r: 4 });
+  });
+
+  it("draws an elbow edge along the right angles", () => {
+    const d = doc([a, b, e], [nodes[0] as LayoutEntry, { id: "b", x: 300, y: 100, w: 100, h: 50 }]);
+    d.style.overrides.push({ id: "a->b", props: { route: "elbow" } });
+    expect(find(edgeGroup(d), "path")?.attrs["d"]).toBe("M100 25L200 25L200 125L300 125");
+  });
+
+  it("does not draw an edge it cannot route", () => {
+    const d = doc([a, { kind: "edge", id: "a->b", from: "a", to: "b" }], [nodes[0] as LayoutEntry]);
+    expect(describeDiagram(d, monoMeasurer).map((g) => g.attrs["data-id"])).toEqual(["a"]);
+  });
+
+  it("describes only the edges in `only`", () => {
+    const out = describeDiagram(doc([a, b, e], nodes), monoMeasurer, { only: new Set(["a->b"]) });
+    expect(out.map((g) => g.attrs["data-id"])).toEqual(["a->b"]);
   });
 });
 

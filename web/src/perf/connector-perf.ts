@@ -2,9 +2,9 @@
 // `routing.ts`; dragging a shape re-routes only the edges attached to it. Also hosts the
 // re-attach gesture: drag an edge's end handle onto a shape or onto empty canvas.
 import type { Anchor, Point } from "../model/layout.ts";
-import type { Box } from "../render/boxes.ts";
+import type { Box, ShapeKind } from "../render/boxes.ts";
 import { generateDiagram } from "../testing/generate-diagram.ts";
-import { attachTarget, type End, route, type ShapeKind, type Target } from "../connectors/routing.ts";
+import { attachTarget, type End, route, type Target } from "../connectors/routing.ts";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 const DEFAULT_W = 160;

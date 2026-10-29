@@ -1,6 +1,7 @@
 // The app's DOM, built by hand (no UI framework). One toolbar, an error banner and the canvas.
 // All state lives in the open `OpenFile`; the DOM is redrawn from it.
-import type { DiagramDocument } from "../model/index.ts";
+import { attachEdgeInput, type Tool } from "../connectors/input.ts";
+import type { DiagramDocument, Point } from "../model/index.ts";
 import type { Box } from "../render/boxes.ts";
 import { describeDiagram } from "../render/describe.ts";
 import { describeGrid } from "../render/grid.ts";
@@ -28,7 +29,7 @@ function el<K extends keyof HTMLElementTagNameMap>(
   return element;
 }
 
-/** Grid display and snap. View settings like pan and zoom: not in history or the file (preferences come later). */
+/** Grid display and snap. View settings like pan and zoom: not in history or the file. */
 export interface GridSettings {
   show: boolean;
   snap: boolean;
@@ -64,6 +65,13 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter): Pr
   const name = el("span", { className: "name" });
   const unsaved = el("span", { className: "unsaved", textContent: "Unsaved changes", hidden: true });
   const saveButton = el("button", { type: "button", textContent: "Save", disabled: true });
+  const toolButtons: Record<Tool, HTMLButtonElement> = {
+    select: el("button", { type: "button", textContent: "Select", title: "Select (V)" }),
+    edge: el("button", { type: "button", textContent: "Arrow", title: "Line and arrow (L)" }),
+  };
+  const tools = el("div", { className: "tools" }, toolButtons.select, toolButtons.edge);
+  tools.setAttribute("role", "toolbar");
+  tools.setAttribute("aria-label", "Tools");
   const zoom = el("span", { className: "zoom" });
   const gridToggle = el("input", { type: "checkbox" });
   const snapToggle = el("input", { type: "checkbox" });
@@ -94,7 +102,7 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter): Pr
   canvas.append(world);
 
   root.replaceChildren(
-    el("header", { className: "bar" }, el("h1", { textContent: "DrawIt" }), picker, name, unsaved, saveButton),
+    el("header", { className: "bar" }, el("h1", { textContent: "DrawIt" }), picker, name, unsaved, saveButton, tools),
     error,
     canvas,
     status,
@@ -103,6 +111,9 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter): Pr
   let current: OpenFile | null = null;
   let view: View = IDENTITY;
   let marquee: Box | null = null;
+  let tool: Tool = "select";
+  // The line of an edge being drawn, shown over everything until it is released.
+  let draft: Point[] | null = null;
   let grid: GridSettings = { show: false, snap: false, size: 8 };
   // A drag draws this copy of the document; the file's own document changes only on release.
   let preview: DiagramDocument | null = null;
@@ -118,7 +129,7 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter): Pr
 
   const drawOverlay = (): void => {
     const doc = preview ?? current?.document;
-    mount(overlay, current && doc ? describeOverlay(doc, measurer, current.history.selection, marquee, view.scale) : []);
+    mount(overlay, current && doc ? describeOverlay(doc, measurer, current.history.selection, marquee, view.scale, draft) : []);
   };
 
   const redraw = (changed?: ReadonlySet<string>): void => {
@@ -134,6 +145,14 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter): Pr
     name.textContent = current?.path ?? "";
     unsaved.hidden = !current?.dirty;
     saveButton.disabled = !current;
+  };
+
+  const setTool = (next: Tool): void => {
+    tool = next;
+    for (const [which, button] of Object.entries(toolButtons)) button.setAttribute("aria-pressed", String(which === next));
+    canvas.classList.toggle("drawing", next === "edge");
+    draft = null;
+    drawOverlay();
   };
 
   const drawGrid = (): void => {
@@ -217,11 +236,13 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter): Pr
   };
   setView(IDENTITY);
   setGrid({});
+  setTool("select");
   attachSelectInput({
     target: canvas,
     getView: () => view,
     getFile: () => current,
     measurer,
+    getTool: () => tool,
     setMarquee: (box) => {
       marquee = box;
     },
@@ -232,6 +253,7 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter): Pr
     getView: () => view,
     getFile: () => current,
     measurer,
+    getTool: () => tool,
     getGrid: () => (grid.snap ? grid.size : 0),
     setPreview: (doc) => {
       preview = doc;
@@ -245,9 +267,23 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter): Pr
     getView: () => view,
     getFile: () => current,
     measurer,
+    getTool: () => tool,
     setEditing: (id) => {
       editing = id;
     },
+    refresh,
+  });
+  attachEdgeInput({
+    target: canvas,
+    getView: () => view,
+    getFile: () => current,
+    measurer,
+    getTool: () => tool,
+    setTool,
+    setDraft: (path) => {
+      draft = path;
+    },
+    redrawOverlay: drawOverlay,
     refresh,
   });
   attachViewInput({
@@ -261,6 +297,8 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter): Pr
     void shell.open(picker.value);
   });
   saveButton.addEventListener("click", () => void shell.save());
+  toolButtons.select.addEventListener("click", () => { setTool("select"); });
+  toolButtons.edge.addEventListener("click", () => { setTool("edge"); });
   gridToggle.addEventListener("change", () => { setGrid({ show: gridToggle.checked }); gridToggle.blur(); });
   snapToggle.addEventListener("change", () => { setGrid({ snap: snapToggle.checked }); snapToggle.blur(); });
   gridSize.addEventListener("change", () => { setGrid({ size: Number(gridSize.value) }); gridSize.blur(); });

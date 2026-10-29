@@ -49,3 +49,52 @@ describe("selection overlay", () => {
     expect(describeOverlay(doc, monoMeasurer, ["a", "b"], null).some((n) => n.attrs["data-handle"] !== undefined)).toBe(false);
   });
 });
+
+describe("selection overlay, edges", () => {
+  const withEdge: DiagramDocument = {
+    ...doc,
+    elements: [...doc.elements, { kind: "edge", id: "e", from: "a", to: "b" }],
+  };
+  const edgeOnly = (nodes: ReturnType<typeof describeOverlay>) => nodes.filter((n) => n.attrs["data-id"] === "select-e");
+
+  it("outlines a selected edge along its path", () => {
+    const [outline] = edgeOnly(describeOverlay(withEdge, monoMeasurer, ["e"], null));
+    expect(outline).toMatchObject({ tag: "polyline", attrs: { class: "selection", fill: "none" } });
+    const points = String(outline?.attrs["points"]).split(" ");
+    expect(points.length).toBe(2);
+    expect(points[0]).toMatch(/^110,/);
+  });
+
+  it("a lone selected edge gets a handle on each end, of constant screen size", () => {
+    const nodes = describeOverlay(withEdge, monoMeasurer, ["e"], null, 2);
+    const ends = nodes.filter((n) => n.attrs["data-end"] !== undefined);
+    expect(ends.map((n) => n.attrs["data-end"])).toEqual(["from", "to"]);
+    // 8 screen px at scale 2 is 4 world px, centred on the end of the path.
+    expect(ends[0]?.attrs).toMatchObject({ x: 108, width: 4, height: 4 });
+    expect(nodes.some((n) => n.attrs["data-handle"] !== undefined)).toBe(false);
+  });
+
+  it("an edge selected with other elements is outlined but has no end handles", () => {
+    const nodes = describeOverlay(withEdge, monoMeasurer, ["a", "e"], null);
+    expect(edgeOnly(nodes)).toHaveLength(1);
+    expect(nodes.some((n) => n.attrs["data-end"] !== undefined)).toBe(false);
+  });
+
+  it("outlines follow z-order, with edges and shapes together", () => {
+    const layout = [...doc.layout.slice(0, 1), { id: "e", x: 0, y: 0 }, ...doc.layout.slice(1)];
+    const nodes = describeOverlay({ ...withEdge, layout }, monoMeasurer, ["b", "e", "a"], null);
+    expect(nodes.filter((n) => String(n.attrs["data-id"]).startsWith("select-")).map((n) => n.attrs["data-id"])).toEqual(["select-a", "select-e", "select-b"]);
+  });
+});
+
+describe("overlay, edge being drawn", () => {
+  it("draws the line being dragged out as a polyline over everything else", () => {
+    const nodes = describeOverlay(doc, monoMeasurer, ["a"], null, 1, [{ x: 110, y: 45 }, { x: 300, y: 200 }]);
+    expect(nodes.at(-1)).toMatchObject({ tag: "polyline", attrs: { "data-id": "edge-draft", class: "draft", points: "110,45 300,200", fill: "none" } });
+  });
+
+  it("draws nothing for no line or an empty one", () => {
+    expect(describeOverlay(doc, monoMeasurer, [], null, 1, null)).toEqual([]);
+    expect(describeOverlay(doc, monoMeasurer, [], null, 1, [])).toEqual([]);
+  });
+});

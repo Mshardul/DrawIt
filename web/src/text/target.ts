@@ -1,7 +1,7 @@
 // What the editing overlay edits: which field of which element, and where its text is drawn. Pure
 // functions over the document, built on the layout the renderer draws with.
 import type { Command } from "../commands/command.ts";
-import type { DiagramDocument } from "../model/index.ts";
+import { type DiagramDocument, unusedId } from "../model/index.ts";
 import type { ShapeLookup } from "../render/describe.ts";
 import { sizeOf } from "../render/size.ts";
 import { labelLayout, layoutTextBox, LINE_HEIGHT } from "../render/text-layout.ts";
@@ -52,13 +52,7 @@ export function setTextCommand(field: EditTarget["field"], id: string, value: st
 }
 
 /** `text`, or `text-2`, `text-3` and so on: the first ID not in use. */
-export function newTextId(doc: DiagramDocument): string {
-  const used = new Set(doc.elements.map((e) => e.id));
-  if (!used.has("text")) return "text";
-  let n = 2;
-  while (used.has(`text-${String(n)}`)) n++;
-  return `text-${String(n)}`;
-}
+export const newTextId = (doc: DiagramDocument): string => unusedId(doc.elements, "text");
 
 /** An empty text box with its top-left corner at `at`, rounded to whole pixels. */
 export function createTextCommand(doc: DiagramDocument, at: { x: number; y: number }): Command {

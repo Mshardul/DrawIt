@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { applyCommand } from "../commands/command.ts";
 import type { DiagramDocument, DiagramElement, LayoutEntry } from "../model/index.ts";
-import { handlesFor, MIN_SIZE, moveCommand, nudgeCommand, resizeCommand } from "./transform.ts";
+import { handlesFor, MIN_SIZE, moveCommand, nudgeCommand, redrawIds, resizeCommand } from "./transform.ts";
 import { monoMeasurer } from "../testing/measurer.ts";
 
 const doc = (elements: DiagramElement[], layout: LayoutEntry[]): DiagramDocument => ({
@@ -155,5 +155,83 @@ describe("snap to grid", () => {
   it("a snapped resize still stops at the minimum size", () => {
     const set = (resizeCommand(sample, monoMeasurer, "a", "e", -95, 0, 8) as { changes: { set: { w: number } }[] }).changes[0]?.set;
     expect(set?.w).toBeGreaterThanOrEqual(MIN_SIZE);
+  });
+});
+
+describe("moving edges with the elements", () => {
+  const scene = (edgeLayout: Partial<LayoutEntry> = {}) =>
+    doc(
+      [
+        { kind: "node", id: "a", shape: "rect" },
+        { kind: "node", id: "b", shape: "rect" },
+        { kind: "node", id: "c", shape: "rect" },
+        { kind: "edge", id: "ab", from: "a", to: "b" },
+        { kind: "edge", id: "free", from: "a", to: null },
+      ],
+      [
+        { id: "a", x: 0, y: 0 },
+        { id: "b", x: 300, y: 0 },
+        { id: "c", x: 600, y: 0 },
+        { id: "ab", x: 0, y: 0, via: [{ x: 150, y: 100 }], ...edgeLayout },
+        { id: "free", x: 0, y: 0, toPoint: { x: 50, y: 400 }, via: [{ x: 20, y: 200 }] },
+      ],
+    );
+  const entry = (d: DiagramDocument, command: ReturnType<typeof moveCommand>, id: string) => {
+    if (!command) throw new Error("no command");
+    return applyCommand(d, command).document.layout.find((e) => e.id === id);
+  };
+
+  it("bend points move with an edge whose two ends both move", () => {
+    const d = scene();
+    expect(entry(d, moveCommand(d, monoMeasurer, ["a", "b"], 10, 20), "ab")?.via).toEqual([{ x: 160, y: 120 }]);
+  });
+
+  it("bend points and a free end move with a selected edge", () => {
+    const d = scene();
+    const free = entry(d, moveCommand(d, monoMeasurer, ["a", "free"], 10, 20), "free");
+    expect(free?.via).toEqual([{ x: 30, y: 220 }]);
+    expect(free?.toPoint).toEqual({ x: 60, y: 420 });
+  });
+
+  it("an edge that is not selected and has an end that stays keeps its bend points and free end", () => {
+    const d = scene();
+    const command = moveCommand(d, monoMeasurer, ["a"], 10, 20);
+    expect(entry(d, command, "ab")?.via).toEqual([{ x: 150, y: 100 }]);
+    expect(entry(d, command, "free")?.toPoint).toEqual({ x: 50, y: 400 });
+  });
+
+  it("a locked edge stays put", () => {
+    const d = scene({ locked: true });
+    expect(entry(d, moveCommand(d, monoMeasurer, ["a", "b", "ab"], 10, 20), "ab")?.via).toEqual([{ x: 150, y: 100 }]);
+  });
+
+  it("an edge alone cannot be moved, since its ends belong to the elements", () => {
+    expect(moveCommand(scene(), monoMeasurer, ["free"], 10, 20)).toBeNull();
+  });
+});
+
+describe("what a layout change redraws", () => {
+  const withEdges = doc(
+    [
+      { kind: "node", id: "a", shape: "rect" },
+      { kind: "node", id: "b", shape: "rect" },
+      { kind: "node", id: "c", shape: "rect" },
+      { kind: "edge", id: "ab", from: "a", to: "b" },
+      { kind: "edge", id: "bc", from: "b", to: "c" },
+    ],
+    [
+      { id: "a", x: 0, y: 0 },
+      { id: "b", x: 300, y: 0 },
+      { id: "c", x: 600, y: 0 },
+    ],
+  );
+
+  it("is the moved elements and the edges attached to them, and no others", () => {
+    const command = moveCommand(withEdges, monoMeasurer, ["a"], 10, 10);
+    expect([...redrawIds(withEdges, command)].sort()).toEqual(["a", "ab"]);
+  });
+
+  it("is empty when there is no command", () => {
+    expect(redrawIds(withEdges, null).size).toBe(0);
   });
 });

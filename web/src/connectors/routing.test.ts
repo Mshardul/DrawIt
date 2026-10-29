@@ -121,6 +121,23 @@ describe("connector routing: elbow", () => {
   });
 });
 
+describe("connector routing: degenerate placement", () => {
+  const finite = (path: Point[]): boolean => path.every((p) => Number.isFinite(p.x) && Number.isFinite(p.y));
+
+  it("shapes on top of each other still give a finite path", () => {
+    for (const kind of ["straight", "elbow"] as const)
+      for (const make of [rect, ellipse]) {
+        expect(finite(route(make(0, 0), make(0, 0), { route: kind })), `${kind} identical`).toBe(true);
+        expect(finite(route(make(0, 0), make(30, 10), { route: kind })), `${kind} overlapping`).toBe(true);
+      }
+  });
+
+  it("a free end on the other end's centre still gives a finite path", () => {
+    for (const kind of ["straight", "elbow"] as const)
+      expect(finite(route(rect(0, 0), { point: { x: 50, y: 25 } }, { route: kind }))).toBe(true);
+  });
+});
+
 describe("connector routing: re-attaching an end", () => {
   const targets: Target[] = [
     { id: "back", box: { x: 0, y: 0, w: 400, h: 400 }, shape: "rect" },

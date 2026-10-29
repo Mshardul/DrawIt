@@ -2,6 +2,7 @@
 // draws (see display.ts), so the caret and selection are where the drawn text will be. Every change
 // goes through the command layer, grouped so a burst of typing is one undo step.
 import type { OpenFile } from "../app/workspace.ts";
+import type { Tool } from "../connectors/input.ts";
 import type { DiagramDocument } from "../model/index.ts";
 import type { ShapeLookup } from "../render/describe.ts";
 import { DEFAULT_TEXT_STYLE, LINE_HEIGHT } from "../render/text-layout.ts";
@@ -19,6 +20,8 @@ export interface TextEditHost {
   getView(): View;
   getFile(): OpenFile | null;
   measurer: TextMeasurer;
+  /** Double-click edits only while the select tool is current. */
+  getTool(): Tool;
   shapes?: ShapeLookup;
   /** The element whose text the renderer leaves out because the editor shows it, or null. */
   setEditing(id: string | null): void;
@@ -200,10 +203,10 @@ export function attachTextEdit(host: TextEditHost): TextEdit {
 
   const onDoubleClick = (event: MouseEvent): void => {
     const file = host.getFile();
-    if (!file || event.button !== 0) return;
+    if (!file || event.button !== 0 || host.getTool() !== "select") return;
     const canvas = host.target.getBoundingClientRect();
     const at = screenToWorld(host.getView(), { x: event.clientX - canvas.left, y: event.clientY - canvas.top });
-    const hit = hitTest(file.document, host.measurer, at);
+    const hit = hitTest(file.document, host.measurer, at, host.getView().scale);
     if (hit !== null) {
       begin(file, hit, false, newGroup());
       return;

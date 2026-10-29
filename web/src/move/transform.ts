@@ -2,8 +2,9 @@
 // A drag previews by applying the command to a copy; release commits it, so one drag is one
 // undo step. Only drawn, unlocked elements transform; edges, frames, images and unknown elements
 // are not drawn and so never move.
-import type { Command } from "../commands/command.ts";
-import type { DiagramDocument } from "../model/index.ts";
+import type { Command, LayoutFields, SetLayoutCommand } from "../commands/command.ts";
+import { edgesAttachedTo } from "../connectors/edges.ts";
+import type { DiagramDocument, LayoutEntry, Point } from "../model/index.ts";
 import { drawnBoxes, type DrawnBox } from "../render/boxes.ts";
 import type { TextMeasurer } from "../text/measure.ts";
 import { snapTo } from "./snap.ts";
@@ -16,13 +17,46 @@ export type Handle = "n" | "ne" | "e" | "se" | "s" | "sw" | "w" | "nw";
 const ALL_HANDLES: Handle[] = ["n", "ne", "e", "se", "s", "sw", "w", "nw"];
 const TEXT_HANDLES: Handle[] = ["e", "w"];
 
+/**
+ * Every ID whose drawing a command changes, so a preview redraws only those: the elements whose
+ * layout it sets and the edges attached to them, which are routed again.
+ */
+export function redrawIds(doc: DiagramDocument, command: Command | null): ReadonlySet<string> {
+  if (command?.type !== "setLayout") return new Set();
+  const ids = command.changes.map((c) => c.id);
+  return new Set([...ids, ...edgesAttachedTo(doc, ids)]);
+}
+
 const transformable = (doc: DiagramDocument, measurer: TextMeasurer, id: string): DrawnBox | undefined =>
   drawnBoxes(doc, measurer).find((b) => b.element.id === id && !b.locked);
 
 /**
+ * The layout changes that carry edges along with moving elements: the bend points and free ends of
+ * every unlocked edge that is selected or has both of its ends on the moving elements. An edge
+ * with an end that stays keeps its bend points, so it bends to follow the end that moved.
+ */
+function edgeShifts(doc: DiagramDocument, selected: ReadonlySet<string>, moving: ReadonlySet<string>, dx: number, dy: number): SetLayoutCommand["changes"] {
+  const entries = new Map<string, LayoutEntry>(doc.layout.map((e) => [e.id, e]));
+  const shift = (p: Point): Point => ({ x: p.x + dx, y: p.y + dy });
+  const changes: SetLayoutCommand["changes"] = [];
+  for (const element of doc.elements) {
+    const entry = element.kind === "edge" ? entries.get(element.id) : undefined;
+    if (element.kind !== "edge" || !entry || entry.locked) continue;
+    const bothEndsMove = element.from !== null && element.to !== null && moving.has(element.from) && moving.has(element.to);
+    if (!selected.has(element.id) && !bothEndsMove) continue;
+    const set: LayoutFields = {};
+    if (entry.via && entry.via.length > 0) set.via = entry.via.map(shift);
+    if (element.from === null && entry.fromPoint) set.fromPoint = shift(entry.fromPoint);
+    if (element.to === null && entry.toPoint) set.toPoint = shift(entry.toPoint);
+    if (Object.keys(set).length > 0) changes.push({ id: element.id, set });
+  }
+  return changes;
+}
+
+/**
  * One command moving every transformable selected element by (dx, dy), rounded to whole px; null
  * if nothing moves. With a `grid` size the selection's top-left corner lands on the grid and the
- * elements keep their offsets from it.
+ * elements keep their offsets from it. Edges go with the elements they join (see `edgeShifts`).
  */
 export function moveCommand(doc: DiagramDocument, measurer: TextMeasurer, ids: string[], dx: number, dy: number, grid = 0): Command | null {
   const selected = new Set(ids);
@@ -37,9 +71,9 @@ export function moveCommand(doc: DiagramDocument, measurer: TextMeasurer, ids: s
     ry = snapTo(top + ry, grid) - top;
   }
   if (rx === 0 && ry === 0) return null;
-  const changes = boxes
-    .map((b) => ({ id: b.element.id, set: { x: b.x + rx, y: b.y + ry } }));
-  return changes.length === 0 ? null : { type: "setLayout", changes };
+  const changes: SetLayoutCommand["changes"] = boxes.map((b) => ({ id: b.element.id, set: { x: b.x + rx, y: b.y + ry } }));
+  changes.push(...edgeShifts(doc, selected, new Set(boxes.map((b) => b.element.id)), rx, ry));
+  return { type: "setLayout", changes };
 }
 
 const ARROWS: Record<string, [number, number]> = {

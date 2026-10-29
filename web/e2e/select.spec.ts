@@ -122,9 +122,9 @@ test("a shift drag-box adds to the selection", async ({ page }) => {
   expect(await selection(page)).toEqual(["a", "b"]);
 });
 
-test("Cmd/Ctrl+A selects every unlocked drawn element and Escape clears", async ({ page }) => {
+test("Cmd/Ctrl+A selects every unlocked drawn element and edge, and Escape clears", async ({ page }) => {
   await page.keyboard.press("ControlOrMeta+a");
-  expect(await selection(page)).toEqual(["a", "b"]);
+  expect(await selection(page)).toEqual(["a", "b", "a->b"]);
   await page.keyboard.press("Escape");
   expect(await selection(page)).toEqual([]);
 });

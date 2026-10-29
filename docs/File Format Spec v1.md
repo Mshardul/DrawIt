@@ -269,6 +269,9 @@ A minimal canvas with floating toolbars.
 - Routing is straight or elbow. Manual bend points are kept; endpoints always recompute.
 - Arrowheads at either end.
 - Edge labels sit at a position along the path and move with it.
+- **Drawing:** with the line tool, drag from an element or from empty canvas to an element or to empty canvas. An end on an element is attached with an `auto` anchor; an end on empty canvas is a free end. The new edge is selected and the tool returns to select. Dragging from an element to itself draws nothing.
+- **Selecting:** a click within a few screen px of an edge's path selects it, and a lone selected edge shows a handle on each end. Edges and shapes share one z-order for clicks. Drag-box selects every edge it touches; select all includes edges; locked edges are skipped by both.
+- **Moving:** moving elements also moves the bend points and free ends of a selected edge and of an edge with both ends on the moving elements. An edge with an end that stays keeps its bend points.
 - Dragging an end re-attaches it to another element or detaches it to a free point.
 - Deleting an element detaches its edges: each attached end stays where it was, as a free end.
 

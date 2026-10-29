@@ -1,11 +1,8 @@
-// Connector routing as a pure function from the two ends to a polyline.
-// Hand-rolled. Straight routes clip the centre line to the
-// outlines; elbow routes leave each shape along the normal of its side and turn at right angles.
-// It has no obstacle avoidance and no model or command integration.
+// Connector routing as a pure function from the two ends to a polyline. Straight routes clip the
+// centre line to the outlines; elbow routes leave each shape along the normal of its side and turn
+// at right angles. Elbows do not avoid shapes.
 import type { Anchor, Point, Side } from "../model/layout.ts";
-import type { Box } from "../render/boxes.ts";
-
-export type ShapeKind = "rect" | "ellipse";
+import type { Box, ShapeKind } from "../render/boxes.ts";
 
 /** An end attached to a shape. */
 export interface NodeEnd {

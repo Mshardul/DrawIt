@@ -3,11 +3,12 @@
 // screen) and commits one command on release, so it is one undo step.
 import { applyCommand, type Command } from "../commands/command.ts";
 import type { OpenFile } from "../app/workspace.ts";
+import type { Tool } from "../connectors/input.ts";
 import type { DiagramDocument } from "../model/index.ts";
 import { hitTest } from "../select/select.ts";
 import type { TextMeasurer } from "../text/measure.ts";
 import { screenToWorld, type Pt, type View } from "../view/view.ts";
-import { type Handle, moveCommand, nudgeCommand, resizeCommand } from "./transform.ts";
+import { type Handle, moveCommand, nudgeCommand, redrawIds, resizeCommand } from "./transform.ts";
 
 /** Pointer travel (screen px) before a press becomes a drag. */
 const DRAG_THRESHOLD = 3;
@@ -17,6 +18,8 @@ export interface TransformInputHost {
   getView(): View;
   getFile(): OpenFile | null;
   measurer: TextMeasurer;
+  /** Moving and resizing by pointer work only while the select tool is current. */
+  getTool(): Tool;
   /** Grid size to snap drags to, or 0 when snap is off. */
   getGrid(): number;
   /** Draws this document instead of the file's until set back to null. */
@@ -34,11 +37,6 @@ interface Drag {
   screen: Pt;
   action: { kind: "move" } | { kind: "resize"; id: string; handle: Handle };
   active: boolean;
-}
-
-/** Every ID a command touches, so a preview redraws only those. */
-function changedIds(command: Command | null): ReadonlySet<string> {
-  return new Set(command?.type === "setLayout" ? command.changes.map((c) => c.id) : []);
 }
 
 const isHandle = (value: string | undefined): value is Handle =>
@@ -76,7 +74,7 @@ export function attachTransformInput(host: TransformInputHost): () => void {
 
   const onPointerDown = (event: PointerEvent): void => {
     const file = host.getFile();
-    if (event.button !== 0 || !file) return;
+    if (event.button !== 0 || !file || host.getTool() !== "select") return;
     box = target.getBoundingClientRect();
     const p = world(event);
     const base = { pointer: event.pointerId, world: p, screen: { x: event.clientX, y: event.clientY }, active: false };
@@ -89,7 +87,7 @@ export function attachTransformInput(host: TransformInputHost): () => void {
       return;
     }
     if (event.shiftKey || event.metaKey || event.ctrlKey) return;
-    const hit = hitTest(file.document, host.measurer, p);
+    const hit = hitTest(file.document, host.measurer, p, host.getView().scale);
     if (hit !== null && file.history.selection.includes(hit)) drag = { ...base, action: { kind: "move" } };
   };
   const onPointerMove = (event: PointerEvent): void => {
@@ -100,7 +98,7 @@ export function attachTransformInput(host: TransformInputHost): () => void {
     const command = commandFor(file, drag, world(event), event.altKey);
     host.setPreview(command ? applyCommand(file.document, command).document : null);
     // Redraw what changed this frame and what the previous frame changed (it may have snapped back).
-    const now = changedIds(command);
+    const now = redrawIds(file.document, command);
     host.redraw(new Set([...drawn, ...now]));
     drawn = now;
   };
