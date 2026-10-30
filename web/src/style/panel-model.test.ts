@@ -34,8 +34,11 @@ describe("style panel fields", () => {
     expect(panelFields(sample(), ["gone"])).toEqual([]);
   });
 
-  it("lists fill, stroke, stroke width, radius and opacity in registry order", () => {
-    expect(keys(["a"])).toEqual(["fill", "opacity", "stroke", "strokeWidth", "radius"]);
+  it("lists the fill, stroke and text fields of a node in registry order", () => {
+    expect(keys(["a"])).toEqual([
+      "fill", "opacity", "stroke", "strokeWidth", "dash", "radius", "shadow",
+      "font", "size", "weight", "italic", "underline", "color", "align", "lineHeight",
+    ]);
   });
 
   it("shows the resolved value, so a default shows as the theme's colour", () => {
@@ -56,7 +59,33 @@ describe("style panel fields", () => {
   });
 
   it("has no fill for an edge", () => {
-    expect(keys(["a->b"])).toEqual(["opacity", "stroke", "strokeWidth"]);
+    expect(keys(["a->b"])).not.toContain("fill");
+  });
+
+  it("offers the text fields for nodes, text boxes and edges, and none for a shape", () => {
+    const text = ["font", "size", "weight", "italic", "underline", "color", "align", "lineHeight"];
+    for (const id of ["a", "t", "a->b"]) expect(keys([id])).toEqual(expect.arrayContaining(text));
+    const doc = sample();
+    doc.elements.push({ kind: "shape", id: "s", shape: "rect" });
+    expect(panelFields(doc, ["s"]).map((f) => f.def.key)).toEqual(["fill", "opacity", "stroke", "strokeWidth", "dash", "radius", "shadow"]);
+  });
+
+  it("offers dash and shadow for edges and text boxes", () => {
+    for (const id of ["a->b", "t"]) expect(keys([id])).toEqual(expect.arrayContaining(["dash", "shadow"]));
+  });
+
+  it("shows a dash from the default look and no shadow until one is set", () => {
+    expect(field(["a"], "dash")?.value).toEqual({ state: "same", value: "solid" });
+    expect(field(["a"], "shadow")?.value).toEqual({ state: "same", value: undefined });
+  });
+
+  it("shows the resolved text values, which differ by kind", () => {
+    expect(field(["a"], "font")?.value).toEqual({ state: "same", value: "Inter" });
+    expect(field(["a"], "size")?.value).toEqual({ state: "same", value: 14 });
+    expect(field(["a"], "italic")?.value).toEqual({ state: "same", value: false });
+    expect(field(["a"], "align")?.value).toEqual({ state: "same", value: "center" });
+    expect(field(["t"], "align")?.value).toEqual({ state: "same", value: "left" });
+    expect(field(["a", "t"], "align")?.value).toEqual({ state: "mixed" });
   });
 
   it("takes a field's value and targets from the elements it applies to", () => {

@@ -3,6 +3,7 @@ import type { DiagramDocument, DiagramElement, LayoutEntry } from "../model/inde
 import { readFileSync } from "node:fs";
 import type { PackManifest } from "../shapes/types.ts";
 import { monoMeasurer } from "../testing/measurer.ts";
+import { describeDefs } from "./defs.ts";
 import { describeDiagram, type SvgNode } from "./describe.ts";
 import { DEFAULT_LOOK } from "../style/text-look.ts";
 
@@ -542,5 +543,62 @@ describe("SVG renderer, text styles", () => {
     );
     const edge = describeDiagram(d, monoMeasurer).find((g) => g.attrs["data-id"] === "e");
     expect(textNodes(edge as SvgNode)[0]?.attrs).toMatchObject({ "font-size": 18, "font-weight": 700, fill: "#00aa00" });
+  });
+});
+
+describe("SVG renderer, dash, gradient and shadow", () => {
+  const withProps = (id: string, props: object, elements: DiagramElement[]): DiagramDocument => {
+    const d = doc(elements, [
+      { id: "a", x: 0, y: 0, w: 100, h: 50 },
+      { id: "b", x: 300, y: 0, w: 100, h: 50 },
+    ]);
+    return { ...d, style: { ...d.style, overrides: [{ id, props }] } };
+  };
+  const a: DiagramElement = { kind: "node", id: "a", shape: "rect" };
+  const b: DiagramElement = { kind: "node", id: "b", shape: "rect" };
+  const e: DiagramElement = { kind: "edge", id: "a->b", from: "a", to: "b" };
+  const group = (d: DiagramDocument, id: string, options = {}): SvgNode =>
+    describeDiagram(d, monoMeasurer, options).find((g) => g.attrs["data-id"] === id) as SvgNode;
+
+  it("draws no dash array for a solid line, and a width-relative one for dashed and dotted", () => {
+    expect(find(group(withProps("a", {}, [a]), "a"), "rect")?.attrs["stroke-dasharray"]).toBeUndefined();
+    const dashed = withProps("a", { dash: "dashed", strokeWidth: 2 }, [a]);
+    expect(find(group(dashed, "a"), "rect")?.attrs["stroke-dasharray"]).toBe("8 6");
+    const dotted = withProps("a", { dash: "dotted", strokeWidth: 2 }, [a]);
+    expect(find(group(dotted, "a"), "rect")?.attrs["stroke-dasharray"]).toBe("2 4");
+  });
+
+  it("dashes an edge and an ellipse", () => {
+    const edge = withProps("a->b", { dash: "dashed", strokeWidth: 1 }, [a, b, e]);
+    expect(find(group(edge, "a->b"), "path")?.attrs["stroke-dasharray"]).toBe("4 3");
+    const ellipse = withProps("a", { dash: "dashed", strokeWidth: 1 }, [{ kind: "node", id: "a", shape: "ellipse" }]);
+    expect(find(group(ellipse, "a"), "ellipse")?.attrs["stroke-dasharray"]).toBe("4 3");
+  });
+
+  it("fills with the gradient a fill names, and draws no fill where it does not parse", () => {
+    const d = withProps("a", { fill: "linear(90, #000, #fff)" }, [a]);
+    const [def] = describeDefs(d);
+    expect(find(group(d, "a"), "rect")?.attrs["fill"]).toBe(`url(#${String(def?.attrs["id"])})`);
+    const bad = withProps("a", { fill: "linear(90, #000)" }, [a]);
+    expect(find(group(bad, "a"), "rect")?.attrs["fill"]).toBe("none");
+  });
+
+  it("puts a shadow on the element's group, and none where the element has no shadow", () => {
+    const d = withProps("a", { shadow: "2 4 6 #000" }, [a, b]);
+    const [def] = describeDefs(d);
+    expect(group(d, "a").attrs["filter"]).toBe(`url(#${String(def?.attrs["id"])})`);
+    expect(group(d, "b").attrs["filter"]).toBeUndefined();
+  });
+
+  it("shadows an edge and a text box", () => {
+    const edge = withProps("a->b", { shadow: "1 1 2 #000" }, [a, b, e]);
+    expect(group(edge, "a->b").attrs["filter"]).toMatch(/^url\(#/);
+    const t = withProps("a", { shadow: "1 1 2 #000" }, [{ kind: "text", id: "a", content: "x" }]);
+    expect(group(t, "a").attrs["filter"]).toMatch(/^url\(#/);
+  });
+
+  it("leaves the filter off when asked for a plain render", () => {
+    const d = withProps("a", { shadow: "2 4 6 #000" }, [a]);
+    expect(group(d, "a", { plain: true }).attrs["filter"]).toBeUndefined();
   });
 });

@@ -11,6 +11,8 @@ html, body { margin: 0; height: 100%; font: 14px system-ui, sans-serif; color: #
 .style-row { display: flex; align-items: end; gap: 4px; margin-bottom: 8px; }
 .style-row label { flex: 1; display: flex; flex-direction: column; gap: 2px; font-size: 12px; }
 .style-row input { width: 100%; box-sizing: border-box; }
+.style-row select { width: 100%; box-sizing: border-box; }
+.style-row input[type="checkbox"] { width: auto; align-self: start; margin: 0; }
 .style-row input[aria-invalid="true"] { border-color: #b00020; outline-color: #b00020; }
 .canvas { touch-action: none; }
 /* Lines are measured with every space they contain, so SVG must not collapse runs of spaces. The CSP rules out a style attribute. */

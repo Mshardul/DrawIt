@@ -6,6 +6,7 @@ import { attachLabelInput } from "../connectors/label-input.ts";
 import { attachReattachInput } from "../connectors/reattach-input.ts";
 import type { DiagramDocument, Point } from "../model/index.ts";
 import type { Box } from "../render/boxes.ts";
+import { countShadowed, describeDefs, SHADOW_DRAG_LIMIT } from "../render/defs.ts";
 import { describeDiagram } from "../render/describe.ts";
 import { describeGrid } from "../render/grid.ts";
 import { mount, patch } from "../render/mount.ts";
@@ -100,11 +101,12 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter): Pr
   gridLayer.setAttribute("class", "grid");
   const elements = document.createElementNS(SVG_NS, "g");
   elements.setAttribute("class", "elements");
+  const defs = document.createElementNS(SVG_NS, "defs");
   // Selection outlines and the drag-box draw over the elements.
   const overlay = document.createElementNS(SVG_NS, "g");
   overlay.setAttribute("class", "overlay");
   world.append(gridLayer, elements, overlay);
-  canvas.append(world);
+  canvas.append(defs, world);
 
   root.replaceChildren(
     el("header", { className: "bar" }, el("h1", { textContent: "DrawIt" }), picker, name, unsaved, saveButton, tools),
@@ -140,8 +142,14 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter): Pr
   const redraw = (changed?: ReadonlySet<string>): void => {
     const doc = preview ?? current?.document;
     const hideText = editing === null ? undefined : new Set([editing]);
-    if (changed && doc) patch(elements, describeDiagram(doc, measurer, { only: changed, ...(hideText && { hideText }) }));
-    else mount(elements, doc ? describeDiagram(doc, measurer, hideText && { hideText }) : []);
+    if (changed && doc) {
+      // Shadow filters are what a drag of many shadowed elements cannot repaint in time; the release redraws them.
+      const plain = preview !== null && countShadowed(doc, changed) > SHADOW_DRAG_LIMIT;
+      patch(elements, describeDiagram(doc, measurer, { only: changed, ...(hideText && { hideText }), ...(plain && { plain }) }));
+    } else {
+      mount(defs, doc ? describeDefs(doc) : []);
+      mount(elements, doc ? describeDiagram(doc, measurer, hideText && { hideText }) : []);
+    }
     drawOverlay();
   };
 

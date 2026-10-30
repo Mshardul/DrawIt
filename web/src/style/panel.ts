@@ -3,6 +3,7 @@
 // redrawn from the document.
 import type { OpenFile } from "../app/workspace.ts";
 import { type Command, CommandError } from "../commands/command.ts";
+import { FONT_FAMILIES } from "../text/fonts.ts";
 import { clearStyle, setStyle } from "./commands.ts";
 import { RecentColours, themeTokens } from "./colours.ts";
 import { type FieldValue, type PanelField, panelFields } from "./panel-model.ts";
@@ -19,9 +20,11 @@ export interface StylePanel {
   update(): void;
 }
 
+type Control = HTMLInputElement | HTMLSelectElement;
+
 interface Row {
   field: PanelField;
-  input: HTMLInputElement;
+  input: Control;
   clear: HTMLButtonElement;
   /** Colour properties only: the button that opens the picker and the picker itself. */
   pick?: HTMLButtonElement;
@@ -69,6 +72,14 @@ export function createStylePanel(host: StylePanelHost): StylePanel {
 
   const commit = (row: Row): void => {
     const { field, input } = row;
+    if (input instanceof HTMLSelectElement) {
+      apply(setStyle(field.ids, { [field.def.key]: input.value }));
+      return;
+    }
+    if (input.type === "checkbox") {
+      apply(setStyle(field.ids, { [field.def.key]: input.checked }));
+      return;
+    }
     const raw = input.value.trim();
     if (raw === "") {
       input.removeAttribute("aria-invalid");
@@ -128,14 +139,27 @@ export function createStylePanel(host: StylePanelHost): StylePanel {
     picker.hidden = false;
   };
 
-  const build = (field: PanelField): Row => {
-    const input = document.createElement("input");
-    input.type = field.def.type === "number" ? "number" : "text";
-    if (field.def.type === "number") {
-      if (field.def.min !== undefined) input.min = String(field.def.min);
-      if (field.def.max !== undefined) input.max = String(field.def.max);
-      input.step = field.def.max === 1 ? "0.05" : "1";
+  const control = ({ def }: PanelField): Control => {
+    if (def.type === "choice" || def.type === "font") {
+      const select = document.createElement("select");
+      // Shown when the selection has no single value among the options.
+      const none = new Option("", "", true, true);
+      none.disabled = true;
+      select.append(none, ...(def.choices ?? FONT_FAMILIES).map((c) => new Option(c, c)));
+      return select;
     }
+    const input = document.createElement("input");
+    input.type = def.type === "boolean" ? "checkbox" : def.type === "number" ? "number" : "text";
+    if (def.type === "number") {
+      if (def.min !== undefined) input.min = String(def.min);
+      if (def.max !== undefined) input.max = String(def.max);
+      input.step = def.max === 1 ? "0.05" : "1";
+    }
+    return input;
+  };
+
+  const build = (field: PanelField): Row => {
+    const input = control(field);
     input.setAttribute("aria-label", field.def.name);
     const clear = document.createElement("button");
     clear.type = "button";
@@ -164,9 +188,15 @@ export function createStylePanel(host: StylePanelHost): StylePanel {
   const show = (row: Row, field: PanelField): void => {
     row.field = field;
     const mixed = field.value.state === "mixed";
-    row.input.value = text(field.value);
-    row.input.placeholder = mixed ? "Mixed" : "none";
-    row.input.removeAttribute("aria-invalid");
+    const { input } = row;
+    if (input instanceof HTMLInputElement && input.type === "checkbox") {
+      input.checked = field.value.state === "same" && field.value.value === true;
+      input.indeterminate = mixed;
+    } else {
+      input.value = text(field.value);
+      if (input instanceof HTMLInputElement) input.placeholder = mixed ? "Mixed" : "none";
+    }
+    input.removeAttribute("aria-invalid");
     row.clear.hidden = !field.overridden;
   };
 

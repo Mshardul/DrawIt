@@ -56,6 +56,7 @@ function reconcile(el: Element, specs: SvgNode[]): void {
 /** Brings `el` in line with `spec`, touching its children only when their content changed. */
 function update(el: Element, spec: SvgNode): void {
   const content = JSON.stringify(spec.children);
+  for (const name of el.getAttributeNames()) if (!(name in spec.attrs)) el.removeAttribute(name);
   setAttrs(el, spec.attrs);
   if (builtFrom.get(el) === content) return;
   reconcile(el, spec.children);

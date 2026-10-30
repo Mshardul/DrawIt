@@ -4,7 +4,10 @@ import type { DiagramDocument, DiagramElement, StyleProps } from "../model/index
 import { type PropertyDef, PROPERTIES } from "./registry.ts";
 import { styleOf } from "./of.ts";
 
-const SHOWN: readonly PropertyDef["key"][] = ["fill", "opacity", "stroke", "strokeWidth", "radius"];
+const SHOWN: readonly PropertyDef["key"][] = [
+  "fill", "opacity", "stroke", "strokeWidth", "dash", "radius", "shadow",
+  "font", "size", "weight", "italic", "underline", "color", "align", "lineHeight",
+];
 
 export type FieldValue = { state: "same"; value: unknown } | { state: "mixed" };
 
@@ -20,12 +23,17 @@ export interface PanelField {
 const isRectangle = (element: DiagramElement): boolean =>
   (element.kind === "node" || element.kind === "shape") && (element.shape === "rect" || element.shape === "core.rect");
 
-/** Edges are lines, not areas, and a pack shape takes its corners from its cut lines. */
-function applies(key: PropertyDef["key"], element: DiagramElement): boolean {
+/**
+ * Edges are lines, not areas, a pack shape takes its corners from its cut lines, and a shape
+ * has no text.
+ */
+function applies(def: PropertyDef, element: DiagramElement): boolean {
+  const { key } = def;
   switch (element.kind) {
     case "node":
-    case "shape":
       return key !== "radius" || isRectangle(element);
+    case "shape":
+      return def.group !== "text" && (key !== "radius" || isRectangle(element));
     case "text":
       return true;
     case "edge":
@@ -40,7 +48,7 @@ export function panelFields(doc: DiagramDocument, selection: readonly string[]):
   const fields: PanelField[] = [];
   for (const def of PROPERTIES) {
     if (!SHOWN.includes(def.key)) continue;
-    const targets = picked.filter((e) => applies(def.key, e));
+    const targets = picked.filter((e) => applies(def, e));
     if (targets.length === 0) continue;
     const values = targets.map((e) => styleOf(doc, e)[def.key as keyof StyleProps]);
     const first = values[0];

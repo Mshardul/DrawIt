@@ -11,6 +11,7 @@ import { styleOf, themeColour } from "../style/of.ts";
 import { type TextLook, textLookOf } from "../style/text-look.ts";
 import { COLOUR } from "../style/values.ts";
 import { svgTextAttrs, type TextMeasurer } from "../text/measure.ts";
+import { fillPaint, shadowFilter } from "./defs.ts";
 import { outlineKind, stackOrder } from "./boxes.ts";
 import { sizeOf } from "./size.ts";
 import { alignedX, labelLayout, layoutTextBox } from "./text-layout.ts";
@@ -30,6 +31,8 @@ export interface DescribeOptions {
   shapes?: ShapeLookup;
   /** Elements drawn without their text, because an editor is showing it. */
   hideText?: ReadonlySet<string>;
+  /** Leave out shadow filters, which are the costly part of painting while elements move. */
+  plain?: boolean;
 }
 
 /** Finds the manifest of a shape by the name written in the file, or undefined for a shape that has none. */
@@ -41,10 +44,30 @@ const paint = (value: unknown): string => (typeof value === "string" && COLOUR.t
 
 const numeric = (value: unknown): number | undefined => (typeof value === "number" ? value : undefined);
 
-/** The fill, stroke and corner attributes of an outline. */
-function outlineAttrs(style: StyleProps): SvgNode["attrs"] {
+/** Dash lengths in stroke widths, so a thick line has longer dashes. */
+const DASH_PATTERNS = { dashed: [4, 3], dotted: [1, 2] } as const;
+
+function dashAttrs(style: StyleProps): SvgNode["attrs"] {
+  const pattern = style.dash === "dashed" || style.dash === "dotted" ? DASH_PATTERNS[style.dash] : undefined;
+  const width = numeric(style.strokeWidth) ?? 1;
+  return pattern ? { "stroke-dasharray": pattern.map((n) => n * width).join(" ") } : {};
+}
+
+/** The fill, stroke and dash attributes of an outline. */
+function outlineAttrs(doc: DiagramDocument, style: StyleProps): SvgNode["attrs"] {
   const width = numeric(style.strokeWidth);
-  return { fill: paint(style.fill), stroke: paint(style.stroke), ...(width !== undefined && { "stroke-width": width }) };
+  return {
+    fill: fillPaint(doc, style.fill),
+    stroke: paint(style.stroke),
+    ...(width !== undefined && { "stroke-width": width }),
+    ...dashAttrs(style),
+  };
+}
+
+/** The shadow filter on the element's group, unless the render is plain. */
+function shadowAttrs(doc: DiagramDocument, style: StyleProps, plain: boolean | undefined): SvgNode["attrs"] {
+  const filter = plain ? undefined : shadowFilter(doc, style.shadow);
+  return filter === undefined ? {} : { filter };
 }
 
 /** Opacity on the element's group, written only when the element is not fully opaque. */
@@ -87,6 +110,7 @@ function labelNodes(label: string, w: number, h: number, measurer: TextMeasurer,
 }
 
 function body(
+  doc: DiagramDocument,
   element: DiagramElement,
   style: StyleProps,
   w: number,
@@ -100,8 +124,8 @@ function body(
     case "shape": {
       const outline =
         outlineKind(element) === "ellipse"
-          ? node("ellipse", { cx: w / 2, cy: h / 2, rx: w / 2, ry: h / 2, ...outlineAttrs(style) })
-          : node("rect", { width: w, height: h, ...cornerAttrs(style), ...outlineAttrs(style) });
+          ? node("ellipse", { cx: w / 2, cy: h / 2, rx: w / 2, ry: h / 2, ...outlineAttrs(doc, style) })
+          : node("rect", { width: w, height: h, ...cornerAttrs(style), ...outlineAttrs(doc, style) });
       const label =
         element.kind === "node" && !hideText ? labelNodes(element.label ?? element.id, w, h, measurer, textLookOf(style), shapes?.(element.shape)) : [];
       return [outline, ...label];
@@ -109,7 +133,7 @@ function body(
     case "text": {
       const background =
         style.fill !== undefined || style.stroke !== undefined
-          ? [node("rect", { width: w, height: h, ...cornerAttrs(style), ...outlineAttrs(style) })]
+          ? [node("rect", { width: w, height: h, ...cornerAttrs(style), ...outlineAttrs(doc, style) })]
           : [];
       const look = textLookOf(style);
       const at = alignedX(look.align, 0, w);
@@ -142,7 +166,7 @@ function labelNodesOnEdge({ edge, points, labelAt, style }: RoutedEdge, measurer
   return [background, ...lineNodes(lines, at.x, box.y, at.anchor, look)];
 }
 
-function edgeNode(routed: RoutedEdge, measurer: TextMeasurer, hideText: boolean, paper: string): SvgNode {
+function edgeNode(doc: DiagramDocument, routed: RoutedEdge, measurer: TextMeasurer, hideText: boolean, paper: string, plain: boolean | undefined): SvgNode {
   const { edge, points, style } = routed;
   const stroke = paint(style.stroke);
   const width = numeric(style.strokeWidth);
@@ -152,13 +176,14 @@ function edgeNode(routed: RoutedEdge, measurer: TextMeasurer, hideText: boolean,
     stroke,
     ...(width !== undefined && { "stroke-width": width }),
     "stroke-linejoin": "round",
+    ...dashAttrs(style),
   });
   const heads = [headShape(style.headStart ?? "none", points, "start"), headShape(style.headEnd ?? "none", points, "end")].flatMap((head) => {
     if (!head) return [];
     if (head.kind === "dot") return [node("circle", { cx: head.centre.x, cy: head.centre.y, r: head.r, fill: stroke })];
     return [node("polygon", { points: head.points.map((p) => `${fmt(p.x)},${fmt(p.y)}`).join(" "), fill: stroke })];
   });
-  return node("g", { "data-id": edge.id, ...opacityAttrs(style) }, [
+  return node("g", { "data-id": edge.id, ...opacityAttrs(style), ...shadowAttrs(doc, style, plain) }, [
     path,
     ...heads,
     ...(hideText ? [] : labelNodesOnEdge(routed, measurer, paper)),
@@ -172,7 +197,7 @@ function edgeNode(routed: RoutedEdge, measurer: TextMeasurer, hideText: boolean,
  * a layout entry and edges that cannot be routed are not.
  */
 export function describeDiagram(doc: DiagramDocument, measurer: TextMeasurer, options: DescribeOptions = {}): SvgNode[] {
-  const { only, shapes, hideText } = options;
+  const { only, shapes, hideText, plain } = options;
   const elements = elementsById(doc);
   const entries = layoutById(doc);
   const edges = routedEdges(doc, measurer, only);
@@ -184,16 +209,16 @@ export function describeDiagram(doc: DiagramDocument, measurer: TextMeasurer, op
     if (!element) continue;
     if (element.kind === "edge") {
       const routed = edges.get(id);
-      if (routed) out.push(edgeNode(routed, measurer, hideText?.has(id) === true, paper));
+      if (routed) out.push(edgeNode(doc, routed, measurer, hideText?.has(id) === true, paper, plain));
       continue;
     }
     const entry = entries.get(id);
     const size = sizeOf(doc, element, entry, measurer);
     if (!entry || !size) continue;
     const style = styleOf(doc, element);
-    const children = body(element, style, size.w, size.h, measurer, shapes, hideText?.has(element.id) === true);
+    const children = body(doc, element, style, size.w, size.h, measurer, shapes, hideText?.has(element.id) === true);
     if (!children) continue;
-    const attrs = { "data-id": element.id, transform: `translate(${fmt(entry.x)} ${fmt(entry.y)})`, ...opacityAttrs(style) };
+    const attrs = { "data-id": element.id, transform: `translate(${fmt(entry.x)} ${fmt(entry.y)})`, ...opacityAttrs(style), ...shadowAttrs(doc, style, plain) };
     out.push(node("g", attrs, children));
   }
   return out;
