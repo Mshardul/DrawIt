@@ -2,7 +2,7 @@
 // worked out from the layout of the elements at its ends.
 import type { DiagramDocument, DiagramElement, EdgeElement, LayoutEntry, Point, StyleProps } from "../model/index.ts";
 import { elementsById, layoutById } from "../model/lookup.ts";
-import { elementBox, outlineKind } from "../render/boxes.ts";
+import { elementBox, outlineKind, packOutline } from "../render/boxes.ts";
 import { styleOf } from "../style/of.ts";
 import type { TextMeasurer } from "../text/measure.ts";
 import { type End, route } from "./routing.ts";
@@ -34,7 +34,9 @@ export function routedEdges(doc: DiagramDocument, measurer: TextMeasurer, only?:
     }
     const target: DiagramElement | undefined = elements.get(id);
     const box = target && elementBox(doc, target, entries.get(id), measurer);
-    return target && box ? { box, shape: outlineKind(target), anchor: entry?.[which] ?? "auto" } : null;
+    if (!target || !box) return null;
+    const outline = packOutline(target, box);
+    return { box, shape: outlineKind(target), anchor: entry?.[which] ?? "auto", ...(outline && { outline }) };
   };
 
   const out = new Map<string, RoutedEdge>();

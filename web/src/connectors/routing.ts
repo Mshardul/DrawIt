@@ -3,12 +3,15 @@
 // at right angles. Elbows do not avoid shapes.
 import type { Anchor, Point, Side } from "../model/layout.ts";
 import type { Box, ShapeKind } from "../render/boxes.ts";
+import { exitPoint } from "../shapes/outline.ts";
 
 /** An end attached to a shape. */
 export interface NodeEnd {
   box: Box;
   shape: ShapeKind;
   anchor: Anchor;
+  /** The shape's outline as a closed polygon in the box's own space; absent for a shape routed by its box. */
+  outline?: readonly Point[];
 }
 /** An end attached to nothing. */
 export interface PointEnd {
@@ -27,6 +30,8 @@ export interface Target {
   id: string;
   box: Box;
   shape: ShapeKind;
+  /** The shape's outline in the box's own space, as for a node end. */
+  outline?: readonly Point[];
 }
 
 /** Length (px) an elbow runs straight out of a shape before it may turn. */
@@ -75,6 +80,11 @@ function clip(end: NodeEnd, toward: Point): Point {
   const dx = toward.x - c.x;
   const dy = toward.y - c.y;
   if (dx === 0 && dy === 0) return c;
+  if (end.outline) {
+    const { x, y } = end.box;
+    const hit = exitPoint(end.outline, { x: c.x - x, y: c.y - y }, { x: toward.x - x, y: toward.y - y });
+    if (hit) return { x: hit.x + x, y: hit.y + y };
+  }
   const t =
     end.shape === "rect"
       ? Math.min(end.box.w / 2 / Math.abs(dx || Number.EPSILON), end.box.h / 2 / Math.abs(dy || Number.EPSILON))

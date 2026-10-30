@@ -73,9 +73,40 @@ describe("contact sheet", () => {
     expect(html).not.toMatch(/<script/i);
   });
 
-  it("the light and dark themes colour the roles through the same classes", () => {
-    expect(html).toMatch(/\.theme-dark/);
-    expect(html).toMatch(/\[data-role="fill"\]/);
-    expect(html).toMatch(/\[data-role="detail"\]/);
+  describe("role rules", () => {
+    const rule = (role: string): string => new RegExp(`\\[data-role="${role}"\\]\\s*\\{([^}]*)\\}`).exec(html)?.[1] ?? "";
+    const declaration = (body: string, property: string): string =>
+      new RegExp(`(?:^|;)\\s*${property}\\s*:\\s*([^;]+)`).exec(body)?.[1]?.trim() ?? "";
+
+    it("a fill part takes the fill and the stroke at the full stroke width", () => {
+      const body = rule("fill");
+      expect(declaration(body, "fill")).toBe("var(--fill)");
+      expect(declaration(body, "stroke")).toBe("var(--stroke)");
+      expect(declaration(body, "stroke-width")).toBe("var(--stroke-width)");
+    });
+
+    it("a stroke part takes the stroke and no fill", () => {
+      const body = rule("stroke");
+      expect(declaration(body, "fill")).toBe("none");
+      expect(declaration(body, "stroke")).toBe("var(--stroke)");
+      expect(declaration(body, "stroke-width")).toBe("var(--stroke-width)");
+    });
+
+    it("a detail part is drawn in the stroke colour at two thirds of the stroke width", () => {
+      const body = rule("detail");
+      expect(declaration(body, "fill")).toBe("none");
+      expect(declaration(body, "stroke")).toBe("var(--stroke)");
+      expect(declaration(body, "stroke-width")).toBe("calc(var(--stroke-width) * 2 / 3)");
+    });
+
+    it("light and dark set fill and stroke colours, and the same stroke width", () => {
+      for (const theme of ["light", "dark"]) {
+        const body = new RegExp(`\\.theme-${theme}\\s*\\{([^}]*)\\}`).exec(html)?.[1] ?? "";
+        expect(declaration(body, "--fill"), theme).not.toBe("");
+        expect(declaration(body, "--stroke"), theme).not.toBe("");
+      }
+      expect(html).not.toContain("--detail");
+      expect(declaration(/svg\s*\{([^}]*)\}/.exec(html)?.[1] ?? "", "--stroke-width")).toBe("1.5");
+    });
   });
 });

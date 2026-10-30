@@ -3,7 +3,7 @@
 import type { Command } from "../commands/command.ts";
 import type { DiagramDocument, EdgeElement, LayoutEntry, Point } from "../model/index.ts";
 import { unusedId } from "../model/index.ts";
-import { drawnBoxes, outlineKind } from "../render/boxes.ts";
+import { drawnBoxes, outlineKind, packOutline } from "../render/boxes.ts";
 import type { TextMeasurer } from "../text/measure.ts";
 import { attachTarget, type End, route, type Target } from "./routing.ts";
 
@@ -12,7 +12,10 @@ export type DrawEnd = { id: string } | { point: Point };
 
 /** Shapes and text boxes an edge can attach to, bottom to top. Frames are regions, not things to connect. */
 export function attachTargets(doc: DiagramDocument, measurer: TextMeasurer): Target[] {
-  return drawnBoxes(doc, measurer).map(({ x, y, w, h, element }) => ({ id: element.id, box: { x, y, w, h }, shape: outlineKind(element) }));
+  return drawnBoxes(doc, measurer).map(({ x, y, w, h, element }) => {
+    const outline = packOutline(element, { x, y, w, h });
+    return { id: element.id, box: { x, y, w, h }, shape: outlineKind(element), ...(outline && { outline }) };
+  });
 }
 
 const roundPoint = (p: Point): Point => ({ x: Math.round(p.x), y: Math.round(p.y) });
@@ -52,7 +55,7 @@ export function draftPath(doc: DiagramDocument, measurer: TextMeasurer, from: Dr
   const endOf = (e: DrawEnd): End | null => {
     if (!("id" in e)) return { point: e.point };
     const t = boxes.get(e.id);
-    return t ? { box: t.box, shape: t.shape, anchor: "auto" } : null;
+    return t ? { box: t.box, shape: t.shape, anchor: "auto", ...(t.outline && { outline: t.outline }) } : null;
   };
   const start = endOf(from);
   const end = endOf(to);

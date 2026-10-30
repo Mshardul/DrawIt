@@ -57,6 +57,11 @@ describe("edit target", () => {
     expect(target?.box).toEqual({ x: 108, y: 200 + 68 - LINE_HEIGHT / 2, w: 80, h: LINE_HEIGHT });
   });
 
+  it("uses the label rectangle of the bundled packs when no lookup is given", () => {
+    const d = doc([{ kind: "node", id: "a", label: "ab", shape: "arch.database" }], [{ id: "a", x: 100, y: 200, w: 96, h: 112 }]);
+    expect(editTarget(d, "a", monoMeasurer)?.box).toEqual({ x: 108, y: 200 + 68 - LINE_HEIGHT / 2, w: 80, h: LINE_HEIGHT });
+  });
+
   it("has nothing to edit for elements without text, or that are not drawn", () => {
     const d = doc(
       [

@@ -4,7 +4,8 @@ import type { Command } from "../commands/command.ts";
 import { routedEdges } from "../connectors/edges.ts";
 import { edgeLabelLayout } from "../connectors/label.ts";
 import { type DiagramDocument, unusedId } from "../model/index.ts";
-import type { ShapeLookup } from "../render/describe.ts";
+import { bundledLoader } from "../shapes/bundled-packs.ts";
+import type { ShapeLookup } from "../shapes/pack-loader.ts";
 import { sizeOf } from "../render/size.ts";
 import { labelLayout, layoutTextBox } from "../render/text-layout.ts";
 import { textLookFor } from "../style/of.ts";
@@ -26,7 +27,7 @@ export interface EditTarget {
 }
 
 /** The text of `id` and where it is drawn, or null for an element with no text to edit or one that is not drawn. */
-export function editTarget(doc: DiagramDocument, id: string, measurer: TextMeasurer, shapes?: ShapeLookup): EditTarget | null {
+export function editTarget(doc: DiagramDocument, id: string, measurer: TextMeasurer, shapes: ShapeLookup = (name) => bundledLoader.shape(name)): EditTarget | null {
   const element = doc.elements.find((e) => e.id === id);
   const entry = doc.layout.find((e) => e.id === id);
   if (element?.kind === "edge") {
@@ -42,7 +43,7 @@ export function editTarget(doc: DiagramDocument, id: string, measurer: TextMeasu
     if (!size) return null;
     const look = textLookFor(doc, element);
     const text = element.label ?? element.id;
-    const { lines, top, area } = labelLayout(text, size, measurer, look, shapes?.(element.shape));
+    const { lines, top, area } = labelLayout(text, size, measurer, look, shapes(element.shape));
     return {
       id,
       field: "label",

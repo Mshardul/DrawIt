@@ -127,3 +127,25 @@ describe("edges attached to elements", () => {
     expect(edgesAttachedTo(d, ["zzz"])).toEqual([]);
   });
 });
+
+describe("edges to pack shapes", () => {
+  const database: DiagramElement = { kind: "node", id: "db", shape: "arch.database" };
+  const far: DiagramElement = { kind: "node", id: "far", shape: "rect" };
+  const layout: LayoutEntry[] = [
+    { id: "db", x: 0, y: 0, w: 96, h: 112 },
+    { id: "far", x: 200, y: -200, w: 100, h: 50 },
+  ];
+  const link: EdgeElement = { kind: "edge", id: "db->far", from: "db", to: "far" };
+
+  it("a straight edge leaves a pack shape at its outline, not at its box", () => {
+    const [start] = routedEdges(doc([database, far, link], layout), monoMeasurer).get("db->far")?.points ?? [];
+    // The box clip would be on the right side, x = 96; the rounded top is further in at that height.
+    expect(start?.x).toBeLessThan(95);
+    expect(start?.y).toBeGreaterThanOrEqual(0);
+  });
+
+  it("an edge to a rectangle named as a pack shape still clips to the box", () => {
+    const [start] = routedEdges(doc([{ kind: "node", id: "db", shape: "rect" }, far, link], layout), monoMeasurer).get("db->far")?.points ?? [];
+    expect(start?.x).toBe(96);
+  });
+});

@@ -11,6 +11,43 @@ const axisAligned = (path: Point[]): boolean =>
 const noZeroSegments = (path: Point[]): boolean =>
   path.every((p, i) => i === 0 || p.x !== (path[i - 1] as Point).x || p.y !== (path[i - 1] as Point).y);
 
+const diamondEnd = (x: number, y: number, anchor: Anchor = "auto"): End => ({
+  box: { x, y, w: 100, h: 50 },
+  shape: "rect",
+  anchor,
+  outline: [{ x: 50, y: 0 }, { x: 100, y: 25 }, { x: 50, y: 50 }, { x: 0, y: 25 }, { x: 50, y: 0 }],
+});
+
+describe("connector routing: straight to a shape with an outline", () => {
+  it("an auto end leaves the outline, not the box", () => {
+    const [a] = route(diamondEnd(0, 0), rect(300, 200), { route: "straight" }) as [Point, Point];
+    expect(a.x).toBeCloseTo(71.43, 1);
+    expect(a.y).toBeCloseTo(39.29, 1);
+  });
+
+  it("works from the shape's place in the world", () => {
+    const [a] = route(diamondEnd(1000, 500), rect(1300, 700), { route: "straight" }) as [Point, Point];
+    expect(a.x).toBeCloseTo(1071.43, 1);
+    expect(a.y).toBeCloseTo(539.29, 1);
+  });
+
+  it("clips the other end to its outline too", () => {
+    const [, b] = route(rect(0, 0), diamondEnd(300, 200), { route: "straight" }) as [Point, Point];
+    expect(b.x).toBeCloseTo(328.57, 1);
+    expect(b.y).toBeCloseTo(210.71, 1);
+  });
+
+  it("falls back to the box where the line does not meet the outline", () => {
+    const hollow: End = { box: { x: 0, y: 0, w: 100, h: 50 }, shape: "rect", anchor: "auto", outline: [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 10 }, { x: 0, y: 0 }] };
+    expect(route(hollow, rect(300, 0), { route: "straight" })[0]).toEqual({ x: 100, y: 25 });
+  });
+
+  it("an explicit side and position still sit on the box", () => {
+    const end = diamondEnd(0, 0, { side: "right", at: 0.5 });
+    expect(route(end, rect(300, 200), { route: "straight" })[0]).toEqual({ x: 100, y: 25 });
+  });
+});
+
 describe("connector routing: straight", () => {
   it("auto ends sit on the facing sides when the shapes are level", () => {
     expect(route(rect(0, 0), rect(300, 0), { route: "straight" })).toEqual([

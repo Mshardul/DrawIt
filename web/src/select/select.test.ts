@@ -42,6 +42,27 @@ describe("selection", () => {
     expect(hitTest(sample, monoMeasurer, { x: 250, y: 50 })).toBe("oval");
   });
 
+  describe("a pack shape", () => {
+    const pack = doc([{ kind: "node", id: "db", shape: "arch.database" }], [{ id: "db", x: 100, y: 100, w: 96, h: 112 }]);
+
+    it("is hit inside its outline and missed in a corner of its box", () => {
+      expect(hitTest(pack, monoMeasurer, { x: 148, y: 156 })).toBe("db");
+      expect(hitTest(pack, monoMeasurer, { x: 101, y: 101 })).toBeNull();
+      expect(hitTest(pack, monoMeasurer, { x: 195, y: 101 })).toBeNull();
+    });
+
+    it("is hit within the pointer reach of its outline, which grows as the view zooms out", () => {
+      // The outline passes through (100, 116), the left side of the rounded top.
+      expect(hitTest(pack, monoMeasurer, { x: 97, y: 116 })).toBe("db");
+      expect(hitTest(pack, monoMeasurer, { x: 93, y: 116 })).toBeNull();
+      expect(hitTest(pack, monoMeasurer, { x: 93, y: 116 }, 0.5)).toBe("db");
+    });
+
+    it("is still selected by a drag-box over a corner of its box", () => {
+      expect(idsInRect(pack, monoMeasurer, { x: 90, y: 90, w: 15, h: 15 })).toEqual(["db"]);
+    });
+  });
+
   it("the topmost overlapping element wins", () => {
     const overlapping = doc(
       [

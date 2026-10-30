@@ -6,13 +6,16 @@ import { edgeLabelLayout } from "../connectors/label.ts";
 import { type RoutedEdge, routedEdges } from "../connectors/edges.ts";
 import type { DiagramDocument, DiagramElement, StyleProps } from "../model/index.ts";
 import { elementsById, layoutById } from "../model/lookup.ts";
-import type { ShapeManifest } from "../shapes/types.ts";
+import { bundledLoader } from "../shapes/bundled-packs.ts";
+import type { ShapeDrawing } from "../shapes/pack-loader.ts";
+import type { SvgEl } from "../shapes/svg.ts";
+import type { ShapeManifest, Size } from "../shapes/types.ts";
 import { styleOf, themeColour } from "../style/of.ts";
 import { type TextLook, textLookOf } from "../style/text-look.ts";
 import { COLOUR } from "../style/values.ts";
 import { svgTextAttrs, type TextMeasurer } from "../text/measure.ts";
 import { fillPaint, shadowFilter } from "./defs.ts";
-import { outlineKind, stackOrder } from "./boxes.ts";
+import { isBuiltInShape, outlineKind, stackOrder } from "./boxes.ts";
 import { sizeOf } from "./size.ts";
 import { alignedX, labelLayout, layoutTextBox } from "./text-layout.ts";
 
@@ -27,17 +30,19 @@ export interface SvgNode {
 export interface DescribeOptions {
   /** Describe only these elements. */
   only?: ReadonlySet<string>;
-  /** Manifests of pack shapes, for their label rectangles. */
-  shapes?: ShapeLookup;
+  /** Where pack shapes come from; the bundled packs when absent. */
+  packs?: ShapeSource;
   /** Elements drawn without their text, because an editor is showing it. */
   hideText?: ReadonlySet<string>;
   /** Leave out shadow filters, which are the costly part of painting while elements move. */
   plain?: boolean;
 }
 
-/** Finds the manifest of a shape by the name written in the file, or undefined for a shape that has none. */
-export type ShapeLookup = (shape: string) => ShapeManifest | undefined;
-
+/** Finds pack shapes by the name written in the file. Both answer undefined for a name no pack provides. */
+export interface ShapeSource {
+  shape(name: string): ShapeManifest | undefined;
+  drawing(name: string, size: Size): ShapeDrawing | undefined;
+}
 
 /** A resolved colour as an SVG paint; anything that is not a plain colour draws as none. */
 const paint = (value: unknown): string => (typeof value === "string" && COLOUR.test(value) ? value : "none");
@@ -109,6 +114,39 @@ function labelNodes(label: string, w: number, h: number, measurer: TextMeasurer,
   return lineNodes(lines, x, top, alignedX(look.align, 0, 0).anchor, look);
 }
 
+/** Dashes of the placeholder for a shape no pack provides. */
+const PLACEHOLDER_DASH = "6 4";
+
+/** The paint a part of a pack shape takes from its role: fill takes fill and stroke, stroke only the stroke, detail the stroke at two thirds of the width. */
+function roleAttrs(doc: DiagramDocument, style: StyleProps, role: string | undefined): SvgNode["attrs"] {
+  const width = numeric(style.strokeWidth);
+  if (role === "fill") return outlineAttrs(doc, style);
+  if (role === "stroke") return { ...outlineAttrs(doc, style), fill: "none" };
+  if (role === "detail") return { fill: "none", stroke: paint(style.stroke), "stroke-width": ((width ?? 1) * 2) / 3 };
+  return {};
+}
+
+function packNode(doc: DiagramDocument, style: StyleProps, el: SvgEl): SvgNode {
+  const { "data-role": role, ...attrs } = el.attrs;
+  return node(el.tag, { ...attrs, ...roleAttrs(doc, style, role) }, el.children.map((child) => packNode(doc, style, child)));
+}
+
+/** The shape's drawing, centred in the element's box when its aspect is locked. */
+function packShapeNode(doc: DiagramDocument, style: StyleProps, drawing: ShapeDrawing, w: number, h: number): SvgNode {
+  const x = (w - drawing.box.w) / 2;
+  const y = (h - drawing.box.h) / 2;
+  return node(
+    "g",
+    { "stroke-linejoin": "round", "stroke-linecap": "round", ...((x !== 0 || y !== 0) && { transform: `translate(${fmt(x)} ${fmt(y)})` }) },
+    drawing.svg.children.map((child) => packNode(doc, style, child)),
+  );
+}
+
+function placeholderNodes(doc: DiagramDocument, style: StyleProps, name: string, w: number, h: number, measurer: TextMeasurer): SvgNode[] {
+  const outline = node("rect", { width: w, height: h, ...outlineAttrs(doc, style), fill: "none", "stroke-dasharray": PLACEHOLDER_DASH });
+  return [outline, ...labelNodes(name, w, h, measurer, textLookOf(style))];
+}
+
 function body(
   doc: DiagramDocument,
   element: DiagramElement,
@@ -116,18 +154,25 @@ function body(
   w: number,
   h: number,
   measurer: TextMeasurer,
-  shapes: ShapeLookup | undefined,
+  packs: ShapeSource,
   hideText: boolean,
 ): SvgNode[] | null {
   switch (element.kind) {
     case "node":
     case "shape": {
+      if (!isBuiltInShape(element.shape)) {
+        const drawing = packs.drawing(element.shape, { w, h });
+        if (!drawing) return placeholderNodes(doc, style, element.shape, w, h, measurer);
+        const label =
+          element.kind === "node" && !hideText ? labelNodes(element.label ?? element.id, w, h, measurer, textLookOf(style), packs.shape(element.shape)) : [];
+        return [packShapeNode(doc, style, drawing, w, h), ...label];
+      }
       const outline =
         outlineKind(element) === "ellipse"
           ? node("ellipse", { cx: w / 2, cy: h / 2, rx: w / 2, ry: h / 2, ...outlineAttrs(doc, style) })
           : node("rect", { width: w, height: h, ...cornerAttrs(style), ...outlineAttrs(doc, style) });
       const label =
-        element.kind === "node" && !hideText ? labelNodes(element.label ?? element.id, w, h, measurer, textLookOf(style), shapes?.(element.shape)) : [];
+        element.kind === "node" && !hideText ? labelNodes(element.label ?? element.id, w, h, measurer, textLookOf(style)) : [];
       return [outline, ...label];
     }
     case "text": {
@@ -193,11 +238,12 @@ function edgeNode(doc: DiagramDocument, routed: RoutedEdge, measurer: TextMeasur
 /**
  * Describes the drawable elements bottom to top, which is z-order: the layout order, with edges
  * that have no layout entry on top. Each element is a `g` carrying its ID in `data-id`. Rectangles,
- * ellipses, text boxes and edges are drawn; frames, images, unknown elements, elements without
- * a layout entry and edges that cannot be routed are not.
+ * ellipses, pack shapes, text boxes and edges are drawn, and a shape no pack provides is a dashed
+ * placeholder; frames, images, unknown elements, elements without a layout entry and edges that
+ * cannot be routed are not.
  */
 export function describeDiagram(doc: DiagramDocument, measurer: TextMeasurer, options: DescribeOptions = {}): SvgNode[] {
-  const { only, shapes, hideText, plain } = options;
+  const { only, packs = bundledLoader, hideText, plain } = options;
   const elements = elementsById(doc);
   const entries = layoutById(doc);
   const edges = routedEdges(doc, measurer, only);
@@ -216,7 +262,7 @@ export function describeDiagram(doc: DiagramDocument, measurer: TextMeasurer, op
     const size = sizeOf(doc, element, entry, measurer);
     if (!entry || !size) continue;
     const style = styleOf(doc, element);
-    const children = body(doc, element, style, size.w, size.h, measurer, shapes, hideText?.has(element.id) === true);
+    const children = body(doc, element, style, size.w, size.h, measurer, packs, hideText?.has(element.id) === true);
     if (!children) continue;
     const attrs = { "data-id": element.id, transform: `translate(${fmt(entry.x)} ${fmt(entry.y)})`, ...opacityAttrs(style), ...shadowAttrs(doc, style, plain) };
     out.push(node("g", attrs, children));

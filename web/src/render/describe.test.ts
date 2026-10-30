@@ -1,7 +1,5 @@
 import { describe, expect, it } from "vitest";
 import type { DiagramDocument, DiagramElement, LayoutEntry } from "../model/index.ts";
-import { readFileSync } from "node:fs";
-import type { PackManifest } from "../shapes/types.ts";
 import { monoMeasurer } from "../testing/measurer.ts";
 import { describeDefs } from "./defs.ts";
 import { describeDiagram, type SvgNode } from "./describe.ts";
@@ -44,11 +42,6 @@ describe("SVG renderer, basic elements", () => {
     );
     expect(find(g as SvgNode, "ellipse")?.attrs).toMatchObject({ cx: 50, cy: 30, rx: 50, ry: 30 });
     expect(find(g as SvgNode, "rect")).toBeUndefined();
-  });
-
-  it("draws a shape from a pack that is not installed as a rectangle", () => {
-    const [g] = describeDiagram(doc([{ kind: "node", id: "a", shape: "arch.server" }], [{ id: "a", x: 0, y: 0 }]), monoMeasurer);
-    expect(find(g as SvgNode, "rect")).toBeDefined();
   });
 
   it("draws a decorative shape element without a label", () => {
@@ -231,11 +224,6 @@ describe("SVG renderer, edges", () => {
   });
 });
 
-const shapeIn = (pack: string, id: string) => {
-  const manifest = JSON.parse(readFileSync(new URL(`../../../packs/${pack}/pack.json`, import.meta.url), "utf8")) as PackManifest;
-  return manifest.shapes.find((shape) => shape.id === id);
-};
-
 const textNodes = (node: SvgNode): SvgNode[] => [...(node.tag === "text" ? [node] : []), ...node.children.flatMap(textNodes)];
 
 describe("SVG renderer, labels", () => {
@@ -275,22 +263,18 @@ describe("SVG renderer, labels", () => {
   });
 
   it("centres a pack shape's label in the manifest label rectangle", () => {
-    const database = shapeIn("arch", "database");
     const [g] = describeDiagram(
       doc([{ kind: "node", id: "a", label: "ab", shape: "arch.database" }], [{ id: "a", x: 0, y: 0, w: 96, h: 112 }]),
       monoMeasurer,
-      { shapes: (name) => (name === "arch.database" ? database : undefined) },
     );
     // The label rectangle is x 8..88, y 40..96, so its centre is (48, 68); the box centre would be (48, 56).
     expect(textNodes(g as SvgNode).map((t) => [t.attrs["x"], t.attrs["y"]])).toEqual([[48, 68]]);
   });
 
   it("wraps a pack shape's label at the manifest label width", () => {
-    const database = shapeIn("arch", "database");
     const [g] = describeDiagram(
       doc([{ kind: "node", id: "a", label: "aaaa bbbb", shape: "arch.database" }], [{ id: "a", x: 0, y: 0, w: 96, h: 112 }]),
       monoMeasurer,
-      { shapes: () => database },
     );
     // The label is 80px wide (eight characters); the 96px box would hold the nine.
     expect(textNodes(g as SvgNode).map((t) => t.text)).toEqual(["aaaa", "bbbb"]);

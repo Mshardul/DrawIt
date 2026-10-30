@@ -6,7 +6,8 @@ import { textLookOf } from "../style/text-look.ts";
 import { edgeLabelLayout } from "../connectors/label.ts";
 import { distanceToPath, pathTouchesRect } from "../connectors/path.ts";
 import type { DiagramDocument } from "../model/index.ts";
-import { type Box, type DrawnBox, drawnBoxes, outlineKind, stackOrder } from "../render/boxes.ts";
+import { type Box, type DrawnBox, drawnBoxes, outlineKind, packOutline, stackOrder } from "../render/boxes.ts";
+import { insideOutline, nearOutline } from "../shapes/outline.ts";
 import type { TextMeasurer } from "../text/measure.ts";
 import type { Pt } from "../view/view.ts";
 
@@ -16,16 +17,21 @@ export const EDGE_REACH_PX = 4;
 interface Pickable {
   id: string;
   locked: boolean;
-  /** `reach` is the world distance from an edge's path that still counts as on it. */
+  /** `reach` is the world distance from an edge's path, or a pack shape's outline, that still counts as on it. */
   covers(p: Pt, reach: number): boolean;
   overlaps(rect: Box): boolean;
 }
 
 function boxPickable(box: DrawnBox): Pickable {
+  const outline = packOutline(box.element, box);
   return {
     id: box.element.id,
     locked: box.locked,
-    covers(p) {
+    covers(p, reach) {
+      if (outline) {
+        const local = { x: p.x - box.x, y: p.y - box.y };
+        return insideOutline(outline, local) || nearOutline(outline, local, reach);
+      }
       if (outlineKind(box.element) === "ellipse") {
         const rx = box.w / 2;
         const ry = box.h / 2;

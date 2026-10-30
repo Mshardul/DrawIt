@@ -8,8 +8,8 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { renderContactSheet } from "../src/shapes/contact-sheet.ts";
+import { validatePackFiles } from "../src/shapes/pack-loader.ts";
 import type { PackManifest, Problem } from "../src/shapes/types.ts";
-import { validatePack } from "../src/shapes/validate.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const DEFAULT_PACKS = resolve(here, "..", "..", "packs");
@@ -17,6 +17,8 @@ const DEFAULT_SHEET = resolve(here, "..", "contact-sheet", "index.html");
 
 export interface LoadedPack {
   dir: string;
+  /** Text of `pack.json`. */
+  manifestText: string;
   manifest: PackManifest;
   svgs: Record<string, string>;
   /** Set when pack.json is not JSON. */
@@ -35,31 +37,18 @@ export function loadPacks(root: string): LoadedPack[] {
           .filter((f) => f.endsWith(".svg"))
           .map((f) => [f, readFileSync(join(dir, f), "utf8")]),
       );
+      const manifestText = readFileSync(join(dir, "pack.json"), "utf8");
       try {
-        return { dir, manifest: JSON.parse(readFileSync(join(dir, "pack.json"), "utf8")) as PackManifest, svgs };
+        return { dir, manifestText, manifest: JSON.parse(manifestText) as PackManifest, svgs };
       } catch (e) {
-        return { dir, manifest: null as unknown as PackManifest, svgs, parseError: e instanceof Error ? e.message : String(e) };
+        return { dir, manifestText, manifest: null as unknown as PackManifest, svgs, parseError: e instanceof Error ? e.message : String(e) };
       }
     });
 }
 
 /** Every problem in `packs`, including a folder name that differs from its pack id and repeated pack ids. */
 export function validateAll(packs: LoadedPack[]): Problem[] {
-  const problems: Problem[] = [];
-  const seen = new Set<string>();
-  for (const pack of packs) {
-    const folder = pack.dir.split(/[\\/]/).at(-1) ?? "";
-    if (pack.parseError !== undefined) {
-      problems.push({ pack: folder, code: "schema", message: `pack.json is not valid JSON: ${pack.parseError}` });
-      continue;
-    }
-    problems.push(...validatePack(pack.manifest, (file) => pack.svgs[file]));
-    const id = pack.manifest.pack;
-    if (id !== folder) problems.push({ pack: id, code: "schema", message: `folder ${folder} must be named after the pack id ${id}` });
-    if (seen.has(id)) problems.push({ pack: id, code: "schema", message: `pack ${id} appears twice` });
-    seen.add(id);
-  }
-  return problems;
+  return validatePackFiles(packs.map((p) => ({ folder: p.dir.split(/[\\/]/).at(-1) ?? "", manifest: p.manifestText, svgs: p.svgs })));
 }
 
 const plural = (n: number, word: string): string => `${String(n)} ${word}${n === 1 ? "" : "s"}`;

@@ -4,7 +4,7 @@
 import type { OpenFile } from "../app/workspace.ts";
 import type { Tool } from "../connectors/input.ts";
 import type { DiagramDocument } from "../model/index.ts";
-import type { ShapeLookup } from "../render/describe.ts";
+import type { ShapeLookup } from "../shapes/pack-loader.ts";
 import { hitTest } from "../select/select.ts";
 import { screenToWorld, type View } from "../view/view.ts";
 import { applyDisplayEdit, displayIndex, editView, type EditView, modelIndex } from "./display.ts";

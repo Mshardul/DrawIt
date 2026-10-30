@@ -22,12 +22,12 @@ h2 small { font-weight: normal; color: #666; margin-left: 8px; }
 .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; }
 figure { margin: 0; padding: 8px; border-radius: 6px; }
 figcaption { font-size: 11px; margin-top: 4px; opacity: 0.7; }
-.theme-light { --bg: #ffffff; --fill: #dbe8f5; --stroke: #1f4e79; --detail: #5b7fa6; color: #1a1a1a; background: var(--bg); }
-.theme-dark { --bg: #1b1f24; --fill: #27415c; --stroke: #8fb8e0; --detail: #6b93bd; color: #eeeeee; background: var(--bg); }
-svg { display: block; overflow: visible; stroke-linejoin: round; stroke-linecap: round; }
-svg [data-role="fill"] { fill: var(--fill); stroke: var(--stroke); stroke-width: 1.5; }
-svg [data-role="stroke"] { fill: none; stroke: var(--stroke); stroke-width: 1.5; }
-svg [data-role="detail"] { fill: none; stroke: var(--detail); stroke-width: 1; }
+.theme-light { --bg: #ffffff; --fill: #dbe8f5; --stroke: #1f4e79; color: #1a1a1a; background: var(--bg); }
+.theme-dark { --bg: #1b1f24; --fill: #27415c; --stroke: #8fb8e0; color: #eeeeee; background: var(--bg); }
+svg { --stroke-width: 1.5; display: block; overflow: visible; stroke-linejoin: round; stroke-linecap: round; }
+svg [data-role="fill"] { fill: var(--fill); stroke: var(--stroke); stroke-width: var(--stroke-width); }
+svg [data-role="stroke"] { fill: none; stroke: var(--stroke); stroke-width: var(--stroke-width); }
+svg [data-role="detail"] { fill: none; stroke: var(--stroke); stroke-width: calc(var(--stroke-width) * 2 / 3); }
 svg .outline { fill: none; stroke: #d33; stroke-width: 1; stroke-dasharray: 3 2; }
 svg .anchor { fill: #d33; }
 svg .label-area { fill: none; stroke: #2a9d4a; stroke-width: 1; stroke-dasharray: 2 2; }

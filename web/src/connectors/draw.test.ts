@@ -141,3 +141,11 @@ describe("the edge being drawn", () => {
     expect(draftPath(doc(), monoMeasurer, { id: "a" }, { id: "a" })).toEqual([]);
   });
 });
+
+describe("the line shown while drawing, from a pack shape", () => {
+  it("leaves the shape at its outline, not at its box", () => {
+    const d = doc([{ kind: "node", id: "db", shape: "arch.database" }], [{ id: "db", x: 0, y: 200, w: 96, h: 112 }]);
+    const [start] = draftPath(d, monoMeasurer, { id: "db" }, { point: { x: 200, y: 100 } });
+    expect(start?.x).toBeLessThan(95);
+  });
+});
