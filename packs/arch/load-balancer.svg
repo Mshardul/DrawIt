@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">
+  <path data-role="fill" d="M 16 8 H 80 C 84.418 8 88 11.582 88 16 V 80 C 88 84.418 84.418 88 80 88 H 16 C 11.582 88 8 84.418 8 80 V 16 C 8 11.582 11.582 8 16 8 Z"/>
+  <polyline data-role="detail" points="16,48 40,48"/>
+  <polyline data-role="detail" points="40,48 52,28 80,28"/>
+  <polyline data-role="detail" points="40,48 80,48"/>
+  <polyline data-role="detail" points="40,48 52,68 80,68"/>
+</svg>

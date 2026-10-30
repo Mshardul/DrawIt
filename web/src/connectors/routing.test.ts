@@ -11,11 +11,12 @@ const axisAligned = (path: Point[]): boolean =>
 const noZeroSegments = (path: Point[]): boolean =>
   path.every((p, i) => i === 0 || p.x !== (path[i - 1] as Point).x || p.y !== (path[i - 1] as Point).y);
 
+const DIAMOND: Point[] = [{ x: 50, y: 0 }, { x: 100, y: 25 }, { x: 50, y: 50 }, { x: 0, y: 25 }, { x: 50, y: 0 }];
 const diamondEnd = (x: number, y: number, anchor: Anchor = "auto"): End => ({
   box: { x, y, w: 100, h: 50 },
   shape: "rect",
   anchor,
-  outline: [{ x: 50, y: 0 }, { x: 100, y: 25 }, { x: 50, y: 50 }, { x: 0, y: 25 }, { x: 50, y: 0 }],
+  outline: DIAMOND,
 });
 
 describe("connector routing: straight to a shape with an outline", () => {
@@ -42,9 +43,48 @@ describe("connector routing: straight to a shape with an outline", () => {
     expect(route(hollow, rect(300, 0), { route: "straight" })[0]).toEqual({ x: 100, y: 25 });
   });
 
-  it("an explicit side and position still sit on the box", () => {
-    const end = diamondEnd(0, 0, { side: "right", at: 0.5 });
-    expect(route(end, rect(300, 200), { route: "straight" })[0]).toEqual({ x: 100, y: 25 });
+  it("a side and position sit where a line inward from the box first meets the outline", () => {
+    expect(route(diamondEnd(0, 0, { side: "right", at: 0.5 }), rect(300, 200), { route: "straight" })[0]).toEqual({ x: 100, y: 25 });
+    expect(route(diamondEnd(0, 0, { side: "top", at: 0.25 }), rect(300, 200), { route: "straight" })[0]).toEqual({ x: 25, y: 12.5 });
+    expect(route(diamondEnd(1000, 500, { side: "left", at: 0.8 }), rect(300, 200), { route: "straight" })[0]).toEqual({ x: 1030, y: 540 });
+  });
+
+  it("a side and position fall back to the box point where the line meets no outline", () => {
+    const hollow: End = { box: { x: 0, y: 0, w: 100, h: 50 }, shape: "rect", anchor: { side: "right", at: 0.5 }, outline: [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 10 }, { x: 0, y: 0 }] };
+    expect(route(hollow, rect(300, 0), { route: "straight" })[0]).toEqual({ x: 100, y: 25 });
+  });
+});
+
+describe("connector routing: elbow from a shape with an outline", () => {
+  it("leaves a side and position along the box side's direction, beyond the box", () => {
+    const path = route(diamondEnd(0, 0, { side: "top", at: 0.25 }), rect(0, 300), { route: "elbow" });
+    expect(path[0]).toEqual({ x: 25, y: 12.5 });
+    expect(path[1]).toEqual({ x: 25, y: -16 });
+    expect(axisAligned(path)).toBe(true);
+  });
+
+  it("an auto end leaves from the shape's own anchor on the facing side", () => {
+    const end: End = { ...diamondEnd(0, 0), anchors: { top: { x: 50, y: 0 }, right: { x: 75, y: 37.5 }, bottom: { x: 50, y: 50 }, left: { x: 0, y: 25 } } };
+    const path = route(end, rect(300, 100), { route: "elbow" });
+    expect(path[0]).toEqual({ x: 75, y: 37.5 });
+    expect(path[1]?.y).toBe(37.5);
+    expect(path[1]?.x).toBeGreaterThanOrEqual(116);
+    expect(axisAligned(path)).toBe(true);
+  });
+
+  it("an auto end with no anchors leaves from the middle of the facing side", () => {
+    const path = route(diamondEnd(0, 0), rect(300, 100), { route: "elbow" });
+    expect(path[0]).toEqual({ x: 100, y: 25 });
+    expect(path[1]?.y).toBe(25);
+    expect(path[1]?.x).toBeGreaterThanOrEqual(116);
+  });
+
+  it("arrives at a shape with an outline along the direction of its box side", () => {
+    const path = route(rect(0, 0), diamondEnd(300, 200, { side: "left", at: 0.8 }), { route: "elbow" });
+    expect(path.at(-1)).toEqual({ x: 330, y: 240 });
+    expect(path.at(-2)?.y).toBe(240);
+    expect(path.at(-2)?.x).toBeLessThanOrEqual(284);
+    expect(axisAligned(path)).toBe(true);
   });
 });
 
@@ -196,5 +236,45 @@ describe("connector routing: re-attaching an end", () => {
 
   it("an element can be excluded, so an edge cannot attach to itself by dropping on its own start", () => {
     expect(attachTarget(targets, { x: 150, y: 120 }, new Set(["front"]))?.id).toBe("back");
+  });
+});
+
+describe("connector routing: dropping an end on a shape with an outline", () => {
+  const target: Target = { id: "d", box: { x: 0, y: 0, w: 100, h: 50 }, shape: "rect", outline: DIAMOND };
+
+  it("attaches inside the outline", () => {
+    expect(attachTarget([target], { x: 80, y: 25 })).toEqual({ id: "d", anchor: { side: "right", at: 0.5 } });
+  });
+
+  it("does not attach in a corner of the box that the outline leaves empty", () => {
+    expect(attachTarget([target], { x: 5, y: 5 })).toBeNull();
+  });
+
+  it("attaches to the shape beneath when the corner of the one above is empty", () => {
+    const below: Target = { id: "r", box: { x: 0, y: 0, w: 100, h: 50 }, shape: "rect" };
+    expect(attachTarget([below, target], { x: 5, y: 5 })?.id).toBe("r");
+  });
+
+  it("works from the shape's place in the world", () => {
+    const placed: Target = { ...target, box: { x: 1000, y: 500, w: 100, h: 50 } };
+    expect(attachTarget([placed], { x: 1005, y: 505 })).toBeNull();
+    expect(attachTarget([placed], { x: 1050, y: 525 })?.id).toBe("d");
+  });
+
+  describe("a stroke-only target", () => {
+    const frame: Target = { id: "b", box: { x: 0, y: 0, w: 100, h: 50 }, shape: "rect", outline: [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 50 }, { x: 0, y: 50 }, { x: 0, y: 0 }], filled: false };
+
+    it("is not attached by a drop inside it", () => {
+      expect(attachTarget([frame], { x: 50, y: 25 })).toBeNull();
+    });
+
+    it("is attached by a drop on its outline, at the side and position nearest", () => {
+      expect(attachTarget([frame], { x: 99, y: 10 })).toEqual({ id: "b", anchor: { side: "right", at: 0.2 } });
+    });
+
+    it("lets a drop inside reach the shape behind it", () => {
+      const behind: Target = { id: "r", box: { x: 20, y: 10, w: 40, h: 30 }, shape: "rect" };
+      expect(attachTarget([behind, frame], { x: 30, y: 20 })?.id).toBe("r");
+    });
   });
 });

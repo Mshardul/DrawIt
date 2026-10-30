@@ -82,8 +82,8 @@ function validateShape(raw: unknown, id: string, report: Report, readSvg: (file:
   if (typeof raw["outline"] !== "string" || raw["outline"] === "") schema("schema", "outline must be a path string");
   const anchors = raw["anchors"];
   const sides = ["top", "right", "bottom", "left"];
-  if (!isObj(anchors) || !sides.every((s) => isPoint(anchors[s])) || (anchors["extra"] !== undefined && !(Array.isArray(anchors["extra"]) && anchors["extra"].every(isPoint)))) {
-    schema("schema", "anchors must give top, right, bottom and left as { x, y }, and optionally extra: a list of them");
+  if (!isObj(anchors) || !sides.every((s) => isPoint(anchors[s])) || Object.keys(anchors).length !== sides.length) {
+    schema("schema", "anchors must give exactly top, right, bottom and left as { x, y }");
   }
   const label = raw["label"];
   if (!isObj(label) || !["x", "y", "w", "h"].every((k) => isNum(label[k]))) schema("schema", "label must be { x, y, w, h }");
@@ -96,8 +96,8 @@ function validateShape(raw: unknown, id: string, report: Report, readSvg: (file:
 
   const stretch = checkStretch(raw["stretch"], raw["keepAspect"] === true, dims, report);
   const poly = checkOutline(raw["outline"] as string, report);
-  const a = anchors as { top: { x: number; y: number }; right: { x: number; y: number }; bottom: { x: number; y: number }; left: { x: number; y: number }; extra?: { x: number; y: number }[] };
-  const named: [string, { x: number; y: number }][] = [...sides.map((s): [string, { x: number; y: number }] => [s, a[s as "top"]]), ...(a.extra ?? []).map((p, i): [string, { x: number; y: number }] => [`extra ${String(i + 1)}`, p])];
+  const a = anchors as Record<"top" | "right" | "bottom" | "left", { x: number; y: number }>;
+  const named: [string, { x: number; y: number }][] = sides.map((s) => [s, a[s as "top"]]);
   for (const [name, p] of named) {
     if (p.x < 0 || p.y < 0 || p.x > w || p.y > h) report("anchor", `anchor ${name} (${String(p.x)}, ${String(p.y)}) is outside the shape's bounds`);
     else if (poly && !pointOnOutline(poly, p, ON_OUTLINE)) report("anchor", `anchor ${name} (${String(p.x)}, ${String(p.y)}) is not on the outline`);

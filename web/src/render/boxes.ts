@@ -1,8 +1,9 @@
 // The boxes of the elements the renderer draws, in z-order. Selection, hit-testing and zoom to fit
 // share it, so they agree with what describeDiagram puts on screen.
-import type { DiagramDocument, DiagramElement, LayoutEntry, Point } from "../model/index.ts";
+import type { DiagramDocument, DiagramElement, LayoutEntry } from "../model/index.ts";
 import { elementsById } from "../model/lookup.ts";
 import { bundledLoader } from "../shapes/bundled-packs.ts";
+import type { ShapeDrawing } from "../shapes/pack-loader.ts";
 import type { TextMeasurer } from "../text/measure.ts";
 import { sizeOf } from "./size.ts";
 
@@ -26,10 +27,14 @@ export function outlineKind(element: DiagramElement): ShapeKind {
   return isShape && (element.shape === "ellipse" || element.shape === "core.ellipse") ? "ellipse" : "rect";
 }
 
-/** The outline of a pack shape drawn in `box`, as a closed polygon in the box's own space; undefined for a built-in shape and for a name no pack provides. */
-export function packOutline(element: DiagramElement, box: Box): Point[] | undefined {
+/**
+ * The outline of a pack shape drawn in `box`, as a closed polygon, and its anchors, both in the box's
+ * own space, and whether it has a filled inside; undefined for a built-in shape and for a name no pack provides.
+ */
+export function packGeometry(element: DiagramElement, box: Box): Pick<ShapeDrawing, "outline" | "anchors" | "filled"> | undefined {
   const isShape = element.kind === "node" || element.kind === "shape";
-  return isShape && !isBuiltInShape(element.shape) ? bundledLoader.drawing(element.shape, { w: box.w, h: box.h })?.outline : undefined;
+  const drawing = isShape && !isBuiltInShape(element.shape) ? bundledLoader.drawing(element.shape, { w: box.w, h: box.h }) : undefined;
+  return drawing && { outline: drawing.outline, anchors: drawing.anchors, filled: drawing.filled };
 }
 
 export interface DrawnBox extends Box {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Point } from "../model/layout.ts";
-import { exitPoint, insideOutline, nearOutline } from "./outline.ts";
+import { entryPoint, exitPoint, insideOutline, nearOutline } from "./outline.ts";
 
 const diamond: Point[] = [{ x: 50, y: 0 }, { x: 100, y: 25 }, { x: 50, y: 50 }, { x: 0, y: 25 }, { x: 50, y: 0 }];
 // A "C" opening to the right: the box centre (50, 25) is outside the shape.
@@ -53,5 +53,26 @@ describe("outline: exit", () => {
 
   it("is null when the line never meets the outline", () => {
     expect(exitPoint(diamond, { x: 500, y: 500 }, { x: 600, y: 500 })).toBeNull();
+  });
+});
+
+describe("outline: entry point", () => {
+  it("is where a line from the box edge, running inward, first meets the outline", () => {
+    expect(entryPoint(diamond, { x: 25, y: 0 }, { x: 25, y: 50 })).toEqual({ x: 25, y: 12.5 });
+    expect(entryPoint(diamond, { x: 0, y: 40 }, { x: 100, y: 40 })).toEqual({ x: 30, y: 40 });
+  });
+
+  it("is the start itself when the start is on the outline", () => {
+    expect(entryPoint(diamond, { x: 100, y: 25 }, { x: 0, y: 25 })).toEqual({ x: 100, y: 25 });
+  });
+
+  it("takes the first meeting, not the last, where the line crosses the shape twice", () => {
+    expect(entryPoint(cShape, { x: 100, y: 25 }, { x: 0, y: 25 })).toEqual({ x: 20, y: 25 });
+    expect(entryPoint(cShape, { x: 50, y: 0 }, { x: 50, y: 50 })).toEqual({ x: 50, y: 0 });
+  });
+
+  it("is null where the line meets no outline", () => {
+    expect(entryPoint(diamond, { x: 0, y: -10 }, { x: 100, y: -10 })).toBeNull();
+    expect(entryPoint(diamond, { x: 120, y: 25 }, { x: 200, y: 25 })).toBeNull();
   });
 });

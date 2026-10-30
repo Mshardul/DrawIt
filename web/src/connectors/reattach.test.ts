@@ -113,4 +113,13 @@ describe("re-attaching an edge end", () => {
     expect(reattachCommand(doc([{ id: "a->b", x: 0, y: 0, locked: true }]), monoMeasurer, "a->b", "to", { x: 350, y: 250 })).toBeNull();
     expect(reattachCommand(doc(), monoMeasurer, "nope", "to", { x: 350, y: 250 })).toBeNull();
   });
+
+  it("dropped on a corner of a pack shape's box that its outline leaves empty detaches the end", () => {
+    const d = doc();
+    d.elements.push({ kind: "node", id: "p", shape: "arch.database" });
+    d.layout.push({ id: "p", x: 600, y: 600, w: 96, h: 112 });
+    const after = reattach(d, "to", { x: 601, y: 601 });
+    expect(edgeOf(after).to).toBeNull();
+    expect(entryOf(after)?.toPoint).toEqual({ x: 601, y: 601 });
+  });
 });

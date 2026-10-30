@@ -1,6 +1,8 @@
-// Default sizes: `w` and `h` fall back to the shape default. These constants stand in for the
-// sizes in shape pack manifests, all multiples of 8.
+// Default sizes: `w` and `h` fall back to the shape default, which is the size in the shape's pack
+// manifest, or a standard size for a built-in shape, an unknown one and the other element kinds.
 import type { DiagramDocument, DiagramElement, LayoutEntry } from "../model/index.ts";
+import { bundledLoader } from "../shapes/bundled-packs.ts";
+import type { ShapeLookup } from "../shapes/pack-loader.ts";
 import { textLookFor } from "../style/of.ts";
 import type { TextLook } from "../style/text-look.ts";
 import type { TextMeasurer } from "../text/measure.ts";
@@ -17,11 +19,14 @@ export interface Size {
   h: number;
 }
 
+const bundledShapes: ShapeLookup = (name) => bundledLoader.shape(name);
+
 /** Default size of an element, or null for an edge, which has no box. A text box fits its content. */
-export function defaultSize(element: DiagramElement, measurer: TextMeasurer, look: TextLook): Size | null {
+export function defaultSize(element: DiagramElement, measurer: TextMeasurer, look: TextLook, shapes: ShapeLookup = bundledShapes): Size | null {
   switch (element.kind) {
     case "node":
     case "shape":
+      return shapes(element.shape)?.size ?? { w: SHAPE_W, h: SHAPE_H };
     case "unknown":
       return { w: SHAPE_W, h: SHAPE_H };
     case "text":
@@ -39,10 +44,10 @@ export function defaultSize(element: DiagramElement, measurer: TextMeasurer, loo
  * The size layout gives an element, falling back to its default per axis. A text box takes only
  * `w` from layout: it wraps there, and its height is the wrapped lines.
  */
-export function sizeOf(doc: DiagramDocument, element: DiagramElement, entry: LayoutEntry | undefined, measurer: TextMeasurer): Size | null {
+export function sizeOf(doc: DiagramDocument, element: DiagramElement, entry: LayoutEntry | undefined, measurer: TextMeasurer, shapes: ShapeLookup = bundledShapes): Size | null {
   const look = textLookFor(doc, element);
   if (element.kind === "text") return layoutTextBox(element.content, entry?.w, measurer, look);
-  const size = defaultSize(element, measurer, look);
+  const size = defaultSize(element, measurer, look, shapes);
   if (!size) return null;
   return { w: entry?.w ?? size.w, h: entry?.h ?? size.h };
 }

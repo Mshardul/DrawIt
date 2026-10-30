@@ -101,14 +101,14 @@ describe("shape pack validation", () => {
     expect(codes(pack({}, [off]))).toContain("anchor");
   });
 
-  it("anchors, including extra ones, are inside the shape's bounds", () => {
-    const extra = shape({ anchors: { top: { x: 80, y: 0 }, right: { x: 152, y: 40 }, bottom: { x: 80, y: 80 }, left: { x: 8, y: 40 }, extra: [{ x: 200, y: 40 }] } });
-    expect(codes(pack({}, [extra]))).toContain("anchor");
+  it("anchors are inside the shape's bounds", () => {
+    const outside = shape({ anchors: { top: { x: 80, y: 0 }, right: { x: 200, y: 40 }, bottom: { x: 80, y: 80 }, left: { x: 8, y: 40 } } });
+    expect(codes(pack({}, [outside]))).toContain("anchor");
   });
 
-  it("extra anchors are accepted when valid", () => {
-    const ok = shape({ anchors: { top: { x: 80, y: 0 }, right: { x: 152, y: 40 }, bottom: { x: 80, y: 80 }, left: { x: 8, y: 40 }, extra: [{ x: 8, y: 0 }] } });
-    expect(codes(pack({}, [ok]))).toEqual([]);
+  it("anchors are the four sides and nothing else", () => {
+    const more = shape({ anchors: { top: { x: 80, y: 0 }, right: { x: 152, y: 40 }, bottom: { x: 80, y: 80 }, left: { x: 8, y: 40 }, extra: [{ x: 8, y: 0 }] } });
+    expect(codes(pack({}, [more]))).toEqual(["schema"]);
   });
 
   it("the label rectangle is inside the shape's bounds", () => {

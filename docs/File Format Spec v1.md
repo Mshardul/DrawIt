@@ -87,19 +87,19 @@ The shape library is categorised and searchable, in the left sidebar. Shapes shi
 | Arrows and lines | Block arrows, curved arrows, brackets, dividers |
 
 - **Creating:** the sidebar lists shapes by category, with search over names and tags and a preview of each. Clicking a shape arms it; a click on the canvas places it at its default size and a drag sizes it. Rectangle and ellipse are built in and listed alongside the pack shapes.
-- **Unknown shapes:** a node that names a shape no pack provides is drawn as a dashed placeholder showing the shape name, at its layout size or, when the layout gives no `w` and `h`, at the standard default size, and is kept in the file untouched.
-- **Selecting:** a click selects a shape inside its outline or within a few screen px of it; drag-box uses bounding boxes.
+- **Unknown shapes:** a node that names a shape no pack provides is drawn as a dashed placeholder showing the shape name, at its layout size or, when the layout gives no `w` and `h`, at the standard default size, and is kept in the file untouched; the name is not drawn while the node's label is being edited.
+- **Selecting:** a click selects a shape inside its outline or within a few screen px of it; drag-box uses bounding boxes. A shape drawn only with strokes, such as a boundary, is selected only on its outline, and an edge end dropped inside it attaches to what lies behind it.
 - **Original shapes only:** no vendor icon sets (AWS, GCP, Azure) are bundled.
 - **Growth:** packs are added and extended without changes to the core.
 - **Packs:** `core` (basic, flowchart, arrows and lines; names need no prefix), `arch`, `net`, `c4`, `info`.
 - **Pack folder:** `packs/<pack>/` holds `pack.json` (JSON) and one SVG per shape. The folder is named after the pack id; a shape's full name is `<pack>.<id>`.
 - **Manifest:** per shape: `id`, `name`, `category`, `tags`, `svg` (file name), `size` (`{ w, h }`, the default size), `outline`, `anchors`, `label`, `stretch` and `keepAspect`. All coordinates are in the SVG's own space, `0 0 w h` at the default size.
   - `outline` is one closed path used for hit-testing and for attaching edges anywhere along the shape's edge.
-  - `anchors` are the default attach points for `auto`: `top`, `right`, `bottom` and `left`, each a point on the outline (the side midpoint, or where the outline meets the side's centre line), plus an optional `extra` list.
+  - `anchors` are the default attach points for `auto`: `top`, `right`, `bottom` and `left`, each a point on the outline (the side midpoint, or where the outline meets the side's centre line).
   - `label` is the rectangle where text is centred.
 - **Stretch:** optional x and y cut lines, two per axis (`"stretch": { "x": [a, b], "y": [c, d] }`). Parts outside them keep their size and move; parts between them scale. A target narrower than the fixed parts shrinks them together. With no cut lines the whole shape scales. `keepAspect` locks the ratio, as for icons, and excludes cut lines. A circle or ellipse lies inside one zone of each stretched axis.
 - **SVG rules:** only `path`, `rect`, `circle`, `ellipse`, `polygon`, `line`, `polyline` and `g`. No text, filters, images, styles, scripts or external references. Paths use absolute `M`, `L`, `H`, `V`, `C`, `Q` and `Z`. No literal colours: each element has a role in `data-role` (`fill`, `stroke` or `detail`) and takes its colour from the theme and classes. A `fill` part takes the element's fill, a `stroke` part its stroke, and a `detail` part its stroke, drawn at two thirds of the stroke width. Stroke width comes from style.
-- **Look:** flat outline plus fill, round joins and caps, an 8px design grid, default sizes in multiples of 8. Icon shapes share one canvas size and level of detail. Containers share one corner radius.
+- **Look:** flat outline plus fill, round joins and caps, an 8px design grid, default sizes in multiples of 8. Icon shapes share one canvas size and level of detail, except a shape that stretches, such as the database cylinder. Containers share one corner radius.
 - **Validation:** `pnpm validate:packs` checks every pack for schema, allowed elements and attributes, literal colours, roles, a closed outline, anchors on the outline and inside the shape's bounds, a label inside the bounds, and cut lines.
 - **Contact sheet:** `pnpm contact-sheet` writes one page showing every shape at its default size, stretched wide and narrow, in light and dark, with a view of its outline, anchors and label area. It draws each part by the same role rules as the app, including `detail` in the stroke colour at two thirds of the stroke width.
 
@@ -244,7 +244,7 @@ Style holds all appearance.
 
 Layout holds geometry only: one line per element, keyed by ID, owned by the canvas.
 
-- **Position and size:** `x`, `y` required; `w`, `h` optional, falling back to the shape default. A text box uses only `w`: without it the box fits its content, with it the text wraps there, and the height is always the wrapped lines. Integers, in px at 1x zoom. Coordinates are absolute canvas positions.
+- **Position and size:** `x`, `y` required; `w`, `h` optional, each falling back to the shape default: the size in the shape's pack manifest, or 160 by 80 for rectangle, ellipse and a shape no pack provides. A text box uses only `w`: without it the box fits its content, with it the text wraps there, and the height is always the wrapped lines. Integers, in px at 1x zoom. Coordinates are absolute canvas positions.
 - **Lock:** `locked=#true`, optional.
 - **Edge anchors:** `from` and `to` take `auto` (default; nearest side, recomputed on move) or a side (`top`, `right`, `bottom`, `left`), optionally with a position along it: `left:0.3`.
 - **Free ends:** `from-point="x,y"` or `to-point="x,y"` for an end written as `-` in structure.
@@ -310,7 +310,7 @@ A minimal canvas with floating toolbars.
 - **Moving:** moving elements also moves the bend points and free ends of a selected edge and of an edge with both ends on the moving elements. An edge with an end that stays keeps its bend points.
 - **Re-attaching:** dragging an end handle of the selected edge onto an element attaches the end there, at the side and position along it nearest the pointer, never `auto`; dragging it onto empty canvas or a frame makes it a free end at the pointer. The edge keeps its ID and its bend points, and the other end is unchanged. Dropping onto the element at the other end, or leaving the end where it was, changes nothing; a locked edge cannot be dragged. Escape cancels the drag.
 - **Bend points:** a lone selected edge shows a handle on each bend point. Alt-click on its path, within a few screen px, adds a point there, placed in the list by its position along the path. Dragging a handle moves the point; Alt-click on a handle removes it, and removing the last one leaves the edge with no `via`. Each edit is one command, and Escape cancels a drag. Alt-click on an edge that is not selected only selects it, and a locked edge cannot be edited. Double-click is never a connector gesture: it edits text.
-- **Attaching to a shape from a pack:** a side and position such as `left:0.3` means the point where a line from that spot on the shape's bounding box, running straight inward, first meets the outline; where it meets none, the point on the bounding box. Auto anchors use the shape's manifest anchors. An elbow route leaves that point along the direction of the bounding-box side it is attached to.
+- **Attaching to a shape from a pack:** a side and position such as `left:0.3` means the point where a line from that spot on the shape's bounding box, running straight inward, first meets the outline; where it meets none, the point on the bounding box. An elbow route's auto anchors use the shape's manifest anchors, and a straight route's auto ends are where the line between the centres crosses the outline. An elbow route leaves its attachment point along the direction of the bounding-box side it is attached to.
 - Deleting an element detaches its edges: each attached end stays where it was, as a free end.
 
 ### 5.4 Text

@@ -2,6 +2,9 @@
 // and straight routing use it, so a diamond is hit and connected along its edges, not its box.
 import type { Point } from "../model/layout.ts";
 
+/** Slack for a ray that starts on a segment or passes through a corner. */
+const EPSILON = 1e-9;
+
 /** True when `p` is inside the polygon (even-odd rule). */
 export function insideOutline(outline: readonly Point[], p: Point): boolean {
   let inside = false;
@@ -47,4 +50,26 @@ export function exitPoint(outline: readonly Point[], from: Point, toward: Point)
     if (t > 0 && u >= 0 && u <= 1 && t > farthest) farthest = t;
   }
   return farthest === -Infinity ? null : { x: from.x + dx * farthest, y: from.y + dy * farthest };
+}
+
+/**
+ * Where the ray from `from` towards `toward` first meets the outline, `from` itself when it lies on
+ * it. Null when the ray does not meet the outline.
+ */
+export function entryPoint(outline: readonly Point[], from: Point, toward: Point): Point | null {
+  const dx = toward.x - from.x;
+  const dy = toward.y - from.y;
+  let nearest = Infinity;
+  for (let i = 1; i < outline.length; i++) {
+    const a = outline[i - 1] as Point;
+    const b = outline[i] as Point;
+    const ex = b.x - a.x;
+    const ey = b.y - a.y;
+    const denominator = dx * ey - dy * ex;
+    if (denominator === 0) continue;
+    const t = ((a.x - from.x) * ey - (a.y - from.y) * ex) / denominator;
+    const u = ((a.x - from.x) * dy - (a.y - from.y) * dx) / denominator;
+    if (t >= -EPSILON && u >= -EPSILON && u <= 1 + EPSILON && t < nearest) nearest = Math.max(0, t);
+  }
+  return nearest === Infinity ? null : { x: from.x + dx * nearest, y: from.y + dy * nearest };
 }

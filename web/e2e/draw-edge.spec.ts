@@ -45,7 +45,7 @@ const edges = (page: Page) => page.evaluate(() => (window as unknown as { hooks:
 const selection = (page: Page) => page.evaluate(() => (window as unknown as { hooks: Hooks }).hooks.selection());
 const text = (page: Page) => page.evaluate(() => (window as unknown as { hooks: Hooks }).hooks.text());
 const layout = (page: Page, id: string) => page.evaluate((i) => (window as unknown as { hooks: Hooks }).hooks.layout(i), id);
-const arrowTool = (page: Page) => page.getByRole("button", { name: "Arrow" });
+const arrowTool = (page: Page) => page.getByRole("button", { name: "Arrow", exact: true });
 
 /** Screen position of a world point, with the view at identity. */
 async function at(page: Page, x: number, y: number): Promise<{ x: number; y: number }> {
@@ -70,7 +70,7 @@ test("dragging from one shape to another adds an edge between them, selects it a
   expect(await selection(page)).toEqual(["a->b"]);
   await expect(page.locator('.elements > g[data-id="a->b"] path')).toHaveCount(1);
   await expect(arrowTool(page)).toHaveAttribute("aria-pressed", "false");
-  await expect(page.getByRole("button", { name: "Select" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: "Select", exact: true })).toHaveAttribute("aria-pressed", "true");
 });
 
 test("the edge is one undo step, and undo takes it away", async ({ page }) => {

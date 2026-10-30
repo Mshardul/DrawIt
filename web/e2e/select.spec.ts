@@ -23,7 +23,7 @@ interface Hooks {
 }
 
 test.beforeEach(async ({ page }) => {
-  await page.setViewportSize({ width: 1000, height: 700 });
+  await page.setViewportSize({ width: 1200, height: 700 });
   await page.goto("/");
   await page.evaluate(async (text) => {
     const load = <T>(path: string) => import(path) as Promise<T>;

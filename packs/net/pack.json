@@ -1,0 +1,109 @@
+{
+  "pack": "net",
+  "version": 1,
+  "shapes": [
+    {
+      "id": "router",
+      "name": "Router",
+      "category": "Network",
+      "tags": ["router", "routing", "gateway", "network"],
+      "svg": "router.svg",
+      "size": { "w": 96, "h": 96 },
+      "outline": "M 88 48 C 88 70.091 70.091 88 48 88 C 25.909 88 8 70.091 8 48 C 8 25.909 25.909 8 48 8 C 70.091 8 88 25.909 88 48 Z",
+      "anchors": {
+        "top": { "x": 48, "y": 8 },
+        "right": { "x": 88, "y": 48 },
+        "bottom": { "x": 48, "y": 88 },
+        "left": { "x": 8, "y": 48 }
+      },
+      "label": { "x": 24, "y": 24, "w": 48, "h": 48 },
+      "keepAspect": true
+    },
+    {
+      "id": "switch",
+      "name": "Switch",
+      "category": "Network",
+      "tags": ["switch", "ethernet", "ports", "network"],
+      "svg": "switch.svg",
+      "size": { "w": 96, "h": 96 },
+      "outline": "M 16 24 H 80 C 84.418 24 88 27.582 88 32 V 64 C 88 68.418 84.418 72 80 72 H 16 C 11.582 72 8 68.418 8 64 V 32 C 8 27.582 11.582 24 16 24 Z",
+      "anchors": {
+        "top": { "x": 48, "y": 24 },
+        "right": { "x": 88, "y": 48 },
+        "bottom": { "x": 48, "y": 72 },
+        "left": { "x": 8, "y": 48 }
+      },
+      "label": { "x": 12, "y": 36, "w": 72, "h": 32 },
+      "keepAspect": true
+    },
+    {
+      "id": "vpn",
+      "name": "VPN",
+      "category": "Network",
+      "tags": ["vpn", "tunnel", "secure", "private"],
+      "svg": "vpn.svg",
+      "size": { "w": 96, "h": 96 },
+      "outline": "M 48 8 L 84 20 V 48 C 84 68 68 82 48 90 C 28 82 12 68 12 48 V 20 Z",
+      "anchors": {
+        "top": { "x": 48, "y": 8 },
+        "right": { "x": 84, "y": 48 },
+        "bottom": { "x": 48, "y": 90 },
+        "left": { "x": 12, "y": 48 }
+      },
+      "label": { "x": 28, "y": 28, "w": 40, "h": 40 },
+      "keepAspect": true
+    },
+    {
+      "id": "internet",
+      "name": "Internet",
+      "category": "Network",
+      "tags": ["internet", "web", "globe", "wan"],
+      "svg": "internet.svg",
+      "size": { "w": 96, "h": 96 },
+      "outline": "M 88 48 C 88 70.091 70.091 88 48 88 C 25.909 88 8 70.091 8 48 C 8 25.909 25.909 8 48 8 C 70.091 8 88 25.909 88 48 Z",
+      "anchors": {
+        "top": { "x": 48, "y": 8 },
+        "right": { "x": 88, "y": 48 },
+        "bottom": { "x": 48, "y": 88 },
+        "left": { "x": 8, "y": 48 }
+      },
+      "label": { "x": 24, "y": 24, "w": 48, "h": 48 },
+      "keepAspect": true
+    },
+    {
+      "id": "subnet",
+      "name": "Subnet",
+      "category": "Network",
+      "tags": ["subnet", "network", "segment", "vpc", "zone"],
+      "svg": "subnet.svg",
+      "size": { "w": 192, "h": 128 },
+      "outline": "M 8 0 H 184 C 188.418 0 192 3.582 192 8 V 120 C 192 124.418 188.418 128 184 128 H 8 C 3.582 128 0 124.418 0 120 V 8 C 0 3.582 3.582 0 8 0 Z",
+      "anchors": {
+        "top": { "x": 96, "y": 0 },
+        "right": { "x": 192, "y": 64 },
+        "bottom": { "x": 96, "y": 128 },
+        "left": { "x": 0, "y": 64 }
+      },
+      "label": { "x": 8, "y": 0, "w": 176, "h": 24 },
+      "stretch": { "x": [8, 184], "y": [24, 120] },
+      "keepAspect": false
+    },
+    {
+      "id": "on-prem",
+      "name": "On-premises",
+      "category": "Network",
+      "tags": ["on-prem", "datacentre", "building", "office"],
+      "svg": "on-prem.svg",
+      "size": { "w": 96, "h": 96 },
+      "outline": "M 16 88 V 24 L 48 8 L 80 24 V 88 Z",
+      "anchors": {
+        "top": { "x": 48, "y": 8 },
+        "right": { "x": 80, "y": 48 },
+        "bottom": { "x": 48, "y": 88 },
+        "left": { "x": 16, "y": 48 }
+      },
+      "label": { "x": 24, "y": 28, "w": 48, "h": 56 },
+      "keepAspect": true
+    }
+  ]
+}

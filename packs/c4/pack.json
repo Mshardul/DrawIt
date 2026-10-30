@@ -1,0 +1,95 @@
+{
+  "pack": "c4",
+  "version": 1,
+  "shapes": [
+    {
+      "id": "person",
+      "name": "Person",
+      "category": "C4",
+      "tags": ["person", "actor", "user", "role"],
+      "svg": "person.svg",
+      "size": { "w": 96, "h": 112 },
+      "outline": "M 0 112 V 72 C 0 56 12 52 28 52 H 48 C 34.745 52 24 41.255 24 28 C 24 14.745 34.745 4 48 4 C 61.255 4 72 14.745 72 28 C 72 41.255 61.255 52 48 52 H 68 C 84 52 96 56 96 72 V 112 Z",
+      "anchors": {
+        "top": { "x": 48, "y": 4 },
+        "right": { "x": 88, "y": 56 },
+        "bottom": { "x": 48, "y": 112 },
+        "left": { "x": 8, "y": 56 }
+      },
+      "label": { "x": 16, "y": 60, "w": 64, "h": 44 },
+      "keepAspect": true
+    },
+    {
+      "id": "software-system",
+      "name": "Software system",
+      "category": "C4",
+      "tags": ["software-system", "system", "application", "service"],
+      "svg": "software-system.svg",
+      "size": { "w": 192, "h": 112 },
+      "outline": "M 8 0 H 184 C 188.418 0 192 3.582 192 8 V 104 C 192 108.418 188.418 112 184 112 H 8 C 3.582 112 0 108.418 0 104 V 8 C 0 3.582 3.582 0 8 0 Z",
+      "anchors": {
+        "top": { "x": 96, "y": 0 },
+        "right": { "x": 192, "y": 56 },
+        "bottom": { "x": 96, "y": 112 },
+        "left": { "x": 0, "y": 56 }
+      },
+      "label": { "x": 8, "y": 8, "w": 176, "h": 96 },
+      "stretch": { "x": [8, 184], "y": [8, 104] },
+      "keepAspect": false
+    },
+    {
+      "id": "container",
+      "name": "Container",
+      "category": "C4",
+      "tags": ["container", "deployable", "app", "datastore"],
+      "svg": "container.svg",
+      "size": { "w": 192, "h": 96 },
+      "outline": "M 8 0 H 184 C 188.418 0 192 3.582 192 8 V 88 C 192 92.418 188.418 96 184 96 H 8 C 3.582 96 0 92.418 0 88 V 8 C 0 3.582 3.582 0 8 0 Z",
+      "anchors": {
+        "top": { "x": 96, "y": 0 },
+        "right": { "x": 192, "y": 48 },
+        "bottom": { "x": 96, "y": 96 },
+        "left": { "x": 0, "y": 48 }
+      },
+      "label": { "x": 8, "y": 32, "w": 176, "h": 56 },
+      "stretch": { "x": [8, 184], "y": [24, 88] },
+      "keepAspect": false
+    },
+    {
+      "id": "component",
+      "name": "Component",
+      "category": "C4",
+      "tags": ["component", "module", "part", "library"],
+      "svg": "component.svg",
+      "size": { "w": 192, "h": 96 },
+      "outline": "M 8 0 H 192 V 96 H 8 V 64 H 0 V 52 H 8 V 28 H 0 V 16 H 8 Z",
+      "anchors": {
+        "top": { "x": 96, "y": 0 },
+        "right": { "x": 192, "y": 48 },
+        "bottom": { "x": 96, "y": 96 },
+        "left": { "x": 8, "y": 48 }
+      },
+      "label": { "x": 24, "y": 8, "w": 160, "h": 80 },
+      "stretch": { "x": [16, 184], "y": [64, 88] },
+      "keepAspect": false
+    },
+    {
+      "id": "boundary",
+      "name": "Boundary",
+      "category": "C4",
+      "tags": ["boundary", "scope", "enterprise", "group"],
+      "svg": "boundary.svg",
+      "size": { "w": 256, "h": 160 },
+      "outline": "M 8 0 H 248 C 252.418 0 256 3.582 256 8 V 152 C 256 156.418 252.418 160 248 160 H 8 C 3.582 160 0 156.418 0 152 V 8 C 0 3.582 3.582 0 8 0 Z",
+      "anchors": {
+        "top": { "x": 128, "y": 0 },
+        "right": { "x": 256, "y": 80 },
+        "bottom": { "x": 128, "y": 160 },
+        "left": { "x": 0, "y": 80 }
+      },
+      "label": { "x": 16, "y": 8, "w": 224, "h": 24 },
+      "stretch": { "x": [8, 248], "y": [8, 152] },
+      "keepAspect": false
+    }
+  ]
+}

@@ -37,8 +37,8 @@ export interface ShapeManifest {
   size: Size;
   /** One closed path, absolute commands only: used for hit-testing and for attaching edges anywhere along it. */
   outline: string;
-  /** Default attach points for `auto`: the side midpoints on the outline, plus optional extras. */
-  anchors: { top: Point; right: Point; bottom: Point; left: Point; extra?: Point[] };
+  /** Default attach points for `auto`: on the outline, where it meets the centre line of each side. */
+  anchors: { top: Point; right: Point; bottom: Point; left: Point };
   /** Where text is centred. */
   label: Rect;
   stretch?: Stretch;

@@ -19,6 +19,278 @@
       "label": { "x": 8, "y": 40, "w": 80, "h": 56 },
       "stretch": { "y": [32, 96] },
       "keepAspect": false
+    },
+    {
+      "id": "server",
+      "name": "Server",
+      "category": "Architecture (generic)",
+      "tags": ["server", "host", "machine", "rack"],
+      "svg": "server.svg",
+      "size": { "w": 96, "h": 96 },
+      "outline": "M 16 8 H 80 C 84.418 8 88 11.582 88 16 V 80 C 88 84.418 84.418 88 80 88 H 16 C 11.582 88 8 84.418 8 80 V 16 C 8 11.582 11.582 8 16 8 Z",
+      "anchors": {
+        "top": { "x": 48, "y": 8 },
+        "right": { "x": 88, "y": 48 },
+        "bottom": { "x": 48, "y": 88 },
+        "left": { "x": 8, "y": 48 }
+      },
+      "label": { "x": 16, "y": 16, "w": 64, "h": 64 },
+      "keepAspect": true
+    },
+    {
+      "id": "cache",
+      "name": "Cache",
+      "category": "Architecture (generic)",
+      "tags": ["cache", "memory", "fast", "redis"],
+      "svg": "cache.svg",
+      "size": { "w": 96, "h": 96 },
+      "outline": "M 16 8 H 80 C 84.418 8 88 11.582 88 16 V 80 C 88 84.418 84.418 88 80 88 H 16 C 11.582 88 8 84.418 8 80 V 16 C 8 11.582 11.582 8 16 8 Z",
+      "anchors": {
+        "top": { "x": 48, "y": 8 },
+        "right": { "x": 88, "y": 48 },
+        "bottom": { "x": 48, "y": 88 },
+        "left": { "x": 8, "y": 48 }
+      },
+      "label": { "x": 16, "y": 16, "w": 64, "h": 64 },
+      "keepAspect": true
+    },
+    {
+      "id": "queue",
+      "name": "Queue",
+      "category": "Architecture (generic)",
+      "tags": ["queue", "messages", "broker", "stream"],
+      "svg": "queue.svg",
+      "size": { "w": 96, "h": 96 },
+      "outline": "M 16 24 H 80 C 84.418 24 88 27.582 88 32 V 64 C 88 68.418 84.418 72 80 72 H 16 C 11.582 72 8 68.418 8 64 V 32 C 8 27.582 11.582 24 16 24 Z",
+      "anchors": {
+        "top": { "x": 48, "y": 24 },
+        "right": { "x": 88, "y": 48 },
+        "bottom": { "x": 48, "y": 72 },
+        "left": { "x": 8, "y": 48 }
+      },
+      "label": { "x": 12, "y": 28, "w": 72, "h": 40 },
+      "keepAspect": true
+    },
+    {
+      "id": "cdn",
+      "name": "CDN",
+      "category": "Architecture (generic)",
+      "tags": ["cdn", "edge", "delivery", "distribution"],
+      "svg": "cdn.svg",
+      "size": { "w": 96, "h": 96 },
+      "outline": "M 16 8 H 80 C 84.418 8 88 11.582 88 16 V 80 C 88 84.418 84.418 88 80 88 H 16 C 11.582 88 8 84.418 8 80 V 16 C 8 11.582 11.582 8 16 8 Z",
+      "anchors": {
+        "top": { "x": 48, "y": 8 },
+        "right": { "x": 88, "y": 48 },
+        "bottom": { "x": 48, "y": 88 },
+        "left": { "x": 8, "y": 48 }
+      },
+      "label": { "x": 16, "y": 16, "w": 64, "h": 64 },
+      "keepAspect": true
+    },
+    {
+      "id": "load-balancer",
+      "name": "Load balancer",
+      "category": "Architecture (generic)",
+      "tags": ["load-balancer", "balancer", "traffic", "distribute"],
+      "svg": "load-balancer.svg",
+      "size": { "w": 96, "h": 96 },
+      "outline": "M 16 8 H 80 C 84.418 8 88 11.582 88 16 V 80 C 88 84.418 84.418 88 80 88 H 16 C 11.582 88 8 84.418 8 80 V 16 C 8 11.582 11.582 8 16 8 Z",
+      "anchors": {
+        "top": { "x": 48, "y": 8 },
+        "right": { "x": 88, "y": 48 },
+        "bottom": { "x": 48, "y": 88 },
+        "left": { "x": 8, "y": 48 }
+      },
+      "label": { "x": 16, "y": 16, "w": 64, "h": 64 },
+      "keepAspect": true
+    },
+    {
+      "id": "gateway",
+      "name": "API gateway",
+      "category": "Architecture (generic)",
+      "tags": ["gateway", "api", "entry", "proxy"],
+      "svg": "gateway.svg",
+      "size": { "w": 96, "h": 96 },
+      "outline": "M 16 8 H 80 C 84.418 8 88 11.582 88 16 V 80 C 88 84.418 84.418 88 80 88 H 16 C 11.582 88 8 84.418 8 80 V 16 C 8 11.582 11.582 8 16 8 Z",
+      "anchors": {
+        "top": { "x": 48, "y": 8 },
+        "right": { "x": 88, "y": 48 },
+        "bottom": { "x": 48, "y": 88 },
+        "left": { "x": 8, "y": 48 }
+      },
+      "label": { "x": 16, "y": 16, "w": 64, "h": 64 },
+      "keepAspect": true
+    },
+    {
+      "id": "dns",
+      "name": "DNS",
+      "category": "Architecture (generic)",
+      "tags": ["dns", "domain", "naming", "lookup"],
+      "svg": "dns.svg",
+      "size": { "w": 96, "h": 96 },
+      "outline": "M 16 8 H 80 C 84.418 8 88 11.582 88 16 V 80 C 88 84.418 84.418 88 80 88 H 16 C 11.582 88 8 84.418 8 80 V 16 C 8 11.582 11.582 8 16 8 Z",
+      "anchors": {
+        "top": { "x": 48, "y": 8 },
+        "right": { "x": 88, "y": 48 },
+        "bottom": { "x": 48, "y": 88 },
+        "left": { "x": 8, "y": 48 }
+      },
+      "label": { "x": 16, "y": 16, "w": 64, "h": 64 },
+      "keepAspect": true
+    },
+    {
+      "id": "firewall",
+      "name": "Firewall",
+      "category": "Architecture (generic)",
+      "tags": ["firewall", "security", "filter", "wall"],
+      "svg": "firewall.svg",
+      "size": { "w": 96, "h": 96 },
+      "outline": "M 16 16 H 80 C 84.418 16 88 19.582 88 24 V 72 C 88 76.418 84.418 80 80 80 H 16 C 11.582 80 8 76.418 8 72 V 24 C 8 19.582 11.582 16 16 16 Z",
+      "anchors": {
+        "top": { "x": 48, "y": 16 },
+        "right": { "x": 88, "y": 48 },
+        "bottom": { "x": 48, "y": 80 },
+        "left": { "x": 8, "y": 48 }
+      },
+      "label": { "x": 12, "y": 20, "w": 72, "h": 56 },
+      "keepAspect": true
+    },
+    {
+      "id": "storage-bucket",
+      "name": "Storage bucket",
+      "category": "Architecture (generic)",
+      "tags": ["storage-bucket", "bucket", "object", "blob", "files"],
+      "svg": "storage-bucket.svg",
+      "size": { "w": 96, "h": 96 },
+      "outline": "M 12 24 C 12 15.2 27.5 8 48 8 C 68.5 8 84 15.2 84 24 L 76 88 H 20 Z",
+      "anchors": {
+        "top": { "x": 48, "y": 8 },
+        "right": { "x": 81, "y": 48 },
+        "bottom": { "x": 48, "y": 88 },
+        "left": { "x": 15, "y": 48 }
+      },
+      "label": { "x": 24, "y": 44, "w": 48, "h": 36 },
+      "keepAspect": true
+    },
+    {
+      "id": "function",
+      "name": "Function",
+      "category": "Architecture (generic)",
+      "tags": ["function", "lambda", "serverless", "compute"],
+      "svg": "function.svg",
+      "size": { "w": 96, "h": 96 },
+      "outline": "M 16 8 H 80 C 84.418 8 88 11.582 88 16 V 80 C 88 84.418 84.418 88 80 88 H 16 C 11.582 88 8 84.418 8 80 V 16 C 8 11.582 11.582 8 16 8 Z",
+      "anchors": {
+        "top": { "x": 48, "y": 8 },
+        "right": { "x": 88, "y": 48 },
+        "bottom": { "x": 48, "y": 88 },
+        "left": { "x": 8, "y": 48 }
+      },
+      "label": { "x": 16, "y": 16, "w": 64, "h": 64 },
+      "keepAspect": true
+    },
+    {
+      "id": "container",
+      "name": "Container",
+      "category": "Architecture (generic)",
+      "tags": ["container", "docker", "package", "box"],
+      "svg": "container.svg",
+      "size": { "w": 96, "h": 96 },
+      "outline": "M 48 8 L 84 28 V 68 L 48 88 L 12 68 V 28 Z",
+      "anchors": {
+        "top": { "x": 48, "y": 8 },
+        "right": { "x": 84, "y": 48 },
+        "bottom": { "x": 48, "y": 88 },
+        "left": { "x": 12, "y": 48 }
+      },
+      "label": { "x": 28, "y": 32, "w": 40, "h": 40 },
+      "keepAspect": true
+    },
+    {
+      "id": "client",
+      "name": "Client",
+      "category": "Architecture (generic)",
+      "tags": ["client", "desktop", "computer", "monitor"],
+      "svg": "client.svg",
+      "size": { "w": 96, "h": 96 },
+      "outline": "M 8 12 H 88 V 64 H 60 V 76 H 72 V 84 H 24 V 76 H 36 V 64 H 8 Z",
+      "anchors": {
+        "top": { "x": 48, "y": 12 },
+        "right": { "x": 88, "y": 48 },
+        "bottom": { "x": 48, "y": 84 },
+        "left": { "x": 8, "y": 48 }
+      },
+      "label": { "x": 16, "y": 20, "w": 64, "h": 36 },
+      "keepAspect": true
+    },
+    {
+      "id": "browser",
+      "name": "Browser",
+      "category": "Architecture (generic)",
+      "tags": ["browser", "web", "window", "page"],
+      "svg": "browser.svg",
+      "size": { "w": 96, "h": 96 },
+      "outline": "M 16 16 H 80 C 84.418 16 88 19.582 88 24 V 72 C 88 76.418 84.418 80 80 80 H 16 C 11.582 80 8 76.418 8 72 V 24 C 8 19.582 11.582 16 16 16 Z",
+      "anchors": {
+        "top": { "x": 48, "y": 16 },
+        "right": { "x": 88, "y": 48 },
+        "bottom": { "x": 48, "y": 80 },
+        "left": { "x": 8, "y": 48 }
+      },
+      "label": { "x": 12, "y": 38, "w": 72, "h": 38 },
+      "keepAspect": true
+    },
+    {
+      "id": "mobile",
+      "name": "Mobile",
+      "category": "Architecture (generic)",
+      "tags": ["mobile", "phone", "device", "app"],
+      "svg": "mobile.svg",
+      "size": { "w": 96, "h": 96 },
+      "outline": "M 36 4 H 60 C 64.418 4 68 7.582 68 12 V 84 C 68 88.418 64.418 92 60 92 H 36 C 31.582 92 28 88.418 28 84 V 12 C 28 7.582 31.582 4 36 4 Z",
+      "anchors": {
+        "top": { "x": 48, "y": 4 },
+        "right": { "x": 68, "y": 48 },
+        "bottom": { "x": 48, "y": 92 },
+        "left": { "x": 28, "y": 48 }
+      },
+      "label": { "x": 32, "y": 20, "w": 32, "h": 56 },
+      "keepAspect": true
+    },
+    {
+      "id": "user",
+      "name": "User",
+      "category": "Architecture (generic)",
+      "tags": ["user", "person", "account", "people"],
+      "svg": "user.svg",
+      "size": { "w": 96, "h": 96 },
+      "outline": "M 8 92 V 76 C 8 62 18 52 32 52 H 48 C 34.745 52 24 41.255 24 28 C 24 14.745 34.745 4 48 4 C 61.255 4 72 14.745 72 28 C 72 41.255 61.255 52 48 52 H 64 C 78 52 88 62 88 76 V 92 Z",
+      "anchors": {
+        "top": { "x": 48, "y": 4 },
+        "right": { "x": 61.256, "y": 48 },
+        "bottom": { "x": 48, "y": 92 },
+        "left": { "x": 34.744, "y": 48 }
+      },
+      "label": { "x": 28, "y": 60, "w": 40, "h": 28 },
+      "keepAspect": true
+    },
+    {
+      "id": "cloud",
+      "name": "Cloud",
+      "category": "Architecture (generic)",
+      "tags": ["cloud", "internet", "hosted", "saas"],
+      "svg": "cloud.svg",
+      "size": { "w": 96, "h": 96 },
+      "outline": "M 28 76 C 12 76 6 56 22 50 C 20 30 44 22 54 36 C 62 26 82 30 80 48 C 94 50 94 76 76 76 Z",
+      "anchors": {
+        "top": { "x": 48, "y": 30.841 },
+        "right": { "x": 80, "y": 48 },
+        "bottom": { "x": 48, "y": 76 },
+        "left": { "x": 21.956, "y": 48 }
+      },
+      "label": { "x": 24, "y": 40, "w": 48, "h": 28 },
+      "keepAspect": true
     }
   ]
 }

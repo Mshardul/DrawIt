@@ -30,7 +30,7 @@ const run = (...args: string[]) => spawnSync("node", [join(here, "packs.ts"), ..
 describe("shape packs in the repository", () => {
   it("every pack under packs/ validates", () => {
     const packs = loadPacks(REPO_PACKS);
-    expect(packs.map((p) => p.manifest.pack).sort()).toEqual(["arch", "core", "info"]);
+    expect(packs.map((p) => p.manifest.pack).sort()).toEqual(["arch", "c4", "core", "info", "net"]);
     expect(validateAll(packs)).toEqual([]);
   });
 

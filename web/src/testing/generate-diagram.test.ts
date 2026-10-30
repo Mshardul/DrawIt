@@ -59,4 +59,15 @@ describe("diagram generator", () => {
     expect(() => generateDiagram({ ratios: { edge: 1 } })).toThrow();
     expect(() => generateDiagram({ count: -1 })).toThrow();
   });
+
+  it("gives nodes the shapes asked for, in turn", () => {
+    const doc = generateDiagram({ count: 20, shapes: ["core.hexagon", "arch.cloud", "core.star"] });
+    const shapes = doc.elements.flatMap((e) => (e.kind === "node" ? [e.shape] : []));
+    expect(shapes.slice(0, 4)).toEqual(["core.hexagon", "arch.cloud", "core.star", "core.hexagon"]);
+    expect(new Set(shapes)).toEqual(new Set(["core.hexagon", "arch.cloud", "core.star"]));
+  });
+
+  it("refuses an empty shape list", () => {
+    expect(() => generateDiagram({ shapes: [] })).toThrow("shapes");
+  });
 });

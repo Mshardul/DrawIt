@@ -32,6 +32,9 @@ const icon: ShapeManifest = {
   keepAspect: true,
 };
 
+const ringSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 80"><path data-role="stroke" d="${OUTLINE}"/><line data-role="detail" x1="8" y1="8" x2="40" y2="8"/></svg>`;
+const ring: ShapeManifest = { ...box, id: "ring", name: "Ring", svg: "ring.svg", tags: ["ring"] };
+
 const pack = (folder: string, shapes: ShapeManifest[], svgs: Record<string, string>, id = folder): PackFiles => ({
   folder,
   manifest: JSON.stringify({ pack: id, version: 1, shapes }),
@@ -39,6 +42,19 @@ const pack = (folder: string, shapes: ShapeManifest[], svgs: Record<string, stri
 });
 const core = (): PackFiles => pack("core", [box], { "box.svg": boxSvg });
 const arch = (): PackFiles => pack("arch", [icon], { "icon.svg": iconSvg });
+
+describe("pack loader listing", () => {
+  it("lists every loaded shape by full name, in pack and manifest order", () => {
+    const loader = createPackLoader([core(), arch()]);
+    expect(loader.shapes().map((s) => s.name)).toEqual(["core.box", "arch.icon"]);
+    expect(loader.shapes()[1]?.shape).toBe(loader.shape("arch.icon"));
+  });
+
+  it("leaves out the shapes of a pack that failed", () => {
+    const loader = createPackLoader([core(), pack("arch", [icon], {})]);
+    expect(loader.shapes().map((s) => s.name)).toEqual(["core.box"]);
+  });
+});
 
 describe("pack loader names", () => {
   it("resolves a full name, and a core shape without its prefix", () => {
@@ -86,9 +102,25 @@ describe("pack loader drawing", () => {
     expect(outline.at(-1)).toEqual(outline[0]);
   });
 
+  it("stretches the anchors with the shape, in the element's own space", () => {
+    const anchors = createPackLoader([core()]).drawing("box", { w: 320, h: 160 })?.anchors;
+    expect(anchors).toEqual({ top: { x: 160, y: 0 }, right: { x: 312, y: 80 }, bottom: { x: 160, y: 160 }, left: { x: 8, y: 80 } });
+  });
+
+  it("moves the anchors of a keep-aspect shape to where the shape is centred", () => {
+    const anchors = createPackLoader([arch()]).drawing("arch.icon", { w: 128, h: 64 })?.anchors;
+    expect(anchors).toEqual({ top: { x: 64, y: 0 }, right: { x: 96, y: 32 }, bottom: { x: 64, y: 64 }, left: { x: 32, y: 32 } });
+  });
+
   it("moves the outline of a keep-aspect shape to where the shape is centred", () => {
     const xs = (createPackLoader([arch()]).drawing("arch.icon", { w: 128, h: 64 })?.outline ?? []).map((p) => p.x);
     expect([Math.min(...xs), Math.max(...xs)]).toEqual([32, 96]);
+  });
+
+  it("says whether a drawing has a part that takes the fill", () => {
+    const loader = createPackLoader([pack("core", [box, ring], { "box.svg": boxSvg, "ring.svg": ringSvg })]);
+    expect(loader.drawing("box", { w: 160, h: 80 })?.filled).toBe(true);
+    expect(loader.drawing("ring", { w: 160, h: 80 })?.filled).toBe(false);
   });
 
   it("returns nothing for an unknown shape", () => {

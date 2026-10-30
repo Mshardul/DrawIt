@@ -65,4 +65,13 @@ describe("grid placement of elements without layout", () => {
     placeUnplaced(u, monoMeasurer);
     expect(u).toEqual(before);
   });
+
+  it("places each element at its shape's default size", () => {
+    const database: DiagramElement = { kind: "node", id: "db", shape: "arch.database" };
+    const out = placeUnplaced(doc([database, node("a")]), monoMeasurer);
+    expect(out.layout).toEqual([
+      { id: "db", x: 0, y: 0 },
+      { id: "a", x: 176, y: 0 },
+    ]);
+  });
 });

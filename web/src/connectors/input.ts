@@ -7,7 +7,7 @@ import { screenToWorld, type View } from "../view/view.ts";
 import { draftPath, type DrawEnd, drawEndAt, newEdgeCommand } from "./draw.ts";
 
 /** What a press on the canvas does. */
-export type Tool = "select" | "edge";
+export type Tool = "select" | "edge" | "shape";
 
 /** Pointer travel (screen px) before a press becomes a drag. */
 const DRAG_THRESHOLD = 3;

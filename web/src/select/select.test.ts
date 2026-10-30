@@ -63,6 +63,31 @@ describe("selection", () => {
     });
   });
 
+  describe("a shape drawn with strokes only", () => {
+    // The boundary lies over the node, as one placed later does.
+    const bounded = doc(
+      [
+        { kind: "node", id: "inside", shape: "rect" },
+        { kind: "node", id: "boundary", shape: "c4.boundary" },
+      ],
+      [
+        { id: "inside", x: 100, y: 60, w: 60, h: 40 },
+        { id: "boundary", x: 0, y: 0, w: 256, h: 160 },
+      ],
+    );
+
+    it("is hit on its outline and not inside it, so what lies behind it can be clicked", () => {
+      expect(hitTest(bounded, monoMeasurer, { x: 130, y: 80 })).toBe("inside");
+      expect(hitTest(bounded, monoMeasurer, { x: 30, y: 120 })).toBeNull();
+      expect(hitTest(bounded, monoMeasurer, { x: 128, y: 1 })).toBe("boundary");
+      expect(hitTest(bounded, monoMeasurer, { x: 255, y: 80 })).toBe("boundary");
+    });
+
+    it("is still selected by a drag-box that touches it", () => {
+      expect(idsInRect(bounded, monoMeasurer, { x: 20, y: 110, w: 10, h: 10 })).toEqual(["boundary"]);
+    });
+  });
+
   it("the topmost overlapping element wins", () => {
     const overlapping = doc(
       [

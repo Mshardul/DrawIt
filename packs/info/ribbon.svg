@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 72">
+  <path data-role="fill" d="M 32 0 H 160 V 16 H 192 L 176 44 L 192 72 H 160 V 56 H 32 V 72 H 0 L 16 44 L 0 16 H 32 Z"/>
+  <line data-role="detail" x1="32" y1="16" x2="32" y2="56"/>
+  <line data-role="detail" x1="160" y1="16" x2="160" y2="56"/>
+</svg>

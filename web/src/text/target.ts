@@ -39,7 +39,7 @@ export function editTarget(doc: DiagramDocument, id: string, measurer: TextMeasu
   }
   if (!element || !entry) return null;
   if (element.kind === "node") {
-    const size = sizeOf(doc, element, entry, measurer);
+    const size = sizeOf(doc, element, entry, measurer, shapes);
     if (!size) return null;
     const look = textLookFor(doc, element);
     const text = element.label ?? element.id;

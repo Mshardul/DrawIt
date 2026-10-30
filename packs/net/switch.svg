@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">
+  <path data-role="fill" d="M 16 24 H 80 C 84.418 24 88 27.582 88 32 V 64 C 88 68.418 84.418 72 80 72 H 16 C 11.582 72 8 68.418 8 64 V 32 C 8 27.582 11.582 24 16 24 Z"/>
+  <rect data-role="detail" x="14" y="38" width="12" height="20"/>
+  <rect data-role="detail" x="32" y="38" width="12" height="20"/>
+  <rect data-role="detail" x="50" y="38" width="12" height="20"/>
+  <rect data-role="detail" x="68" y="38" width="12" height="20"/>
+  <line data-role="detail" x1="8" y1="32" x2="88" y2="32"/>
+</svg>

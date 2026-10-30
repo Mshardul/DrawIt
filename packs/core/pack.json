@@ -19,6 +19,464 @@
       "label": { "x": 8, "y": 8, "w": 144, "h": 64 },
       "stretch": { "x": [8, 152], "y": [8, 72] },
       "keepAspect": false
+    },
+    {
+      "id": "circle",
+      "name": "Circle",
+      "category": "Basic",
+      "tags": ["circle", "round", "dot"],
+      "svg": "circle.svg",
+      "size": { "w": 96, "h": 96 },
+      "outline": "M 96 48 C 96 74.51 74.51 96 48 96 C 21.49 96 0 74.51 0 48 C 0 21.49 21.49 0 48 0 C 74.51 0 96 21.49 96 48 Z",
+      "anchors": {
+        "top": { "x": 48, "y": 0 },
+        "right": { "x": 96, "y": 48 },
+        "bottom": { "x": 48, "y": 96 },
+        "left": { "x": 0, "y": 48 }
+      },
+      "label": { "x": 16, "y": 16, "w": 64, "h": 64 },
+      "keepAspect": true
+    },
+    {
+      "id": "diamond",
+      "name": "Diamond",
+      "category": "Basic",
+      "tags": ["diamond", "rhombus", "decision"],
+      "svg": "diamond.svg",
+      "size": { "w": 128, "h": 96 },
+      "outline": "M 64 0 L 128 48 L 64 96 L 0 48 Z",
+      "anchors": {
+        "top": { "x": 64, "y": 0 },
+        "right": { "x": 128, "y": 48 },
+        "bottom": { "x": 64, "y": 96 },
+        "left": { "x": 0, "y": 48 }
+      },
+      "label": { "x": 32, "y": 24, "w": 64, "h": 48 },
+      "keepAspect": false
+    },
+    {
+      "id": "triangle",
+      "name": "Triangle",
+      "category": "Basic",
+      "tags": ["triangle", "warning", "pointer"],
+      "svg": "triangle.svg",
+      "size": { "w": 128, "h": 112 },
+      "outline": "M 64 0 L 128 112 L 0 112 Z",
+      "anchors": {
+        "top": { "x": 64, "y": 0 },
+        "right": { "x": 96, "y": 56 },
+        "bottom": { "x": 64, "y": 112 },
+        "left": { "x": 32, "y": 56 }
+      },
+      "label": { "x": 40, "y": 64, "w": 48, "h": 40 },
+      "keepAspect": false
+    },
+    {
+      "id": "pentagon",
+      "name": "Pentagon",
+      "category": "Basic",
+      "tags": ["pentagon", "polygon", "home"],
+      "svg": "pentagon.svg",
+      "size": { "w": 112, "h": 104 },
+      "outline": "M 56 0 L 112 40 L 88 104 L 24 104 L 0 40 Z",
+      "anchors": {
+        "top": { "x": 56, "y": 0 },
+        "right": { "x": 107.5, "y": 52 },
+        "bottom": { "x": 56, "y": 104 },
+        "left": { "x": 4.5, "y": 52 }
+      },
+      "label": { "x": 24, "y": 40, "w": 64, "h": 48 },
+      "keepAspect": false
+    },
+    {
+      "id": "hexagon",
+      "name": "Hexagon",
+      "category": "Basic",
+      "tags": ["hexagon", "polygon", "cell"],
+      "svg": "hexagon.svg",
+      "size": { "w": 128, "h": 96 },
+      "outline": "M 32 0 L 96 0 L 128 48 L 96 96 L 32 96 L 0 48 Z",
+      "anchors": {
+        "top": { "x": 64, "y": 0 },
+        "right": { "x": 128, "y": 48 },
+        "bottom": { "x": 64, "y": 96 },
+        "left": { "x": 0, "y": 48 }
+      },
+      "label": { "x": 24, "y": 16, "w": 80, "h": 64 },
+      "stretch": { "x": [32, 96] },
+      "keepAspect": false
+    },
+    {
+      "id": "octagon",
+      "name": "Octagon",
+      "category": "Basic",
+      "tags": ["octagon", "polygon", "stop"],
+      "svg": "octagon.svg",
+      "size": { "w": 112, "h": 112 },
+      "outline": "M 32 0 L 80 0 L 112 32 L 112 80 L 80 112 L 32 112 L 0 80 L 0 32 Z",
+      "anchors": {
+        "top": { "x": 56, "y": 0 },
+        "right": { "x": 112, "y": 56 },
+        "bottom": { "x": 56, "y": 112 },
+        "left": { "x": 0, "y": 56 }
+      },
+      "label": { "x": 16, "y": 16, "w": 80, "h": 80 },
+      "stretch": { "x": [32, 80], "y": [32, 80] },
+      "keepAspect": false
+    },
+    {
+      "id": "star",
+      "name": "Star",
+      "category": "Basic",
+      "tags": ["star", "favourite", "rating", "highlight"],
+      "svg": "star.svg",
+      "size": { "w": 128, "h": 120 },
+      "outline": "M 64 0 L 79.282 42.966 L 124.868 44.223 L 88.727 72.034 L 101.618 115.777 L 64 90 L 26.382 115.777 L 39.273 72.034 L 3.132 44.223 L 48.718 42.966 Z",
+      "anchors": {
+        "top": { "x": 64, "y": 0 },
+        "right": { "x": 104.365, "y": 60 },
+        "bottom": { "x": 64, "y": 90 },
+        "left": { "x": 23.635, "y": 60 }
+      },
+      "label": { "x": 48, "y": 48, "w": 32, "h": 28 },
+      "keepAspect": false
+    },
+    {
+      "id": "callout",
+      "name": "Callout",
+      "category": "Basic",
+      "tags": ["callout", "speech", "bubble", "comment", "note"],
+      "svg": "callout.svg",
+      "size": { "w": 160, "h": 96 },
+      "outline": "M 0 0 H 160 V 72 H 48 L 24 96 L 32 72 H 0 Z",
+      "anchors": {
+        "top": { "x": 80, "y": 0 },
+        "right": { "x": 160, "y": 48 },
+        "bottom": { "x": 80, "y": 72 },
+        "left": { "x": 0, "y": 48 }
+      },
+      "label": { "x": 8, "y": 8, "w": 144, "h": 56 },
+      "stretch": { "x": [48, 152], "y": [8, 64] },
+      "keepAspect": false
+    },
+    {
+      "id": "callout-round",
+      "name": "Rounded callout",
+      "category": "Basic",
+      "tags": ["callout", "speech", "bubble", "comment", "rounded"],
+      "svg": "callout-round.svg",
+      "size": { "w": 160, "h": 96 },
+      "outline": "M 8 0 H 152 C 156.418 0 160 3.582 160 8 V 64 C 160 68.418 156.418 72 152 72 H 48 L 24 96 L 32 72 H 8 C 3.582 72 0 68.418 0 64 V 8 C 0 3.582 3.582 0 8 0 Z",
+      "anchors": {
+        "top": { "x": 80, "y": 0 },
+        "right": { "x": 160, "y": 48 },
+        "bottom": { "x": 80, "y": 72 },
+        "left": { "x": 0, "y": 48 }
+      },
+      "label": { "x": 8, "y": 8, "w": 144, "h": 56 },
+      "stretch": { "x": [48, 152], "y": [8, 64] },
+      "keepAspect": false
+    },
+    {
+      "id": "bracket",
+      "name": "Bracket",
+      "category": "Basic",
+      "tags": ["bracket", "group", "span", "square"],
+      "svg": "bracket.svg",
+      "size": { "w": 32, "h": 128 },
+      "outline": "M 0 0 H 32 V 8 H 8 V 120 H 32 V 128 H 0 Z",
+      "anchors": {
+        "top": { "x": 16, "y": 0 },
+        "right": { "x": 8, "y": 64 },
+        "bottom": { "x": 16, "y": 128 },
+        "left": { "x": 0, "y": 64 }
+      },
+      "label": { "x": 8, "y": 8, "w": 16, "h": 112 },
+      "stretch": { "x": [8, 24], "y": [8, 120] },
+      "keepAspect": false
+    },
+    {
+      "id": "brace",
+      "name": "Brace",
+      "category": "Basic",
+      "tags": ["brace", "group", "span", "curly"],
+      "svg": "brace.svg",
+      "size": { "w": 32, "h": 128 },
+      "outline": "M 32 0 Q 16 0 16 16 V 48 Q 16 64 0 64 Q 16 64 16 80 V 112 Q 16 128 32 128 V 120 Q 24 120 24 112 V 80 Q 24 72 16 64 Q 24 56 24 48 V 16 Q 24 8 32 8 Z",
+      "anchors": {
+        "top": { "x": 16, "y": 16 },
+        "right": { "x": 16, "y": 64 },
+        "bottom": { "x": 16, "y": 112 },
+        "left": { "x": 0, "y": 64 }
+      },
+      "label": { "x": 16, "y": 20, "w": 8, "h": 24 },
+      "stretch": { "x": [8, 24], "y": [16, 112] },
+      "keepAspect": false
+    },
+    {
+      "id": "process",
+      "name": "Process",
+      "category": "Flowchart",
+      "tags": ["process", "step", "action", "rectangle"],
+      "svg": "process.svg",
+      "size": { "w": 160, "h": 80 },
+      "outline": "M 0 0 L 160 0 L 160 80 L 0 80 Z",
+      "anchors": {
+        "top": { "x": 80, "y": 0 },
+        "right": { "x": 160, "y": 40 },
+        "bottom": { "x": 80, "y": 80 },
+        "left": { "x": 0, "y": 40 }
+      },
+      "label": { "x": 8, "y": 8, "w": 144, "h": 64 },
+      "keepAspect": false
+    },
+    {
+      "id": "decision",
+      "name": "Decision",
+      "category": "Flowchart",
+      "tags": ["decision", "branch", "condition", "diamond"],
+      "svg": "decision.svg",
+      "size": { "w": 160, "h": 96 },
+      "outline": "M 80 0 L 160 48 L 80 96 L 0 48 Z",
+      "anchors": {
+        "top": { "x": 80, "y": 0 },
+        "right": { "x": 160, "y": 48 },
+        "bottom": { "x": 80, "y": 96 },
+        "left": { "x": 0, "y": 48 }
+      },
+      "label": { "x": 40, "y": 24, "w": 80, "h": 48 },
+      "keepAspect": false
+    },
+    {
+      "id": "terminator",
+      "name": "Terminator",
+      "category": "Flowchart",
+      "tags": ["terminator", "start", "end", "stadium", "pill"],
+      "svg": "terminator.svg",
+      "size": { "w": 160, "h": 64 },
+      "outline": "M 32 0 H 128 C 145.673 0 160 14.327 160 32 C 160 49.673 145.673 64 128 64 H 32 C 14.327 64 0 49.673 0 32 C 0 14.327 14.327 0 32 0 Z",
+      "anchors": {
+        "top": { "x": 80, "y": 0 },
+        "right": { "x": 160, "y": 32 },
+        "bottom": { "x": 80, "y": 64 },
+        "left": { "x": 0, "y": 32 }
+      },
+      "label": { "x": 24, "y": 8, "w": 112, "h": 48 },
+      "stretch": { "x": [32, 128] },
+      "keepAspect": false
+    },
+    {
+      "id": "data",
+      "name": "Data",
+      "category": "Flowchart",
+      "tags": ["data", "input", "output", "parallelogram"],
+      "svg": "data.svg",
+      "size": { "w": 160, "h": 80 },
+      "outline": "M 24 0 L 160 0 L 136 80 L 0 80 Z",
+      "anchors": {
+        "top": { "x": 80, "y": 0 },
+        "right": { "x": 148, "y": 40 },
+        "bottom": { "x": 80, "y": 80 },
+        "left": { "x": 12, "y": 40 }
+      },
+      "label": { "x": 32, "y": 8, "w": 96, "h": 64 },
+      "stretch": { "x": [24, 136] },
+      "keepAspect": false
+    },
+    {
+      "id": "document",
+      "name": "Document",
+      "category": "Flowchart",
+      "tags": ["document", "report", "file", "page"],
+      "svg": "document.svg",
+      "size": { "w": 160, "h": 96 },
+      "outline": "M 0 0 H 160 V 80 Q 120 64 80 80 Q 40 96 0 80 Z",
+      "anchors": {
+        "top": { "x": 80, "y": 0 },
+        "right": { "x": 160, "y": 48 },
+        "bottom": { "x": 80, "y": 80 },
+        "left": { "x": 0, "y": 48 }
+      },
+      "label": { "x": 8, "y": 8, "w": 144, "h": 56 },
+      "stretch": { "y": [8, 64] },
+      "keepAspect": false
+    },
+    {
+      "id": "manual-input",
+      "name": "Manual input",
+      "category": "Flowchart",
+      "tags": ["manual-input", "keyboard", "input", "entry"],
+      "svg": "manual-input.svg",
+      "size": { "w": 160, "h": 80 },
+      "outline": "M 0 24 L 160 0 V 80 H 0 Z",
+      "anchors": {
+        "top": { "x": 80, "y": 12 },
+        "right": { "x": 160, "y": 40 },
+        "bottom": { "x": 80, "y": 80 },
+        "left": { "x": 0, "y": 40 }
+      },
+      "label": { "x": 8, "y": 32, "w": 144, "h": 40 },
+      "stretch": { "y": [24, 72] },
+      "keepAspect": false
+    },
+    {
+      "id": "connector",
+      "name": "Connector",
+      "category": "Flowchart",
+      "tags": ["connector", "on-page", "junction", "circle"],
+      "svg": "connector.svg",
+      "size": { "w": 48, "h": 48 },
+      "outline": "M 48 24 C 48 37.255 37.255 48 24 48 C 10.745 48 0 37.255 0 24 C 0 10.745 10.745 0 24 0 C 37.255 0 48 10.745 48 24 Z",
+      "anchors": {
+        "top": { "x": 24, "y": 0 },
+        "right": { "x": 48, "y": 24 },
+        "bottom": { "x": 24, "y": 48 },
+        "left": { "x": 0, "y": 24 }
+      },
+      "label": { "x": 8, "y": 8, "w": 32, "h": 32 },
+      "keepAspect": true
+    },
+    {
+      "id": "arrow-right",
+      "name": "Arrow right",
+      "category": "Arrows and lines",
+      "tags": ["arrow", "right", "block", "next"],
+      "svg": "arrow-right.svg",
+      "size": { "w": 160, "h": 64 },
+      "outline": "M 0 16 H 112 V 0 L 160 32 L 112 64 V 48 H 0 Z",
+      "anchors": {
+        "top": { "x": 80, "y": 16 },
+        "right": { "x": 160, "y": 32 },
+        "bottom": { "x": 80, "y": 48 },
+        "left": { "x": 0, "y": 32 }
+      },
+      "label": { "x": 8, "y": 16, "w": 96, "h": 32 },
+      "stretch": { "x": [8, 112] },
+      "keepAspect": false
+    },
+    {
+      "id": "arrow-left",
+      "name": "Arrow left",
+      "category": "Arrows and lines",
+      "tags": ["arrow", "left", "block", "back"],
+      "svg": "arrow-left.svg",
+      "size": { "w": 160, "h": 64 },
+      "outline": "M 160 16 H 48 V 0 L 0 32 L 48 64 V 48 H 160 Z",
+      "anchors": {
+        "top": { "x": 80, "y": 16 },
+        "right": { "x": 160, "y": 32 },
+        "bottom": { "x": 80, "y": 48 },
+        "left": { "x": 0, "y": 32 }
+      },
+      "label": { "x": 56, "y": 16, "w": 96, "h": 32 },
+      "stretch": { "x": [48, 152] },
+      "keepAspect": false
+    },
+    {
+      "id": "arrow-up",
+      "name": "Arrow up",
+      "category": "Arrows and lines",
+      "tags": ["arrow", "up", "block", "increase"],
+      "svg": "arrow-up.svg",
+      "size": { "w": 64, "h": 160 },
+      "outline": "M 16 160 V 48 H 0 L 32 0 L 64 48 H 48 V 160 Z",
+      "anchors": {
+        "top": { "x": 32, "y": 0 },
+        "right": { "x": 48, "y": 80 },
+        "bottom": { "x": 32, "y": 160 },
+        "left": { "x": 16, "y": 80 }
+      },
+      "label": { "x": 16, "y": 56, "w": 32, "h": 96 },
+      "stretch": { "y": [48, 152] },
+      "keepAspect": false
+    },
+    {
+      "id": "arrow-down",
+      "name": "Arrow down",
+      "category": "Arrows and lines",
+      "tags": ["arrow", "down", "block", "decrease"],
+      "svg": "arrow-down.svg",
+      "size": { "w": 64, "h": 160 },
+      "outline": "M 16 0 V 112 H 0 L 32 160 L 64 112 H 48 V 0 Z",
+      "anchors": {
+        "top": { "x": 32, "y": 0 },
+        "right": { "x": 48, "y": 80 },
+        "bottom": { "x": 32, "y": 160 },
+        "left": { "x": 16, "y": 80 }
+      },
+      "label": { "x": 16, "y": 8, "w": 32, "h": 96 },
+      "stretch": { "y": [8, 112] },
+      "keepAspect": false
+    },
+    {
+      "id": "arrow-double",
+      "name": "Double arrow",
+      "category": "Arrows and lines",
+      "tags": ["arrow", "double", "both", "block", "exchange"],
+      "svg": "arrow-double.svg",
+      "size": { "w": 192, "h": 64 },
+      "outline": "M 0 32 L 48 0 V 16 H 144 V 0 L 192 32 L 144 64 V 48 H 48 V 64 Z",
+      "anchors": {
+        "top": { "x": 96, "y": 16 },
+        "right": { "x": 192, "y": 32 },
+        "bottom": { "x": 96, "y": 48 },
+        "left": { "x": 0, "y": 32 }
+      },
+      "label": { "x": 56, "y": 16, "w": 80, "h": 32 },
+      "stretch": { "x": [48, 144] },
+      "keepAspect": false
+    },
+    {
+      "id": "arrow-curved",
+      "name": "Curved arrow",
+      "category": "Arrows and lines",
+      "tags": ["arrow", "curved", "bend", "turn"],
+      "svg": "arrow-curved.svg",
+      "size": { "w": 160, "h": 96 },
+      "outline": "M 0 96 C 0 40 40 16 96 16 V 0 L 160 32 L 96 64 V 48 C 56 48 40 64 40 96 Z",
+      "anchors": {
+        "top": { "x": 80, "y": 16.776 },
+        "right": { "x": 128, "y": 48 },
+        "bottom": { "x": 80, "y": 49.073 },
+        "left": { "x": 14.253, "y": 48 }
+      },
+      "label": { "x": 48, "y": 24, "w": 40, "h": 24 },
+      "keepAspect": false
+    },
+    {
+      "id": "arrow-u-turn",
+      "name": "U-turn arrow",
+      "category": "Arrows and lines",
+      "tags": ["arrow", "u-turn", "return", "loop"],
+      "svg": "arrow-u-turn.svg",
+      "size": { "w": 144, "h": 128 },
+      "outline": "M 0 128 V 48 C 0 21.49 21.49 0 48 0 H 80 C 106.51 0 128 21.49 128 48 V 80 H 144 L 112 128 L 80 80 H 96 V 48 C 96 39.16 88.84 32 80 32 H 48 C 39.16 32 32 39.16 32 48 V 128 Z",
+      "anchors": {
+        "top": { "x": 72, "y": 0 },
+        "right": { "x": 128, "y": 64 },
+        "bottom": { "x": 72, "y": 32 },
+        "left": { "x": 0, "y": 64 }
+      },
+      "label": { "x": 48, "y": 0, "w": 32, "h": 32 },
+      "keepAspect": false
+    },
+    {
+      "id": "divider",
+      "name": "Divider",
+      "category": "Arrows and lines",
+      "tags": ["divider", "line", "separator", "rule"],
+      "svg": "divider.svg",
+      "size": { "w": 192, "h": 8 },
+      "outline": "M 0 0 H 192 V 8 H 0 Z",
+      "anchors": {
+        "top": { "x": 96, "y": 0 },
+        "right": { "x": 192, "y": 4 },
+        "bottom": { "x": 96, "y": 8 },
+        "left": { "x": 0, "y": 4 }
+      },
+      "label": { "x": 8, "y": 0, "w": 176, "h": 8 },
+      "stretch": { "x": [8, 184] },
+      "keepAspect": false
     }
   ]
 }

@@ -4,6 +4,10 @@ import { attachEdgeInput, type Tool } from "../connectors/input.ts";
 import { attachBendInput } from "../connectors/bend-input.ts";
 import { attachLabelInput } from "../connectors/label-input.ts";
 import { attachReattachInput } from "../connectors/reattach-input.ts";
+import { defaultSize } from "../library/preview.ts";
+import { attachShapeInput } from "../library/input.ts";
+import type { PlacedShape } from "../library/place.ts";
+import { createLibrarySidebar } from "../library/sidebar.ts";
 import type { DiagramDocument, Point } from "../model/index.ts";
 import type { Box } from "../render/boxes.ts";
 import { countShadowed, describeDefs, SHADOW_DRAG_LIMIT } from "../render/defs.ts";
@@ -14,6 +18,7 @@ import { describeOverlay } from "../render/overlay.ts";
 import { attachTransformInput } from "../move/input.ts";
 import { attachSelectInput } from "../select/input.ts";
 import { type StorageAdapter, StorageError } from "../storage/adapter.ts";
+import { bundledLoader } from "../shapes/bundled-packs.ts";
 import { createStylePanel } from "../style/panel.ts";
 import { loadFonts } from "../text/fonts.ts";
 import { attachTextEdit, type TextEdit } from "../text/edit.ts";
@@ -70,7 +75,7 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter): Pr
   const name = el("span", { className: "name" });
   const unsaved = el("span", { className: "unsaved", textContent: "Unsaved changes", hidden: true });
   const saveButton = el("button", { type: "button", textContent: "Save", disabled: true });
-  const toolButtons: Record<Tool, HTMLButtonElement> = {
+  const toolButtons: Record<Exclude<Tool, "shape">, HTMLButtonElement> = {
     select: el("button", { type: "button", textContent: "Select", title: "Select (V)" }),
     edge: el("button", { type: "button", textContent: "Arrow", title: "Line and arrow (L)" }),
   };
@@ -90,6 +95,19 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter): Pr
     el("label", {}, "Grid size", gridSize),
   );
   const stylePanel = createStylePanel({ getFile: () => current, refresh: () => { refresh(); } });
+  const library = createLibrarySidebar({
+    loader: bundledLoader,
+    measurer,
+    onPick: (entry) => {
+      if (tool === "shape" && armed?.shape === entry.shape) {
+        setTool("select");
+        return;
+      }
+      armed = { shape: entry.shape, size: defaultSize(entry, bundledLoader) };
+      setTool("shape");
+      library.setArmed(entry.shape);
+    },
+  });
   const error = el("div", { className: "error", hidden: true });
   error.setAttribute("role", "alert");
   const canvas = document.createElementNS(SVG_NS, "svg");
@@ -111,7 +129,7 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter): Pr
   root.replaceChildren(
     el("header", { className: "bar" }, el("h1", { textContent: "DrawIt" }), picker, name, unsaved, saveButton, tools),
     error,
-    el("div", { className: "workspace" }, canvas, stylePanel.element),
+    el("div", { className: "workspace" }, library.element, canvas, stylePanel.element),
     status,
   );
 
@@ -119,8 +137,12 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter): Pr
   let view: View = IDENTITY;
   let marquee: Box | null = null;
   let tool: Tool = "select";
+  // The shape the shape tool places.
+  let armed: PlacedShape | null = null;
   // The line of an edge being drawn, shown over everything until it is released.
   let draft: Point[] | null = null;
+  // The box of a shape being sized, drawn like the drag-box.
+  let shapeDraft: Box | null = null;
   let grid: GridSettings = { show: false, snap: false, size: 8 };
   // A drag draws this copy of the document; the file's own document changes only on release.
   let preview: DiagramDocument | null = null;
@@ -136,7 +158,7 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter): Pr
 
   const drawOverlay = (): void => {
     const doc = preview ?? current?.document;
-    mount(overlay, current && doc ? describeOverlay(doc, measurer, current.history.selection, marquee, view.scale, draft) : []);
+    mount(overlay, current && doc ? describeOverlay(doc, measurer, current.history.selection, marquee ?? shapeDraft, view.scale, draft) : []);
   };
 
   const redraw = (changed?: ReadonlySet<string>): void => {
@@ -164,8 +186,13 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter): Pr
   const setTool = (next: Tool): void => {
     tool = next;
     for (const [which, button] of Object.entries(toolButtons)) button.setAttribute("aria-pressed", String(which === next));
-    canvas.classList.toggle("drawing", next === "edge");
+    canvas.classList.toggle("drawing", next !== "select");
+    if (next !== "shape") {
+      armed = null;
+      library.setArmed(null);
+    }
     draft = null;
+    shapeDraft = null;
     drawOverlay();
   };
 
@@ -334,6 +361,20 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter): Pr
     setTool,
     setDraft: (path) => {
       draft = path;
+    },
+    redrawOverlay: drawOverlay,
+    refresh,
+  });
+  attachShapeInput({
+    target: canvas,
+    getView: () => view,
+    getFile: () => current,
+    getTool: () => tool,
+    setTool,
+    getArmed: () => armed,
+    getGrid: () => (grid.snap ? grid.size : 0),
+    setDraft: (box) => {
+      shapeDraft = box;
     },
     redrawOverlay: drawOverlay,
     refresh,

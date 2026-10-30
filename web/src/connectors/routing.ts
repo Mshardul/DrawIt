@@ -3,7 +3,7 @@
 // at right angles. Elbows do not avoid shapes.
 import type { Anchor, Point, Side } from "../model/layout.ts";
 import type { Box, ShapeKind } from "../render/boxes.ts";
-import { exitPoint } from "../shapes/outline.ts";
+import { entryPoint, exitPoint, insideOutline, nearOutline } from "../shapes/outline.ts";
 
 /** An end attached to a shape. */
 export interface NodeEnd {
@@ -12,6 +12,8 @@ export interface NodeEnd {
   anchor: Anchor;
   /** The shape's outline as a closed polygon in the box's own space; absent for a shape routed by its box. */
   outline?: readonly Point[];
+  /** The shape's default attach points for `auto`, in the box's own space; absent for a shape that has none. */
+  anchors?: Readonly<Record<Side, Point>>;
 }
 /** An end attached to nothing. */
 export interface PointEnd {
@@ -32,7 +34,14 @@ export interface Target {
   shape: ShapeKind;
   /** The shape's outline in the box's own space, as for a node end. */
   outline?: readonly Point[];
+  /** The shape's default attach points, as for a node end. */
+  anchors?: Readonly<Record<Side, Point>>;
+  /** False for a shape with no filled inside: a drop attaches to it only on its outline. */
+  filled?: boolean;
 }
+
+/** How close (px) a drop must be to the outline of a shape with no filled inside to attach to it. */
+const OUTLINE_REACH = 6;
 
 /** Length (px) an elbow runs straight out of a shape before it may turn. */
 const STUB = 16;
@@ -44,9 +53,26 @@ const centre = (b: Box): Point => ({ x: b.x + b.w / 2, y: b.y + b.h / 2 });
 const isNode = (end: End): end is NodeEnd => "box" in end;
 const centreOf = (end: End): Point => (isNode(end) ? centre(end.box) : end.point);
 
-/** The point on `side` of the shape's outline, `at` (0..1, default the middle) of the way along it. */
+/** The point on `side` of the shape's box, `at` (0..1) of the way along it. */
+function boxPoint({ x, y, w, h }: Box, side: Side, at: number): Point {
+  if (side === "top") return { x: x + w * at, y };
+  if (side === "bottom") return { x: x + w * at, y: y + h };
+  return { x: side === "left" ? x : x + w, y: y + h * at };
+}
+
+/**
+ * The point on `side` of the shape, `at` (0..1, default the middle) of the way along it. A shape with
+ * an outline is met by a line from that spot on its box running straight inward, and keeps the box
+ * point where the line meets nothing.
+ */
 function sidePoint(end: NodeEnd, side: Side, at = 0.5): Point {
   const { x, y, w, h } = end.box;
+  if (end.outline) {
+    const start = boxPoint(end.box, side, at);
+    const inward = NORMAL[side];
+    const hit = entryPoint(end.outline, { x: start.x - x, y: start.y - y }, { x: start.x - x - inward.x, y: start.y - y - inward.y });
+    return hit ? { x: hit.x + x, y: hit.y + y } : start;
+  }
   if (end.shape === "rect") {
     if (side === "top") return { x: x + w * at, y };
     if (side === "bottom") return { x: x + w * at, y: y + h };
@@ -122,9 +148,13 @@ function port(end: End, toward: Point): Port {
     return { at: end.point, out: end.point, dir };
   }
   const side = end.anchor === "auto" ? facingSide(end.box, toward) : end.anchor.side;
-  const at = sidePoint(end, side, end.anchor === "auto" ? 0.5 : end.anchor.at);
+  const anchored = end.anchor === "auto" ? end.anchors?.[side] : undefined;
+  const at = anchored ? { x: anchored.x + end.box.x, y: anchored.y + end.box.y } : sidePoint(end, side, end.anchor === "auto" ? 0.5 : end.anchor.at);
   const dir = NORMAL[side];
-  return { at, out: { x: at.x + dir.x * STUB, y: at.y + dir.y * STUB }, dir };
+  // A shape with an outline can be met inside its box, so the stub starts at the box side.
+  const edge = end.outline ? boxPoint(end.box, side, 0.5) : at;
+  const out = dir.x !== 0 ? { x: edge.x + dir.x * STUB, y: at.y } : { x: at.x, y: edge.y + dir.y * STUB };
+  return { at, out, dir };
 }
 
 /** The bends between two stub ends, for a path with no manual bend points. */
@@ -208,6 +238,10 @@ export function route(from: End, to: End, options: RouteOptions): Point[] {
 const inside = (t: Target, p: Point): boolean => {
   const { x, y, w, h } = t.box;
   if (p.x < x || p.x > x + w || p.y < y || p.y > y + h) return false;
+  if (t.outline) {
+    const local = { x: p.x - x, y: p.y - y };
+    return t.filled === false ? nearOutline(t.outline, local, OUTLINE_REACH) : insideOutline(t.outline, local);
+  }
   if (t.shape === "rect") return true;
   return ((p.x - x - w / 2) / (w / 2)) ** 2 + ((p.y - y - h / 2) / (h / 2)) ** 2 <= 1;
 };

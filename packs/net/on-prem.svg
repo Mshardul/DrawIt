@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">
+  <path data-role="fill" d="M 16 88 V 24 L 48 8 L 80 24 V 88 Z"/>
+  <rect data-role="detail" x="26" y="30" width="12" height="12"/>
+  <rect data-role="detail" x="58" y="30" width="12" height="12"/>
+  <rect data-role="detail" x="26" y="50" width="12" height="12"/>
+  <rect data-role="detail" x="58" y="50" width="12" height="12"/>
+  <rect data-role="detail" x="40" y="70" width="16" height="18"/>
+</svg>

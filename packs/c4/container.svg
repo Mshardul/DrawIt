@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 96">
+  <path data-role="fill" d="M 8 0 H 184 C 188.418 0 192 3.582 192 8 V 88 C 192 92.418 188.418 96 184 96 H 8 C 3.582 96 0 92.418 0 88 V 8 C 0 3.582 3.582 0 8 0 Z"/>
+  <line data-role="detail" x1="0" y1="24" x2="192" y2="24"/>
+</svg>

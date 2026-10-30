@@ -40,3 +40,12 @@ html, body { margin: 0; height: 100%; font: 14px system-ui, sans-serif; color: #
 .colour-group { display: flex; flex-wrap: wrap; gap: 4px; }
 .colour-group button { padding: 2px; line-height: 0; }
 .colour-picker[hidden] { display: none; }
+.library { width: 224px; padding: 8px 12px; border-right: 1px solid #ccc; overflow-y: auto; box-sizing: border-box; }
+.library input { width: 100%; box-sizing: border-box; }
+.library h2 { font-size: 12px; margin: 12px 0 4px; color: #555; }
+.library-items { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; }
+.library-item { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px; font-size: 11px; background: none; border: 1px solid transparent; border-radius: 4px; cursor: pointer; }
+.library-item[aria-pressed="true"] { background: #dbe8f5; border-color: #1a73e8; }
+.library-empty { font-size: 12px; color: #555; }
+/* A preview is a large shape drawn small: its strokes keep their screen width instead of scaling down to a hairline. */
+.library-item svg * { vector-effect: non-scaling-stroke; }

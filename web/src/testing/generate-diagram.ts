@@ -9,6 +9,8 @@ export interface GenerateOptions {
   seed?: number;
   /** Relative share per kind. Kinds left out get none. Default: 60% nodes, 35% edges, the rest text, frames and shapes. */
   ratios?: Partial<Record<GeneratedKind, number>>;
+  /** Shapes the nodes take in turn. Default: rectangle, ellipse and three architecture shapes. */
+  shapes?: string[];
 }
 
 const DEFAULT_RATIOS: Record<GeneratedKind, number> = { node: 0.6, edge: 0.35, text: 0.03, frame: 0.01, shape: 0.01 };
@@ -54,7 +56,8 @@ function allocate(count: number, ratios: Record<GeneratedKind, number>): Record<
 
 /** Builds a deterministic test diagram for the performance budgets. */
 export function generateDiagram(options: GenerateOptions = {}): DiagramDocument {
-  const { count = 500, seed = 1, ratios: given = DEFAULT_RATIOS } = options;
+  const { count = 500, seed = 1, ratios: given = DEFAULT_RATIOS, shapes = NODE_SHAPES } = options;
+  if (shapes.length === 0) throw new Error("shapes must name at least one shape");
   if (!Number.isInteger(count) || count < 0) throw new Error(`count must be a non-negative integer, got ${String(count)}`);
   const ratios = Object.fromEntries(KINDS.map((k) => [k, given[k] ?? 0])) as Record<GeneratedKind, number>;
   if (KINDS.some((k) => !(ratios[k] >= 0))) throw new Error("ratios must be zero or greater");
@@ -81,7 +84,7 @@ export function generateDiagram(options: GenerateOptions = {}): DiagramDocument 
   }
   for (let i = 0; i < n.node; i++) {
     const id = `n${String(i + 1)}`;
-    elements.push({ kind: "node", id, label: `Node ${String(i + 1)}`, shape: NODE_SHAPES[i % NODE_SHAPES.length] ?? "rect" });
+    elements.push({ kind: "node", id, label: `Node ${String(i + 1)}`, shape: shapes[i % shapes.length] ?? "rect" });
     const pos = { x: (i % cols) * CELL_W, y: Math.floor(i / cols) * CELL_H };
     nodePos.push(pos);
     layout.push({ id, ...pos, w: NODE_W, h: NODE_H });

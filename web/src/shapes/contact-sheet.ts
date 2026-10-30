@@ -12,6 +12,14 @@ export interface SheetPack {
   svgs: Record<string, string>;
 }
 
+/** How a part is coloured by its role. The contact sheet and the catalogue share it, so both show what the app draws. */
+export const ROLE_STYLE = `
+svg { --stroke-width: 1.5; display: block; overflow: visible; stroke-linejoin: round; stroke-linecap: round; }
+svg [data-role="fill"] { fill: var(--fill); stroke: var(--stroke); stroke-width: var(--stroke-width); }
+svg [data-role="stroke"] { fill: none; stroke: var(--stroke); stroke-width: var(--stroke-width); }
+svg [data-role="detail"] { fill: none; stroke: var(--stroke); stroke-width: calc(var(--stroke-width) * 2 / 3); }
+`;
+
 const STYLE = `
 :root { color-scheme: light dark; font: 14px system-ui, sans-serif; }
 body { margin: 0; padding: 24px; background: #f2f2f2; color: #1a1a1a; }
@@ -24,18 +32,15 @@ figure { margin: 0; padding: 8px; border-radius: 6px; }
 figcaption { font-size: 11px; margin-top: 4px; opacity: 0.7; }
 .theme-light { --bg: #ffffff; --fill: #dbe8f5; --stroke: #1f4e79; color: #1a1a1a; background: var(--bg); }
 .theme-dark { --bg: #1b1f24; --fill: #27415c; --stroke: #8fb8e0; color: #eeeeee; background: var(--bg); }
-svg { --stroke-width: 1.5; display: block; overflow: visible; stroke-linejoin: round; stroke-linecap: round; }
-svg [data-role="fill"] { fill: var(--fill); stroke: var(--stroke); stroke-width: var(--stroke-width); }
-svg [data-role="stroke"] { fill: none; stroke: var(--stroke); stroke-width: var(--stroke-width); }
-svg [data-role="detail"] { fill: none; stroke: var(--stroke); stroke-width: calc(var(--stroke-width) * 2 / 3); }
+${ROLE_STYLE}
 svg .outline { fill: none; stroke: #d33; stroke-width: 1; stroke-dasharray: 3 2; }
 svg .anchor { fill: #d33; }
 svg .label-area { fill: none; stroke: #2a9d4a; stroke-width: 1; stroke-dasharray: 2 2; }
 `;
 
-const escape = (s: string): string => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+export const escape = (s: string): string => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
-function serialize(el: SvgEl): string {
+export function serialize(el: SvgEl): string {
   const attrs = Object.entries(el.attrs).map(([k, v]) => ` ${k}="${escape(v)}"`).join("");
   return el.children.length === 0 ? `<${el.tag}${attrs}/>` : `<${el.tag}${attrs}>${el.children.map(serialize).join("")}</${el.tag}>`;
 }
@@ -56,7 +61,7 @@ function draw(shape: ShapeManifest, svg: string, target: Size, guides: boolean):
     drawn.children.push(
       el("path", { class: "outline", d: shape.outline }),
       el("rect", { class: "label-area", x: label.x, y: label.y, width: label.w, height: label.h }),
-      ...[anchors.top, anchors.right, anchors.bottom, anchors.left, ...(anchors.extra ?? [])].map((p) => el("circle", { class: "anchor", cx: p.x, cy: p.y, r: 3 })),
+      ...[anchors.top, anchors.right, anchors.bottom, anchors.left].map((p) => el("circle", { class: "anchor", cx: p.x, cy: p.y, r: 3 })),
     );
   }
   return serialize(drawn);

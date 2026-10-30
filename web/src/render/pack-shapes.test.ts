@@ -128,15 +128,23 @@ describe("SVG renderer, pack shapes with their own packs", () => {
   });
 });
 
+describe("SVG renderer, pack shape sizes", () => {
+  it("draws a pack shape with no size in the layout at its manifest size, unstretched", () => {
+    const g = draw(doc([node("arch.database")], [at()]));
+    expect(find(g, "path")?.attrs["d"]).toMatch(/^M 0 16 C 0 7.163 21.49 0 48 0 /);
+    expect(find(g, "path")?.attrs["d"]).toContain("112");
+  });
+});
+
 describe("SVG renderer, unknown shapes", () => {
   it("draws a dashed placeholder at the layout size showing the shape name", () => {
-    const g = draw(doc([node("net.router")], [at(120, 60)]));
+    const g = draw(doc([node("net.nope")], [at(120, 60)]));
     expect(find(g, "rect")?.attrs).toMatchObject({ width: 120, height: 60, fill: "none", "stroke-dasharray": "6 4" });
-    expect(all(g, "text").map((t) => t.text)).toEqual(["net.router"]);
+    expect(all(g, "text").map((t) => t.text)).toEqual(["net.nope"]);
   });
 
   it("uses the standard default size when the layout has no size", () => {
-    expect(find(draw(doc([node("net.router")], [at()])), "rect")?.attrs).toMatchObject({ width: 160, height: 80 });
+    expect(find(draw(doc([node("net.nope")], [at()])), "rect")?.attrs).toMatchObject({ width: 160, height: 80 });
   });
 
   it("is a placeholder for a pack shape written without its pack, and for a decorative shape", () => {
@@ -145,14 +153,15 @@ describe("SVG renderer, unknown shapes", () => {
   });
 
   it("shows the shape name and not the label", () => {
-    const labelled: DiagramElement = { kind: "node", id: "a", label: "Router", shape: "net.router" };
-    expect(all(draw(doc([labelled], [at(120, 60)])), "text").map((t) => t.text)).toEqual(["net.router"]);
+    const labelled: DiagramElement = { kind: "node", id: "a", label: "Router", shape: "net.nope" };
+    expect(all(draw(doc([labelled], [at(120, 60)])), "text").map((t) => t.text)).toEqual(["net.nope"]);
   });
 
-  it("keeps the name while the node's text is being edited", () => {
-    const labelled: DiagramElement = { kind: "node", id: "a", label: "Router", shape: "net.router" };
+  it("leaves the name out while the node's text is being edited, and keeps the dashed outline", () => {
+    const labelled: DiagramElement = { kind: "node", id: "a", label: "Router", shape: "net.nope" };
     const g = draw(doc([labelled], [at(120, 60)]), { hideText: new Set(["a"]) });
-    expect(all(g, "text").map((t) => t.text)).toEqual(["net.router"]);
+    expect(all(g, "text")).toEqual([]);
+    expect(find(g, "rect")?.attrs["stroke-dasharray"]).toBeDefined();
   });
 
   it("does not make a placeholder of a rectangle or an ellipse, with or without core", () => {

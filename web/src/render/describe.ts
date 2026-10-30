@@ -142,9 +142,9 @@ function packShapeNode(doc: DiagramDocument, style: StyleProps, drawing: ShapeDr
   );
 }
 
-function placeholderNodes(doc: DiagramDocument, style: StyleProps, name: string, w: number, h: number, measurer: TextMeasurer): SvgNode[] {
+function placeholderNodes(doc: DiagramDocument, style: StyleProps, name: string, w: number, h: number, measurer: TextMeasurer, hideText: boolean): SvgNode[] {
   const outline = node("rect", { width: w, height: h, ...outlineAttrs(doc, style), fill: "none", "stroke-dasharray": PLACEHOLDER_DASH });
-  return [outline, ...labelNodes(name, w, h, measurer, textLookOf(style))];
+  return [outline, ...(hideText ? [] : labelNodes(name, w, h, measurer, textLookOf(style)))];
 }
 
 function body(
@@ -162,7 +162,7 @@ function body(
     case "shape": {
       if (!isBuiltInShape(element.shape)) {
         const drawing = packs.drawing(element.shape, { w, h });
-        if (!drawing) return placeholderNodes(doc, style, element.shape, w, h, measurer);
+        if (!drawing) return placeholderNodes(doc, style, element.shape, w, h, measurer, hideText);
         const label =
           element.kind === "node" && !hideText ? labelNodes(element.label ?? element.id, w, h, measurer, textLookOf(style), packs.shape(element.shape)) : [];
         return [packShapeNode(doc, style, drawing, w, h), ...label];
@@ -259,7 +259,7 @@ export function describeDiagram(doc: DiagramDocument, measurer: TextMeasurer, op
       continue;
     }
     const entry = entries.get(id);
-    const size = sizeOf(doc, element, entry, measurer);
+    const size = sizeOf(doc, element, entry, measurer, (name) => packs.shape(name));
     if (!entry || !size) continue;
     const style = styleOf(doc, element);
     const children = body(doc, element, style, size.w, size.h, measurer, packs, hideText?.has(element.id) === true);

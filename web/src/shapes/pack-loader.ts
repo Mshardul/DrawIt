@@ -4,7 +4,7 @@
 import type { Point } from "../model/layout.ts";
 import { flatten, parsePath } from "./path.ts";
 import { parseSvg, type SvgEl } from "./svg.ts";
-import { stretchSvg, targetBox } from "./stretch.ts";
+import { stretchPoint, stretchSvg, targetBox } from "./stretch.ts";
 import type { PackManifest, Problem, ShapeManifest, Size } from "./types.ts";
 import { validatePack } from "./validate.ts";
 
@@ -26,6 +26,10 @@ export interface ShapeDrawing {
   box: Size;
   /** The outline flattened to a closed polygon in the element's own space, where the shape is drawn. */
   outline: Point[];
+  /** The default attach points for `auto`, stretched like the outline, in the element's own space. */
+  anchors: Record<"top" | "right" | "bottom" | "left", Point>;
+  /** False when no part takes the fill, as for a shape drawn only with strokes: its inside is empty. */
+  filled: boolean;
 }
 
 /** Finds the manifest of a shape by the name written in the file. */
@@ -38,6 +42,8 @@ export interface PackLoader {
   shape(name: string): ShapeManifest | undefined;
   /** `name` drawn at `size`. The same object comes back for the same shape and size. */
   drawing(name: string, size: Size): ShapeDrawing | undefined;
+  /** Every loaded shape with its full name, in pack and manifest order. */
+  shapes(): { name: string; shape: ShapeManifest }[];
   /** The names in `names` that no pack provides, each once, in the order first seen. */
   unknownShapes(names: readonly string[]): string[];
 }
@@ -81,6 +87,8 @@ export function validatePackFiles(source: readonly PackFiles[]): Problem[] {
   return check(source).problems;
 }
 
+const hasFill = (el: SvgEl): boolean => el.attrs["data-role"] === "fill" || el.children.some(hasFill);
+
 export function createPackLoader(source: readonly PackFiles[]): PackLoader {
   const { loaded, problems } = check(source);
   const shapes = new Map<string, { shape: ShapeManifest; svg: string }>();
@@ -96,6 +104,7 @@ export function createPackLoader(source: readonly PackFiles[]): PackLoader {
   return {
     problems,
     shape: (name) => find(name)?.shape,
+    shapes: () => [...shapes].map(([name, { shape }]) => ({ name, shape })),
     drawing(name, size) {
       const entry = find(name);
       if (!entry) return undefined;
@@ -117,7 +126,13 @@ export function createPackLoader(source: readonly PackFiles[]): PackLoader {
       const y = (size.h - box.h) / 2;
       const outlineSvg = stretchSvg({ tag: "svg", attrs: {}, children: [{ tag: "path", attrs: { d: shape.outline }, children: [] }] }, shape.size, box, shape.stretch);
       const outline = flatten(parsePath(outlineSvg.children[0]?.attrs["d"] ?? "")).points.map((p) => ({ x: p.x + x, y: p.y + y }));
-      const drawing = { svg: stretchSvg(root, shape.size, box, shape.stretch), box, outline };
+      const place = (p: Point): Point => {
+        const q = stretchPoint(p, shape.size, box, shape.stretch);
+        return { x: q.x + x, y: q.y + y };
+      };
+      const { top, right, bottom, left } = shape.anchors;
+      const anchors = { top: place(top), right: place(right), bottom: place(bottom), left: place(left) };
+      const drawing = { svg: stretchSvg(root, shape.size, box, shape.stretch), box, outline, anchors, filled: hasFill(root) };
       sizes.set(key, drawing);
       if (sizes.size > SIZES_PER_SHAPE) sizes.delete(sizes.keys().next().value as string);
       return drawing;

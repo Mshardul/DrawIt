@@ -5,7 +5,7 @@ import { createPackLoader } from "./pack-loader.ts";
 describe("bundled packs", () => {
   it("hold a folder, manifest and SVGs for each pack in the repository", () => {
     const folders = bundledPacks.map((p) => p.folder).sort();
-    expect(folders).toEqual(["arch", "core", "info"]);
+    expect(folders).toEqual(["arch", "c4", "core", "info", "net"]);
     const core = bundledPacks.find((p) => p.folder === "core");
     expect(JSON.parse(core?.manifest ?? "{}")).toMatchObject({ pack: "core" });
     expect(Object.keys(core?.svgs ?? {})).toContain("rounded-rect.svg");

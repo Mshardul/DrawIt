@@ -148,4 +148,25 @@ describe("edges to pack shapes", () => {
     const [start] = routedEdges(doc([{ kind: "node", id: "db", shape: "rect" }, far, link], layout), monoMeasurer).get("db->far")?.points ?? [];
     expect(start?.x).toBe(96);
   });
+
+  it("a side and position on a pack shape meet its outline, not the box corner", () => {
+    const rounded: DiagramElement = { kind: "node", id: "rr", shape: "core.rounded-rect" };
+    const edgeFromCorner: EdgeElement = { kind: "edge", id: "rr->far", from: "rr", to: "far" };
+    const d = doc([rounded, far, edgeFromCorner], [{ id: "rr", x: 0, y: 0, w: 160, h: 80 }, { id: "far", x: 400, y: 300, w: 100, h: 50 }, { id: "rr->far", x: 0, y: 0, from: { side: "top", at: 0 } }]);
+    const [start] = routedEdges(d, monoMeasurer).get("rr->far")?.points ?? [];
+    expect(start?.x).toBe(0);
+    expect(start?.y).toBeCloseTo(8, 0);
+  });
+
+  it("an elbow leaves a pack shape along its box side from beyond the box", () => {
+    const rounded: DiagramElement = { kind: "node", id: "rr", shape: "core.rounded-rect" };
+    const e: EdgeElement = { kind: "edge", id: "rr->far", from: "rr", to: "far" };
+    const d = doc([rounded, far, e], [{ id: "rr", x: 0, y: 0, w: 160, h: 80 }, { id: "far", x: 400, y: 300, w: 100, h: 50 }, { id: "rr->far", x: 0, y: 0, from: { side: "top", at: 0.5 } }], {
+      overrides: [{ id: "rr->far", props: { route: "elbow" } }],
+    });
+    const points = routedEdges(d, monoMeasurer).get("rr->far")?.points ?? [];
+    expect(points[0]).toEqual({ x: 80, y: 0 });
+    expect(points[1]?.x).toBe(80);
+    expect(points[1]?.y).toBeLessThan(0);
+  });
 });

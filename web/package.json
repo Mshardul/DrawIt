@@ -16,7 +16,8 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "validate:packs": "node tools/packs.ts validate",
-    "contact-sheet": "node tools/packs.ts contact-sheet"
+    "contact-sheet": "node tools/packs.ts contact-sheet",
+    "catalogue": "vite --open /catalogue.html"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

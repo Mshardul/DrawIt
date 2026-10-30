@@ -106,4 +106,25 @@ describe("stack order", () => {
     expect(stackOrder(doc(elements, [...layout]))).toEqual(stackOrder(doc(elements, layout)));
     expect(stackOrder(doc(elements, [...layout]))).not.toBe(stackOrder(doc(elements, layout)));
   });
+
+  describe("pack shape sizes", () => {
+    const shapeDoc = (shape: string, entry: Partial<LayoutEntry> = {}): DiagramDocument =>
+      doc([{ kind: "node", id: "a", shape }], [{ id: "a", x: 0, y: 0, ...entry }]);
+
+    it("a pack shape with no size in the layout takes the size of its manifest", () => {
+      expect(drawnBoxes(shapeDoc("arch.database"), monoMeasurer)[0]).toMatchObject({ w: 96, h: 112 });
+      expect(drawnBoxes(shapeDoc("core.circle"), monoMeasurer)[0]).toMatchObject({ w: 96, h: 96 });
+    });
+
+    it("takes each missing axis from the manifest and keeps the one the layout gives", () => {
+      expect(drawnBoxes(shapeDoc("arch.database", { w: 200 }), monoMeasurer)[0]).toMatchObject({ w: 200, h: 112 });
+      expect(drawnBoxes(shapeDoc("arch.database", { h: 40 }), monoMeasurer)[0]).toMatchObject({ w: 96, h: 40 });
+    });
+
+    it("a built-in shape, an unknown shape and a frame keep their standard sizes", () => {
+      expect(drawnBoxes(shapeDoc("rect"), monoMeasurer)[0]).toMatchObject({ w: 160, h: 80 });
+      expect(drawnBoxes(shapeDoc("ellipse"), monoMeasurer)[0]).toMatchObject({ w: 160, h: 80 });
+      expect(drawnBoxes(shapeDoc("net.nope"), monoMeasurer)[0]).toMatchObject({ w: 160, h: 80 });
+    });
+  });
 });
