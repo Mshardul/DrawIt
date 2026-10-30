@@ -2,6 +2,7 @@
 // `describeDiagram` it is data and holds no state. Each node is keyed by `data-id` so `mount`
 // can reconcile it; strokes keep their screen width at any zoom.
 import { routedEdges } from "../connectors/edges.ts";
+import { textLookOf } from "../style/text-look.ts";
 import { edgeLabelLayout } from "../connectors/label.ts";
 import type { DiagramDocument, Point } from "../model/index.ts";
 import type { TextMeasurer } from "../text/measure.ts";
@@ -58,7 +59,7 @@ export function describeOverlay(
   bends?.forEach((p, i) => {
     out.push(node({ "data-id": `bend-${String(i)}`, "data-bend": i, class: "handle bend", x: p.x - size / 2, y: p.y - size / 2, width: size, height: size }));
   });
-  const label = lone?.edge.label ? edgeLabelLayout(lone.points, lone.labelAt, lone.edge.label, measurer)?.box : undefined;
+  const label = lone?.edge.label ? edgeLabelLayout(lone.points, lone.labelAt, lone.edge.label, measurer, textLookOf(lone.style))?.box : undefined;
   if (label) {
     out.push(node({ "data-id": "label-grip", "data-label": "edge", class: "label-grip", x: label.x, y: label.y, width: label.w, height: label.h, fill: "transparent" }));
   }

@@ -5,10 +5,10 @@ import type { OpenFile } from "../app/workspace.ts";
 import type { Tool } from "../connectors/input.ts";
 import type { DiagramDocument } from "../model/index.ts";
 import type { ShapeLookup } from "../render/describe.ts";
-import { DEFAULT_TEXT_STYLE, LINE_HEIGHT } from "../render/text-layout.ts";
 import { hitTest } from "../select/select.ts";
 import { screenToWorld, type View } from "../view/view.ts";
 import { applyDisplayEdit, displayIndex, editView, type EditView, modelIndex } from "./display.ts";
+import type { TextLook } from "../style/text-look.ts";
 import { fontShorthand, type TextMeasurer } from "./measure.ts";
 import { createTextCommand, editTarget, type EditTarget, newTextId, setTextCommand } from "./target.ts";
 
@@ -38,6 +38,15 @@ export interface TextEdit {
   detach(): void;
 }
 
+/** Gives the editor the font, colour, line height and alignment the text is drawn with. */
+function applyLook(editor: HTMLTextAreaElement, look: TextLook): void {
+  editor.style.font = fontShorthand(look.style);
+  editor.style.lineHeight = `${String(look.lineHeight)}px`;
+  editor.style.color = look.color;
+  editor.style.textDecoration = look.underline ? "underline" : "none";
+  editor.style.textAlign = look.align;
+}
+
 /** Room at the right of a line for the caret after its last character. */
 const CARET_ROOM = 2;
 
@@ -47,7 +56,7 @@ interface Session {
   editor: HTMLTextAreaElement;
   view: EditView;
   box: EditTarget["box"];
-  align: EditTarget["align"];
+  look: EditTarget["look"];
   /** Typing in one session shares a group, so it merges into one undo step. */
   group: string;
   created: boolean;
@@ -65,10 +74,11 @@ export function attachTextEdit(host: TextEditHost): TextEdit {
 
   const reposition = (): void => {
     if (!session) return;
-    const { editor, box, align } = session;
+    const { editor, box, look } = session;
     const view = host.getView();
     const canvas = host.target.getBoundingClientRect();
-    const room = align === "center" ? CARET_ROOM / 2 : 0;
+    // The extra width keeps the caret visible after the last character without moving aligned text.
+    const room = look.align === "center" ? CARET_ROOM / 2 : look.align === "right" ? CARET_ROOM : 0;
     editor.style.left = `${String(canvas.left + view.x + (box.x - room) * view.scale)}px`;
     editor.style.top = `${String(canvas.top + view.y + box.y * view.scale)}px`;
     editor.style.width = `${String(box.w + CARET_ROOM)}px`;
@@ -82,10 +92,10 @@ export function attachTextEdit(host: TextEditHost): TextEdit {
     if (!target) return false;
     s.view = editView(target.text, target.lines);
     s.box = target.box;
-    s.align = target.align;
+    s.look = target.look;
     s.editor.value = s.view.display;
     s.editor.rows = target.lines.length;
-    s.editor.style.textAlign = target.align;
+    applyLook(s.editor, target.look);
     if (selection) s.editor.setSelectionRange(displayIndex(s.view.breaks, selection.start), displayIndex(s.view.breaks, selection.end));
     reposition();
     return true;
@@ -131,15 +141,13 @@ export function attachTextEdit(host: TextEditHost): TextEdit {
     editor.wrap = "off";
     editor.spellcheck = false;
     editor.setAttribute("aria-label", "Edit text");
-    editor.style.font = fontShorthand(DEFAULT_TEXT_STYLE);
-    editor.style.lineHeight = `${String(LINE_HEIGHT)}px`;
     const s: Session = {
       id,
       field: target.field,
       editor,
       view: editView(target.text, target.lines),
       box: target.box,
-      align: target.align,
+      look: target.look,
       group,
       created,
       typed: false,

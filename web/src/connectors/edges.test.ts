@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { DiagramDocument, DiagramElement, EdgeElement, LayoutEntry, StyleProps } from "../model/index.ts";
-import { LINE_HEIGHT } from "../render/text-layout.ts";
+import { DEFAULT_LOOK } from "../style/text-look.ts";
 import { monoMeasurer } from "../testing/measurer.ts";
 import { styleOf } from "../style/of.ts";
 import { edgesAttachedTo, routedEdges } from "./edges.ts";
+
+const LINE_HEIGHT = DEFAULT_LOOK.lineHeight;
 
 const doc = (elements: DiagramElement[], layout: LayoutEntry[], style: Partial<DiagramDocument["style"]> = {}): DiagramDocument => ({
   version: 1,

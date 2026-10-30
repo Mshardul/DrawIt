@@ -4,37 +4,38 @@ import { readDiagram } from "../kdl/read.ts";
 import { writeDiagram } from "../kdl/write.ts";
 import type { DiagramDocument, LayoutEntry } from "../model/index.ts";
 import { monoMeasurer } from "../testing/measurer.ts";
+import { DEFAULT_LOOK } from "../style/text-look.ts";
 import { edgeLabelLayout, labelDragCommand } from "./label.ts";
 
 const line = [{ x: 100, y: 25 }, { x: 300, y: 25 }];
 
 describe("where an edge label is drawn", () => {
   it("is centred on the middle of the path by default", () => {
-    expect(edgeLabelLayout(line, undefined, "Hi", monoMeasurer)).toEqual({ lines: ["Hi"], box: { x: 190, y: 13, w: 20, h: 24 } });
+    expect(edgeLabelLayout(line, undefined, "Hi", monoMeasurer, DEFAULT_LOOK)).toEqual({ lines: ["Hi"], box: { x: 190, y: 13, w: 20, h: 24 } });
   });
 
   it("is centred on the point at its position along the path", () => {
-    expect(edgeLabelLayout(line, 0.25, "Hi", monoMeasurer)?.box).toEqual({ x: 140, y: 13, w: 20, h: 24 });
-    expect(edgeLabelLayout(line, 1, "Hi", monoMeasurer)?.box).toEqual({ x: 290, y: 13, w: 20, h: 24 });
+    expect(edgeLabelLayout(line, 0.25, "Hi", monoMeasurer, DEFAULT_LOOK)?.box).toEqual({ x: 140, y: 13, w: 20, h: 24 });
+    expect(edgeLabelLayout(line, 1, "Hi", monoMeasurer, DEFAULT_LOOK)?.box).toEqual({ x: 290, y: 13, w: 20, h: 24 });
   });
 
   it("follows the path round a corner", () => {
     const bent = [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 100 }];
-    expect(edgeLabelLayout(bent, 0.75, "Hi", monoMeasurer)?.box).toEqual({ x: 90, y: 38, w: 20, h: 24 });
+    expect(edgeLabelLayout(bent, 0.75, "Hi", monoMeasurer, DEFAULT_LOOK)?.box).toEqual({ x: 90, y: 38, w: 20, h: 24 });
   });
 
   it("is as wide as its longest line and as tall as its lines, and never wraps", () => {
-    const layout = edgeLabelLayout(line, 0.5, "a\nbbbb", monoMeasurer);
+    const layout = edgeLabelLayout(line, 0.5, "a\nbbbb", monoMeasurer, DEFAULT_LOOK);
     expect(layout?.lines).toEqual(["a", "bbbb"]);
     expect(layout?.box).toEqual({ x: 180, y: 1, w: 40, h: 48 });
   });
 
   it("has a small box when empty, so there is still somewhere to edit", () => {
-    expect(edgeLabelLayout(line, 0.5, "", monoMeasurer)?.box).toEqual({ x: 196, y: 13, w: 8, h: 24 });
+    expect(edgeLabelLayout(line, 0.5, "", monoMeasurer, DEFAULT_LOOK)?.box).toEqual({ x: 196, y: 13, w: 8, h: 24 });
   });
 
   it("is null for a path that is not drawn", () => {
-    expect(edgeLabelLayout([], 0.5, "Hi", monoMeasurer)).toBeNull();
+    expect(edgeLabelLayout([], 0.5, "Hi", monoMeasurer, DEFAULT_LOOK)).toBeNull();
   });
 });
 

@@ -1,5 +1,6 @@
 // Elements without a layout line are placed in a grid on open; their
 // positions are written on save.
+import { textLookFor } from "../style/of.ts";
 import type { DiagramDocument } from "../model/index.ts";
 import type { TextMeasurer } from "../text/measure.ts";
 import { defaultSize } from "./size.ts";
@@ -19,7 +20,7 @@ export function placeUnplaced(doc: DiagramDocument, measurer: TextMeasurer): Dia
   let y = 0;
   let rowHeight = 0;
   for (const element of doc.elements) {
-    const size = defaultSize(element, measurer);
+    const size = defaultSize(element, measurer, textLookFor(doc, element));
     if (!size || placed.has(element.id)) continue;
     if (x > 0 && x + size.w > ROW_WIDTH) {
       x = 0;

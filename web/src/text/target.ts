@@ -6,7 +6,9 @@ import { edgeLabelLayout } from "../connectors/label.ts";
 import { type DiagramDocument, unusedId } from "../model/index.ts";
 import type { ShapeLookup } from "../render/describe.ts";
 import { sizeOf } from "../render/size.ts";
-import { labelLayout, layoutTextBox, LINE_HEIGHT } from "../render/text-layout.ts";
+import { labelLayout, layoutTextBox } from "../render/text-layout.ts";
+import { textLookFor } from "../style/of.ts";
+import type { TextLook } from "../style/text-look.ts";
 import type { Rect } from "../shapes/types.ts";
 import type { TextMeasurer } from "./measure.ts";
 
@@ -19,7 +21,8 @@ export interface EditTarget {
   lines: string[];
   /** Where the lines are drawn, in world coordinates. */
   box: Rect;
-  align: "center" | "left";
+  /** How the text is drawn; the editor takes its font, colour, line height and alignment from it. */
+  look: TextLook;
 }
 
 /** The text of `id` and where it is drawn, or null for an element with no text to edit or one that is not drawn. */
@@ -29,27 +32,30 @@ export function editTarget(doc: DiagramDocument, id: string, measurer: TextMeasu
   if (element?.kind === "edge") {
     const routed = routedEdges(doc, measurer, new Set([id])).get(id);
     const text = element.label ?? "";
-    const layout = routed && edgeLabelLayout(routed.points, routed.labelAt, text, measurer);
-    return layout ? { id, field: "edgeLabel", text, lines: layout.lines, box: layout.box, align: "center" } : null;
+    const look = textLookFor(doc, element);
+    const layout = routed && edgeLabelLayout(routed.points, routed.labelAt, text, measurer, look);
+    return layout ? { id, field: "edgeLabel", text, lines: layout.lines, box: layout.box, look } : null;
   }
   if (!element || !entry) return null;
   if (element.kind === "node") {
-    const size = sizeOf(element, entry, measurer);
+    const size = sizeOf(doc, element, entry, measurer);
     if (!size) return null;
+    const look = textLookFor(doc, element);
     const text = element.label ?? element.id;
-    const { lines, top, area } = labelLayout(text, size, measurer, shapes?.(element.shape));
+    const { lines, top, area } = labelLayout(text, size, measurer, look, shapes?.(element.shape));
     return {
       id,
       field: "label",
       text,
       lines,
-      box: { x: entry.x + area.x, y: entry.y + top, w: area.w, h: lines.length * LINE_HEIGHT },
-      align: "center",
+      box: { x: entry.x + area.x, y: entry.y + top, w: area.w, h: lines.length * look.lineHeight },
+      look,
     };
   }
   if (element.kind === "text") {
-    const { w, h, lines } = layoutTextBox(element.content, entry.w, measurer);
-    return { id, field: "content", text: element.content, lines, box: { x: entry.x, y: entry.y, w, h }, align: "left" };
+    const look = textLookFor(doc, element);
+    const { w, h, lines } = layoutTextBox(element.content, entry.w, measurer, look);
+    return { id, field: "content", text: element.content, lines, box: { x: entry.x, y: entry.y, w, h }, look };
   }
   return null;
 }

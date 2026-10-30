@@ -31,8 +31,8 @@ export function isDrawn(element: DiagramElement): boolean {
 }
 
 /** The box an element takes: its layout position with its layout or default size. Null for an element with no layout entry and for an edge, which has no box. */
-export function elementBox(element: DiagramElement, entry: LayoutEntry | undefined, measurer: TextMeasurer): Box | null {
-  const size = entry && sizeOf(element, entry, measurer);
+export function elementBox(doc: DiagramDocument, element: DiagramElement, entry: LayoutEntry | undefined, measurer: TextMeasurer): Box | null {
+  const size = entry && sizeOf(doc, element, entry, measurer);
   return entry && size ? { x: entry.x, y: entry.y, w: size.w, h: size.h } : null;
 }
 
@@ -42,7 +42,7 @@ export function drawnBoxes(doc: DiagramDocument, measurer: TextMeasurer): DrawnB
   const out: DrawnBox[] = [];
   for (const entry of doc.layout) {
     const element = elements.get(entry.id);
-    const box = element && isDrawn(element) ? elementBox(element, entry, measurer) : null;
+    const box = element && isDrawn(element) ? elementBox(doc, element, entry, measurer) : null;
     if (element && box) out.push({ ...box, element, locked: entry.locked === true });
   }
   return out;

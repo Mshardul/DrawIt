@@ -33,7 +33,7 @@ export function routedEdges(doc: DiagramDocument, measurer: TextMeasurer, only?:
       return point ? { point } : null;
     }
     const target: DiagramElement | undefined = elements.get(id);
-    const box = target && elementBox(target, entries.get(id), measurer);
+    const box = target && elementBox(doc, target, entries.get(id), measurer);
     return target && box ? { box, shape: outlineKind(target), anchor: entry?.[which] ?? "auto" } : null;
   };
 

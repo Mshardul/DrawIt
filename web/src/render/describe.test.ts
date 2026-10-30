@@ -4,7 +4,9 @@ import { readFileSync } from "node:fs";
 import type { PackManifest } from "../shapes/types.ts";
 import { monoMeasurer } from "../testing/measurer.ts";
 import { describeDiagram, type SvgNode } from "./describe.ts";
-import { LINE_HEIGHT } from "./text-layout.ts";
+import { DEFAULT_LOOK } from "../style/text-look.ts";
+
+const LINE_HEIGHT = DEFAULT_LOOK.lineHeight;
 
 function doc(elements: DiagramElement[], layout: LayoutEntry[]): DiagramDocument {
   return {
@@ -478,5 +480,67 @@ describe("SVG renderer, fill, stroke and opacity", () => {
       });
       expect(find(group(d, "a->b"), "rect")?.attrs["fill"]).toBe("#fafafa");
     });
+  });
+});
+
+describe("SVG renderer, text styles", () => {
+  const styled = (elements: DiagramElement[], layout: LayoutEntry[], overrides: Record<string, object>): DiagramDocument => {
+    const d = doc(elements, layout);
+    return { ...d, style: { ...d.style, overrides: Object.entries(overrides).map(([id, props]) => ({ id, props })) } };
+  };
+
+  it("draws a label in its font, size, weight, italic, underline and colour", () => {
+    const [g] = describeDiagram(
+      styled(
+        [{ kind: "node", id: "a", label: "A", shape: "rect" }],
+        [{ id: "a", x: 0, y: 0, w: 100, h: 60 }],
+        { a: { font: "JetBrains Mono", size: 20, weight: 700, italic: true, underline: true, color: "#ff0000" } },
+      ),
+      monoMeasurer,
+    );
+    expect(textNodes(g as SvgNode)[0]?.attrs).toMatchObject({
+      "font-family": '"JetBrains Mono"',
+      "font-size": 20,
+      "font-weight": 700,
+      "font-style": "italic",
+      "text-decoration": "underline",
+      fill: "#ff0000",
+    });
+  });
+
+  it("draws text with no underline when the style has none", () => {
+    const [g] = describeDiagram(doc([{ kind: "node", id: "a", label: "A", shape: "rect" }], [{ id: "a", x: 0, y: 0, w: 100, h: 60 }]), monoMeasurer);
+    expect(textNodes(g as SvgNode)[0]?.attrs).not.toHaveProperty("text-decoration");
+  });
+
+  it("anchors a label at the left, centre or right of its area by alignment", () => {
+    const at = (align: string): unknown[] => {
+      const [g] = describeDiagram(
+        styled([{ kind: "node", id: "a", label: "A", shape: "rect" }], [{ id: "a", x: 0, y: 0, w: 100, h: 60 }], { a: { align } }),
+        monoMeasurer,
+      );
+      const t = textNodes(g as SvgNode)[0];
+      return [t?.attrs["x"], t?.attrs["text-anchor"]];
+    };
+    expect([at("left"), at("center"), at("right")]).toEqual([[0, "start"], [50, "middle"], [100, "end"]]);
+  });
+
+  it("anchors a text box at its right edge when right aligned, and spaces lines by the line height", () => {
+    const [g] = describeDiagram(
+      styled([{ kind: "text", id: "t", content: "a\nb" }], [{ id: "t", x: 0, y: 0, w: 80 }], { t: { align: "right", lineHeight: 40 } }),
+      monoMeasurer,
+    );
+    const lines = textNodes(g as SvgNode);
+    expect(lines.map((l) => [l.attrs["x"], l.attrs["text-anchor"], l.attrs["y"]])).toEqual([[80, "end", 20], [80, "end", 60]]);
+  });
+
+  it("draws an edge label in the edge's text style", () => {
+    const d = styled(
+      [{ kind: "node", id: "a", shape: "rect" }, { kind: "node", id: "b", shape: "rect" }, { kind: "edge", id: "e", from: "a", to: "b", label: "Hi" }],
+      [{ id: "a", x: 0, y: 0, w: 100, h: 50 }, { id: "b", x: 200, y: 0, w: 100, h: 50 }],
+      { e: { size: 18, color: "#00aa00", weight: 700 } },
+    );
+    const edge = describeDiagram(d, monoMeasurer).find((g) => g.attrs["data-id"] === "e");
+    expect(textNodes(edge as SvgNode)[0]?.attrs).toMatchObject({ "font-size": 18, "font-weight": 700, fill: "#00aa00" });
   });
 });

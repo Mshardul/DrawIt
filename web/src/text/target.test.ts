@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { applyCommand } from "../commands/command.ts";
 import type { DiagramDocument, DiagramElement, LayoutEntry } from "../model/index.ts";
-import { LINE_HEIGHT } from "../render/text-layout.ts";
-import { monoMeasurer } from "../testing/measurer.ts";
+import { DEFAULT_LOOK } from "../style/text-look.ts";
+import { monoMeasurer, sizedMeasurer } from "../testing/measurer.ts";
 import { createTextCommand, editTarget, newTextId, setTextCommand } from "./target.ts";
+
+const LINE_HEIGHT = DEFAULT_LOOK.lineHeight;
 
 const doc = (elements: DiagramElement[], layout: LayoutEntry[]): DiagramDocument => ({
   version: 1,
@@ -22,7 +24,7 @@ describe("edit target", () => {
       text: "aaaa bbbb cccc",
       lines: ["aaaa bbbb", "cccc"],
       box: { x: 20, y: 10 + 30 - LINE_HEIGHT, w: 100, h: 2 * LINE_HEIGHT },
-      align: "center",
+      look: expect.objectContaining({ align: "center" }) as unknown,
     });
   });
 
@@ -39,7 +41,7 @@ describe("edit target", () => {
       text: "ab\nabcd",
       lines: ["ab", "abcd"],
       box: { x: 5, y: 6, w: 40, h: 2 * LINE_HEIGHT },
-      align: "left",
+      look: expect.objectContaining({ align: "left" }) as unknown,
     });
   });
 
@@ -125,7 +127,7 @@ describe("edit target of an edge label", () => {
       text: "Hi",
       lines: ["Hi"],
       box: { x: 190, y: 13, w: 20, h: LINE_HEIGHT },
-      align: "center",
+      look: expect.objectContaining({ align: "center" }) as unknown,
     });
   });
 
@@ -147,5 +149,26 @@ describe("edit target of an edge label", () => {
     const d = doc(elements("Hi"), nodes);
     const emptied = applyCommand(d, setTextCommand("edgeLabel", "e", "")).document;
     expect(emptied.elements.find((e) => e.id === "e")).not.toHaveProperty("label");
+  });
+});
+
+describe("edit target of styled text", () => {
+  const styled = (props: object): DiagramDocument => {
+    const d = doc(
+      [{ kind: "node", id: "a", label: "aaaa", shape: "rect" }, { kind: "text", id: "t", content: "aa bb cc" }],
+      [{ id: "a", x: 0, y: 0, w: 100, h: 60 }, { id: "t", x: 0, y: 100, w: 30 }],
+    );
+    return { ...d, style: { ...d.style, overrides: [{ id: "a", props }, { id: "t", props }] } };
+  };
+
+  it("carries the look it measured with, so the editor can match the display", () => {
+    const target = editTarget(styled({ size: 20, weight: 700, color: "#ff0000", align: "right" }), "a", sizedMeasurer);
+    expect(target?.look).toMatchObject({ style: { size: 20, weight: 700 }, color: "#ff0000", align: "right" });
+  });
+
+  it("lays a label out with its font size and line height", () => {
+    const target = editTarget(styled({ size: 20, lineHeight: 30 }), "t", sizedMeasurer);
+    expect(target?.lines).toEqual(["aa", "bb", "cc"]);
+    expect(target?.box).toEqual({ x: 0, y: 100, w: 30, h: 90 });
   });
 });

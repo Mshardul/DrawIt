@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import type { DiagramDocument, DiagramElement, LayoutEntry } from "../model/index.ts";
 import { monoMeasurer } from "../testing/measurer.ts";
 import { drawnBoxes, elementBox, outlineKind, stackOrder } from "./boxes.ts";
-import { LINE_HEIGHT } from "./text-layout.ts";
+import { DEFAULT_LOOK } from "../style/text-look.ts";
+
+const LINE_HEIGHT = DEFAULT_LOOK.lineHeight;
 
 const doc = (elements: DiagramElement[], layout: LayoutEntry[]): DiagramDocument => ({
   version: 1,
@@ -67,12 +69,12 @@ describe("element box", () => {
   const node: DiagramElement = { kind: "node", id: "a", shape: "rect" };
 
   it("is the layout position with the layout size, or the default size", () => {
-    expect(elementBox(node, { id: "a", x: 3, y: 4, w: 50 }, monoMeasurer)).toEqual({ x: 3, y: 4, w: 50, h: 80 });
+    expect(elementBox(doc([node], []), node, { id: "a", x: 3, y: 4, w: 50 }, monoMeasurer)).toEqual({ x: 3, y: 4, w: 50, h: 80 });
   });
 
   it("is null for an element with no layout entry or no box", () => {
-    expect(elementBox(node, undefined, monoMeasurer)).toBeNull();
-    expect(elementBox({ kind: "edge", id: "e", from: "a", to: "a" }, { id: "e", x: 0, y: 0 }, monoMeasurer)).toBeNull();
+    expect(elementBox(doc([node], []), node, undefined, monoMeasurer)).toBeNull();
+    expect(elementBox(doc([], []), { kind: "edge", id: "e", from: "a", to: "a" }, { id: "e", x: 0, y: 0 }, monoMeasurer)).toBeNull();
   });
 });
 

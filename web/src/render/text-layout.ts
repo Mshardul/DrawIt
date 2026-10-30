@@ -2,13 +2,8 @@
 // measurer, so selection, resize and the renderer all get the same answer.
 import { stretchPoint, targetBox } from "../shapes/stretch.ts";
 import type { Rect, ShapeManifest, Size } from "../shapes/types.ts";
-import type { TextMeasurer, TextStyle } from "../text/measure.ts";
-
-/** The text style every element has until styling arrives. */
-export const DEFAULT_TEXT_STYLE: TextStyle = { family: "Inter", size: 14, weight: 400, italic: false };
-
-/** Distance between baselines. */
-export const LINE_HEIGHT = 24;
+import type { TextLook } from "../style/text-look.ts";
+import type { TextMeasurer } from "../text/measure.ts";
 
 /** Narrowest a text box that fits its content gets, so an empty one can still be selected. */
 export const MIN_TEXT_W = 8;
@@ -23,14 +18,21 @@ export interface TextBoxLayout {
  * A text box with no `w` is as wide as its longest line. With `w` it wraps there. Either way the
  * height is the number of lines, so a `h` in the layout file does not apply to text boxes.
  */
-export function layoutTextBox(content: string, w: number | undefined, measurer: TextMeasurer, style: TextStyle = DEFAULT_TEXT_STYLE): TextBoxLayout {
+export function layoutTextBox(content: string, w: number | undefined, measurer: TextMeasurer, look: TextLook): TextBoxLayout {
   if (w !== undefined) {
-    const lines = measurer.wrap(content, w, style);
-    return { w, h: lines.length * LINE_HEIGHT, lines };
+    const lines = measurer.wrap(content, w, look.style);
+    return { w, h: lines.length * look.lineHeight, lines };
   }
   const lines = content.split("\n");
-  const widest = Math.max(...lines.map((line) => measurer.width(line, style)));
-  return { w: Math.max(MIN_TEXT_W, Math.ceil(widest)), h: lines.length * LINE_HEIGHT, lines };
+  const widest = Math.max(...lines.map((line) => measurer.width(line, look.style)));
+  return { w: Math.max(MIN_TEXT_W, Math.ceil(widest)), h: lines.length * look.lineHeight, lines };
+}
+
+/** Where lines of `align` text start and which way they run, in a span of `width` that begins at `left`. */
+export function alignedX(align: TextLook["align"], left: number, width: number): { x: number; anchor: "start" | "middle" | "end" } {
+  if (align === "left") return { x: left, anchor: "start" };
+  if (align === "right") return { x: left + width, anchor: "end" };
+  return { x: left + width / 2, anchor: "middle" };
 }
 
 /**
@@ -51,16 +53,16 @@ export function labelArea(box: Size, manifest?: ShapeManifest): Rect {
 
 export interface LabelLayout {
   lines: string[];
-  /** Horizontal centre of every line, in the element's own space. */
+  /** Where every line is anchored, in the element's own space: the left, centre or right of the area by alignment. */
   x: number;
   /** Top of the block of lines. */
   top: number;
   area: Rect;
 }
 
-/** A label wrapped to its area, the block of lines centred on the area. */
-export function labelLayout(label: string, box: Size, measurer: TextMeasurer, manifest?: ShapeManifest, style: TextStyle = DEFAULT_TEXT_STYLE): LabelLayout {
+/** A label wrapped to its area, the block of lines centred vertically on the area. */
+export function labelLayout(label: string, box: Size, measurer: TextMeasurer, look: TextLook, manifest?: ShapeManifest): LabelLayout {
   const area = labelArea(box, manifest);
-  const lines = measurer.wrap(label, area.w, style);
-  return { lines, x: area.x + area.w / 2, top: area.y + (area.h - lines.length * LINE_HEIGHT) / 2, area };
+  const lines = measurer.wrap(label, area.w, look.style);
+  return { lines, x: alignedX(look.align, area.x, area.w).x, top: area.y + (area.h - lines.length * look.lineHeight) / 2, area };
 }

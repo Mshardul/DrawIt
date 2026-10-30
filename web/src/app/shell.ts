@@ -13,6 +13,7 @@ import { describeOverlay } from "../render/overlay.ts";
 import { attachTransformInput } from "../move/input.ts";
 import { attachSelectInput } from "../select/input.ts";
 import { type StorageAdapter, StorageError } from "../storage/adapter.ts";
+import { createStylePanel } from "../style/panel.ts";
 import { loadFonts } from "../text/fonts.ts";
 import { attachTextEdit, type TextEdit } from "../text/edit.ts";
 import { createTextMeasurer } from "../text/measure.ts";
@@ -87,6 +88,7 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter): Pr
     el("label", {}, snapToggle, "Snap"),
     el("label", {}, "Grid size", gridSize),
   );
+  const stylePanel = createStylePanel({ getFile: () => current, refresh: () => { refresh(); } });
   const error = el("div", { className: "error", hidden: true });
   error.setAttribute("role", "alert");
   const canvas = document.createElementNS(SVG_NS, "svg");
@@ -107,7 +109,7 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter): Pr
   root.replaceChildren(
     el("header", { className: "bar" }, el("h1", { textContent: "DrawIt" }), picker, name, unsaved, saveButton, tools),
     error,
-    canvas,
+    el("div", { className: "workspace" }, canvas, stylePanel.element),
     status,
   );
 
@@ -148,6 +150,7 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter): Pr
     name.textContent = current?.path ?? "";
     unsaved.hidden = !current?.dirty;
     saveButton.disabled = !current;
+    stylePanel.update();
   };
 
   const setTool = (next: Tool): void => {

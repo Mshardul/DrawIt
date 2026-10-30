@@ -2,6 +2,7 @@
 // renderer draws: shapes and text boxes by their boxes, edges by their routed paths, in one
 // z-order. Frames, images and unknown elements cannot be selected until they are drawn.
 import { routedEdges } from "../connectors/edges.ts";
+import { textLookOf } from "../style/text-look.ts";
 import { edgeLabelLayout } from "../connectors/label.ts";
 import { distanceToPath, pathTouchesRect } from "../connectors/path.ts";
 import type { DiagramDocument } from "../model/index.ts";
@@ -45,7 +46,7 @@ function pickables(doc: DiagramDocument, measurer: TextMeasurer): Pickable[] {
   const out: Pickable[] = [];
   for (const id of stackOrder(doc)) {
     const edge = edges.get(id);
-    const label = edge?.edge.label ? edgeLabelLayout(edge.points, edge.labelAt, edge.edge.label, measurer)?.box : undefined;
+    const label = edge?.edge.label ? edgeLabelLayout(edge.points, edge.labelAt, edge.edge.label, measurer, textLookOf(edge.style))?.box : undefined;
     const picked =
       boxes.get(id) ??
       (edge && {

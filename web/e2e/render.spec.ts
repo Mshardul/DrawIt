@@ -57,11 +57,11 @@ test("draws a rectangle, an ellipse and a text box in the browser", async ({ pag
   await expect(page.locator('g[data-id="note"] text')).toHaveText(["one", "two"]);
   await expect(page.locator('g[data-id="box"] text')).toHaveText("Box");
   const box = await page.locator('g[data-id="box"] rect').boundingBox();
-  // The 1px stroke is centred on the edge, so the box is half a pixel larger on each side.
-  expect(box?.x).toBeCloseTo(9.5, 0);
-  expect(box?.y).toBeCloseTo(19.5, 0);
-  expect(box?.width).toBeCloseTo(101, 0);
-  expect(box?.height).toBeCloseTo(51, 0);
+  // The 1.5px stroke is centred on the edge, so the box is 0.75px larger on each side.
+  expect(box?.x).toBeCloseTo(9.25, 1);
+  expect(box?.y).toBeCloseTo(19.25, 1);
+  expect(box?.width).toBeCloseTo(101.5, 1);
+  expect(box?.height).toBeCloseTo(51.5, 1);
 });
 
 test("drawing again updates in place: a moved element keeps its DOM node, a removed one goes", async ({ page }) => {

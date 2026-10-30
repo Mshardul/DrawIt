@@ -3,6 +3,7 @@
 import type { DiagramDocument, DiagramElement, Style, StyleProps } from "../model/index.ts";
 import { BUILT_IN_THEME, defaultStyleFor } from "./defaults.ts";
 import { createStyleResolver } from "./resolve.ts";
+import { type TextLook, textLookOf } from "./text-look.ts";
 
 interface Resolved {
   resolve: (element: DiagramElement) => StyleProps;
@@ -28,4 +29,9 @@ export function styleOf(doc: DiagramDocument, element: DiagramElement): StylePro
 /** A colour token's value for this document: the file's theme first, then the built-in theme. */
 export function themeColour(doc: DiagramDocument, name: string): string | undefined {
   return doc.style.theme.colors[name] ?? BUILT_IN_THEME.colors[name];
+}
+
+/** How an element's text is drawn and measured. */
+export function textLookFor(doc: DiagramDocument, element: DiagramElement): TextLook {
+  return textLookOf(styleOf(doc, element));
 }

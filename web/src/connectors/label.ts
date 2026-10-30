@@ -4,6 +4,7 @@ import type { Command } from "../commands/command.ts";
 import type { DiagramDocument, Point } from "../model/index.ts";
 import type { Box } from "../render/boxes.ts";
 import { layoutTextBox } from "../render/text-layout.ts";
+import type { TextLook } from "../style/text-look.ts";
 import type { TextMeasurer } from "../text/measure.ts";
 import { routedEdges } from "./edges.ts";
 import { nearestOnPath, pointAlongPath } from "./path.ts";
@@ -19,10 +20,10 @@ export interface EdgeLabelLayout {
 }
 
 /** The lines and box of a label at `labelAt` along `points`, or null when the path is not drawn. */
-export function edgeLabelLayout(points: Point[], labelAt: number | undefined, text: string, measurer: TextMeasurer): EdgeLabelLayout | null {
+export function edgeLabelLayout(points: Point[], labelAt: number | undefined, text: string, measurer: TextMeasurer, look: TextLook): EdgeLabelLayout | null {
   const centre = pointAlongPath(points, labelAt ?? DEFAULT_LABEL_AT);
   if (!centre) return null;
-  const { w, h, lines } = layoutTextBox(text, undefined, measurer);
+  const { w, h, lines } = layoutTextBox(text, undefined, measurer, look);
   return { lines, box: { x: centre.x - w / 2, y: centre.y - h / 2, w, h } };
 }
 

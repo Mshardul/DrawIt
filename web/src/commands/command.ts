@@ -197,6 +197,10 @@ function setStyle(doc: Doc, command: SetStyleCommand): void {
   if (!holder) return;
   Object.assign(holder.props, command.set);
   unset(holder.props, command.unset);
+  // An override with nothing set says nothing; a class stays because elements refer to it by name.
+  if (target.kind === "el" && Object.keys(holder.props).length === 0) {
+    doc.style.overrides = doc.style.overrides.filter((o) => o.id !== target.id);
+  }
 }
 
 function reorder(doc: Doc, command: ReorderCommand): void {

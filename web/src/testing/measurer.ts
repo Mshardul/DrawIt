@@ -11,3 +11,9 @@ export const monoMeasurer: TextMeasurer = {
   width: widthOf,
   wrap: (text, maxWidth) => breakLines(text, maxWidth, widthOf),
 };
+
+/** A measurer whose characters are half as wide as the font size, so a test can see the style reach it. */
+export const sizedMeasurer: TextMeasurer = {
+  width: (text, style) => Array.from(text).length * (style.size / 2),
+  wrap: (text, maxWidth, style) => breakLines(text, maxWidth, (piece) => Array.from(piece).length * (style.size / 2)),
+};

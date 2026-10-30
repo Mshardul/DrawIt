@@ -8,11 +8,12 @@ import type { DiagramDocument, DiagramElement, StyleProps } from "../model/index
 import { elementsById, layoutById } from "../model/lookup.ts";
 import type { ShapeManifest } from "../shapes/types.ts";
 import { styleOf, themeColour } from "../style/of.ts";
+import { type TextLook, textLookOf } from "../style/text-look.ts";
 import { COLOUR } from "../style/values.ts";
 import { svgTextAttrs, type TextMeasurer } from "../text/measure.ts";
 import { outlineKind, stackOrder } from "./boxes.ts";
 import { sizeOf } from "./size.ts";
-import { DEFAULT_TEXT_STYLE, labelLayout, layoutTextBox, LINE_HEIGHT } from "./text-layout.ts";
+import { alignedX, labelLayout, layoutTextBox } from "./text-layout.ts";
 
 export interface SvgNode {
   tag: string;
@@ -34,7 +35,6 @@ export interface DescribeOptions {
 /** Finds the manifest of a shape by the name written in the file, or undefined for a shape that has none. */
 export type ShapeLookup = (shape: string) => ShapeManifest | undefined;
 
-const INK = "#1a1a1a";
 
 /** A resolved colour as an SVG paint; anything that is not a plain colour draws as none. */
 const paint = (value: unknown): string => (typeof value === "string" && COLOUR.test(value) ? value : "none");
@@ -62,17 +62,18 @@ const node = (tag: string, attrs: SvgNode["attrs"], children: SvgNode[] = [], te
   text === undefined ? { tag, attrs, children } : { tag, attrs, children, text };
 
 /** One `text` node per line, all on `x`, line `i` centred `i` line heights below `top`. */
-function lineNodes(lines: string[], x: number, top: number, anchor: "start" | "middle"): SvgNode[] {
+function lineNodes(lines: string[], x: number, top: number, anchor: "start" | "middle" | "end", look: TextLook): SvgNode[] {
   return lines.map((line, i) =>
     node(
       "text",
       {
         x,
-        y: top + LINE_HEIGHT / 2 + i * LINE_HEIGHT,
+        y: top + look.lineHeight / 2 + i * look.lineHeight,
         "text-anchor": anchor,
         "dominant-baseline": "central",
-        ...svgTextAttrs(DEFAULT_TEXT_STYLE),
-        fill: INK,
+        ...svgTextAttrs(look.style),
+        ...(look.underline && { "text-decoration": "underline" }),
+        fill: look.color,
       },
       [],
       line,
@@ -80,9 +81,9 @@ function lineNodes(lines: string[], x: number, top: number, anchor: "start" | "m
   );
 }
 
-function labelNodes(label: string, w: number, h: number, measurer: TextMeasurer, manifest?: ShapeManifest): SvgNode[] {
-  const { lines, x, top } = labelLayout(label, { w, h }, measurer, manifest);
-  return lineNodes(lines, x, top, "middle");
+function labelNodes(label: string, w: number, h: number, measurer: TextMeasurer, look: TextLook, manifest?: ShapeManifest): SvgNode[] {
+  const { lines, x, top } = labelLayout(label, { w, h }, measurer, look, manifest);
+  return lineNodes(lines, x, top, alignedX(look.align, 0, 0).anchor, look);
 }
 
 function body(
@@ -102,7 +103,7 @@ function body(
           ? node("ellipse", { cx: w / 2, cy: h / 2, rx: w / 2, ry: h / 2, ...outlineAttrs(style) })
           : node("rect", { width: w, height: h, ...cornerAttrs(style), ...outlineAttrs(style) });
       const label =
-        element.kind === "node" && !hideText ? labelNodes(element.label ?? element.id, w, h, measurer, shapes?.(element.shape)) : [];
+        element.kind === "node" && !hideText ? labelNodes(element.label ?? element.id, w, h, measurer, textLookOf(style), shapes?.(element.shape)) : [];
       return [outline, ...label];
     }
     case "text": {
@@ -110,7 +111,9 @@ function body(
         style.fill !== undefined || style.stroke !== undefined
           ? [node("rect", { width: w, height: h, ...cornerAttrs(style), ...outlineAttrs(style) })]
           : [];
-      const lines = hideText ? [] : lineNodes(layoutTextBox(element.content, w, measurer).lines, 0, 0, "start");
+      const look = textLookOf(style);
+      const at = alignedX(look.align, 0, w);
+      const lines = hideText ? [] : lineNodes(layoutTextBox(element.content, w, measurer, look).lines, at.x, 0, at.anchor, look);
       return [...background, ...lines];
     }
     default:
@@ -123,8 +126,9 @@ const fmt = (n: number): string => String(n);
 /** The background behind a label, so the line does not run through the text, and its room around the text. */
 const LABEL_PAD = 4;
 
-function labelNodesOnEdge({ edge, points, labelAt }: RoutedEdge, measurer: TextMeasurer, paper: string): SvgNode[] {
-  const layout = edge.label ? edgeLabelLayout(points, labelAt, edge.label, measurer) : null;
+function labelNodesOnEdge({ edge, points, labelAt, style }: RoutedEdge, measurer: TextMeasurer, paper: string): SvgNode[] {
+  const look = textLookOf(style);
+  const layout = edge.label ? edgeLabelLayout(points, labelAt, edge.label, measurer, look) : null;
   if (!layout) return [];
   const { box, lines } = layout;
   const background = node("rect", {
@@ -134,7 +138,8 @@ function labelNodesOnEdge({ edge, points, labelAt }: RoutedEdge, measurer: TextM
     height: box.h + 2 * LABEL_PAD,
     fill: paper,
   });
-  return [background, ...lineNodes(lines, box.x + box.w / 2, box.y, "middle")];
+  const at = alignedX(look.align, box.x, box.w);
+  return [background, ...lineNodes(lines, at.x, box.y, at.anchor, look)];
 }
 
 function edgeNode(routed: RoutedEdge, measurer: TextMeasurer, hideText: boolean, paper: string): SvgNode {
@@ -183,7 +188,7 @@ export function describeDiagram(doc: DiagramDocument, measurer: TextMeasurer, op
       continue;
     }
     const entry = entries.get(id);
-    const size = sizeOf(element, entry, measurer);
+    const size = sizeOf(doc, element, entry, measurer);
     if (!entry || !size) continue;
     const style = styleOf(doc, element);
     const children = body(element, style, size.w, size.h, measurer, shapes, hideText?.has(element.id) === true);
