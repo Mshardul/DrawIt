@@ -78,7 +78,8 @@ test("editing fill writes an override and draws it; undo restores the default", 
   await expect(page.locator('.canvas [data-id="a"] rect').first()).toHaveAttribute("fill", "#00ff00");
   await page.evaluate(() => { (window as unknown as { hooks: Hooks }).hooks.undo(); });
   expect((await overrides(page)).map((o) => o.id)).toEqual(["b"]);
-  await expect(field(page, "fill")).toHaveValue("#dbe8f5");
+  await expect(field(page, "fill")).toHaveValue("");
+  await expect(field(page, "fill")).toHaveAttribute("placeholder", "none");
 });
 
 test("a selection with different fills shows mixed, and an edit sets all of them", async ({ page }) => {
@@ -98,7 +99,8 @@ test("clear removes the override and the line", async ({ page }) => {
   await select(page, ["b"]);
   await panel(page).getByRole("button", { name: "Clear fill" }).click();
   expect(await overrides(page)).toEqual([]);
-  await expect(field(page, "fill")).toHaveValue("#dbe8f5");
+  await expect(field(page, "fill")).toHaveValue("");
+  await expect(field(page, "fill")).toHaveAttribute("placeholder", "none");
 });
 
 test("a value the property does not accept is refused and marked", async ({ page }) => {

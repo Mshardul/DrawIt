@@ -16,7 +16,8 @@ function doc(overrides: DiagramDocument["style"]["overrides"] = []): DiagramDocu
 
 describe("style of an element", () => {
   it("resolves with the default look and the built-in theme", () => {
-    expect(styleOf(doc(), node)).toMatchObject({ fill: "#dbe8f5", stroke: "#1f4e79", strokeWidth: 1.5 });
+    expect(styleOf(doc(), node)).toMatchObject({ stroke: "#1f4e79", strokeWidth: 1.5 });
+    expect(styleOf(doc(), node)).not.toHaveProperty("fill");
   });
 
   it("applies the document's overrides", () => {

@@ -4,6 +4,7 @@ import { attachEdgeInput, type Tool } from "../connectors/input.ts";
 import { attachBendInput } from "../connectors/bend-input.ts";
 import { attachLabelInput } from "../connectors/label-input.ts";
 import { attachReattachInput } from "../connectors/reattach-input.ts";
+import { attachEditInput } from "../edit/input.ts";
 import { defaultSize } from "../library/preview.ts";
 import { attachShapeInput } from "../library/input.ts";
 import type { PlacedShape } from "../library/place.ts";
@@ -303,6 +304,7 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter): Pr
     },
     refresh,
   });
+  attachEditInput({ getFile: () => current, measurer, refresh });
   attachTransformInput({
     target: canvas,
     getView: () => view,

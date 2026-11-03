@@ -33,44 +33,43 @@ All of the following ship in v1.
 5. Select, multi-select (shift- or Cmd/Ctrl-click, drag-box), select all, select inside a shape or frame.
 6. Move, resize, arrow-key nudge.
 7. Delete, duplicate.
-8. Bring to front, send to back.
-9. Align and distribute.
-10. Lock/unlock.
-11. Images: paste or drag in, saved to `assets/`.
+8. Align and distribute.
+9. Lock/unlock.
+10. Images: paste or drag in, saved to `assets/`.
 
 **Connectors**
 
-12. Attached arrows that follow shapes, with auto anchors.
-13. Straight and elbow routing, manual bend points.
-14. Arrowheads at either end; labels on arrows.
-15. Re-attach or detach an arrow by dragging its end.
-16. Attachment at any point along an element's edge.
+11. Attached arrows that follow shapes, with auto anchors.
+12. Straight and elbow routing, manual bend points.
+13. Arrowheads at either end; labels on arrows.
+14. Re-attach or detach an arrow by dragging its end.
+15. Attachment at any point along an element's edge.
 
 **Text and style**
 
-17. Text styling for a whole text box or label: font, size, bold, italic, underline, colour, alignment.
-18. Fill, stroke colour, stroke width, dash, corner radius, opacity.
-19. Colour picker with recent colours.
+16. Text styling for a whole text box or label: font, size, bold, italic, underline, colour, alignment.
+17. Fill, stroke colour, stroke width, dash, corner radius, opacity.
+18. Colour picker with recent colours.
 
 **Workspace and files**
 
-20. Open folder, file tree, new/rename/delete file.
-21. Multiple open files as tabs.
-22. Explicit save, unsaved indicator, refusal of invalid files.
-23. Copy/paste elements within and across files.
-24. Undo/redo.
-25. Whole-line comment preservation in files.
+19. Open folder, file tree, new/rename/delete file.
+20. Multiple open files as tabs.
+21. Explicit save, unsaved indicator, refusal of invalid files.
+22. Copy/paste elements within and across files.
+23. Undo/redo.
+24. Whole-line comment preservation in files.
 
 **Output**
 
-26. Frames.
-27. Export PNG/SVG of the canvas, a selection or a frame.
+25. Frames.
+26. Export PNG/SVG of the canvas, a selection or a frame.
 
 **Interface and infrastructure**
 
-28. Minimal UI with configurable shortcuts, View/Preferences toggles and a command palette.
-29. Go binary, file format, formatter, automated tests, performance budgets.
-30. In-app documentation of the file format, shapes and style properties.
+27. Minimal UI with configurable shortcuts, View/Preferences toggles and a command palette.
+28. Go binary, file format, formatter, automated tests, performance budgets.
+29. In-app documentation of the file format, shapes and style properties.
 
 ## 3. Shape library
 
@@ -207,7 +206,7 @@ Style holds all appearance.
 
 | Property | Node | Shape | Text box | Edge |
 |---|---|---|---|---|
-| `fill` | `$surface` | `$surface` | none | none |
+| `fill` | none | none | none | none |
 | `stroke` | `$line` | `$line` | none | `$ink` |
 | `stroke-width` | `$stroke` | `$stroke` | none | `$stroke` |
 | `dash` | `solid` | `solid` | none | `solid` |
@@ -250,7 +249,7 @@ Layout holds geometry only: one line per element, keyed by ID, owned by the canv
 - **Free ends:** `from-point="x,y"` or `to-point="x,y"` for an end written as `-` in structure.
 - **Bend points:** `via="x,y x,y …"`.
 - **Edge label position:** `label-at=<0..1>` along the path.
-- **Z-order:** the order of entries; later entries draw on top. Nodes and edges share one order. New elements are appended, so they draw on top; bring to front and send to back move an entry.
+- **Z-order:** the order of entries; later entries draw on top. Nodes and edges share one order. New elements are appended, so they draw on top; moving an entry changes the order.
 - **Missing entries:** elements without a layout line are placed on open in a grid, in file order, left to right, wrapping at 1200px, at each shape's default size with 80px between them. Their positions are written on save. Edges without anchors use `auto`. The in-app documentation tells authors, human or AI, to write a layout section.
 - **Orphan entries:** lines for IDs no longer in structure are dropped on save.
 
@@ -429,6 +428,7 @@ Each budget is an automated test against generated 500-element files.
   - Alignment guides and equal-spacing hints while dragging.
   - Rich text in text boxes, with mixed styles inside one box.
   - Copy style / paste style.
+  - Stacking order commands: bring to front and send to back, as buttons in the Arrange group of the right panel.
 - **v2, prioritised:** presentation mode (frames as slides), find text on the canvas (Cmd/Ctrl+F), links on shapes (to a URL or another workspace file).
 - **v2:** `.drawio` import, dark mode, code view of the file with diagnostics for hand edits, curved routing, multiple themes, freehand ink, class/ERD compartments with per-field editing.
 - **Plugins and breadth:** plugin API for code extensions, icon packs, charts, auto-layout (ELK), Mermaid and D2 import, PDF export, templates.

@@ -39,7 +39,7 @@ describe("SVG renderer, pack shapes", () => {
   });
 
   it("draws a fill part in the element's fill and stroke, and leaves no role in the output", () => {
-    const part = find(draw(doc([node("rounded-rect")], [at(200, 100)])), "path");
+    const part = find(draw(doc([node("rounded-rect")], [at(200, 100)], { fill: "#dbe8f5" })), "path");
     expect(part?.attrs).toMatchObject({ fill: "#dbe8f5", stroke: "#1f4e79", "stroke-width": 1.5 });
     expect(part?.attrs["data-role"]).toBeUndefined();
   });

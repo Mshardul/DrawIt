@@ -369,9 +369,9 @@ describe("SVG renderer, fill, stroke and opacity", () => {
     describeDiagram(d, monoMeasurer).find((g) => g.attrs["data-id"] === id) as SvgNode;
   const a: DiagramElement = { kind: "node", id: "a", shape: "rect" };
 
-  it("draws a node with the colours of the default theme", () => {
+  it("draws a node with no fill and the stroke colours of the default theme", () => {
     expect(find(group(doc([a], [box("a")]), "a"), "rect")?.attrs).toMatchObject({
-      fill: "#dbe8f5",
+      fill: "none",
       stroke: "#1f4e79",
       "stroke-width": 1.5,
     });

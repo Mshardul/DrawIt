@@ -8,7 +8,7 @@ The table has one fixed set of columns and plain-text cells. Changing a column i
 
 - **Columns:** ID, Phase, Title, Description, Depends on, Story Points, Status, Created on, Updated on.
 - **ID:** `T-NNN`, never reused.
-- **Phase:** `0` to `7`.
+- **Phase:** `0` to `8`.
 - **Depends on:** comma-separated IDs, or `none`.
 - **Story Points:** one of `1`, `2`, `3`, `5` or `8`.
 - **Status:** `todo`, `doing`, `done` or `blocked`.
@@ -26,9 +26,10 @@ Phases 0 to 5 are broken into tickets. Later phases are outlined and get tickets
 | 2 | Connectors and text. |
 | 3 | Styling: theme, classes and overrides resolved from the style section, drawn on shapes, edges and text, and edited from a style panel with a colour picker. |
 | 4 | Shape packs: pack loader, pack shapes drawn, hit-tested and routed by their outlines, shape library sidebar and creation tool, and one ticket per shape category, built in parallel from the shape standard (T-022). Category work can start before the renderer exists. |
-| 5 | Editing commands: delete, duplicate, bring to front and send to back, align and distribute, lock, select inside, frames, images. |
+| 5 | Editing commands: delete, duplicate, align and distribute, lock, select inside, frames, images. |
 | 6 | Workspace, files, file watching, preferences, clipboard, export. |
 | 7 | Polish: performance budgets, in-app documentation, release. |
+| 8 | After v1: stacking order commands, for diagrams where filled shapes overlap. |
 
 ## Tickets
 
@@ -81,6 +82,7 @@ Phases 0 to 5 are broken into tickets. Later phases are outlined and get tickets
 | T-046 | 3 | Render dash, gradient and shadow | Draw dash, gradient fill and shadow from the resolved style. Gradient and shadow definitions are part of the rendered tree, built once and not recomputed per pointer move, so SVG export can reuse them. While a drag would break the frame budget, it is drawn without filters and the committed render keeps them. | T-038, T-040 | 5 | done | 2026-10-29 | 2026-10-30 |
 | T-047 | 3 | Panel: dash, gradient and shadow fields | Dash, gradient and shadow properties in the style panel. | T-042, T-046 | 3 | done | 2026-10-29 | 2026-10-30 |
 | T-048 | 3 | Phase 3 performance check | In Chromium and WebKit, on a generated 500-element file with shadows, gradients and styled text: dragging a selection and resizing a shape stay inside the 60fps budget (spec 7.1). | T-044, T-046 | 3 | done | 2026-10-29 | 2026-10-30 |
+| T-082 | 3 | Hollow by default | A node and a shape have no fill in the default look, so overlapping shapes show through each other until a fill is set. Setting a fill, gradient or shadow works as before, and the `surface` token stays in the default theme. | T-037 | 2 | done | 2026-11-04 | 2026-11-04 |
 | T-049 | 4 | Pack loader | Load the bundled packs through a source of pack files, check them with the shape validator, resolve `<pack>.<id>` names (`core` shapes need no prefix) and apply the stretch for an element size, cached by shape and size. Report shape names no pack provides. Pure code, no renderer. | T-022 | 5 | done | 2026-10-29 | 2026-10-30 |
 | T-050 | 4 | Render pack shapes and placeholders | Draw nodes and shapes from their pack SVG at the element size, coloured by role from the resolved style. An unknown shape is a dashed placeholder showing its name, at its layout size, or the standard default size when the layout has none. Labels use the manifest label rectangle. | T-049, T-040, T-026 | 5 | done | 2026-10-29 | 2026-10-30 |
 | T-051 | 4 | Pack outlines for hit-testing and straight routing | Flatten the outline once per shape and size. Shape hit-testing is inside the outline plus a margin, and straight edges clip to the outline. Moving or resizing a shape re-routes only its edges. | T-049, T-028, T-031 | 5 | done | 2026-10-29 | 2026-10-30 |
@@ -101,11 +103,10 @@ Phases 0 to 5 are broken into tickets. Later phases are outlined and get tickets
 | T-066 | 4 | Placeholder name while editing | While the label of a node with an unknown shape is edited, the placeholder's name text is not drawn under the editor. | T-050, T-027 | 2 | done | 2026-10-31 | 2026-10-31 |
 | T-067 | 4 | Legible previews and details | Library previews are drawn at 72 by 52 px with strokes that keep their screen width, and no pack shape has a round part narrower than 6 px or a rectangle part with a side under 8 px. | T-052, T-057, T-058 | 2 | done | 2026-10-31 | 2026-10-31 |
 | T-068 | 4 | Four anchors only | A shape's anchors are exactly top, right, bottom and left: the validator refuses any other key and the shape standard lists no extra points. | T-022 | 1 | done | 2026-10-31 | 2026-10-31 |
-| T-069 | 5 | Delete | Delete and Backspace remove the selection as one undoable command. An edge attached to a deleted element keeps that end where it was, as a free end; deleting an edge removes only it. Undo restores the elements, their layout lines and the selection. | T-006, T-014, T-029 | 3 | todo | 2026-10-31 | 2026-10-31 |
+| T-069 | 5 | Delete | Delete and Backspace remove the selection as one undoable command. An edge attached to a deleted element keeps that end where it was, as a free end; deleting an edge removes only it. Undo restores the elements, their layout lines and the selection. | T-006, T-014, T-029 | 3 | done | 2026-10-31 | 2026-11-04 |
 | T-070 | 5 | Duplicate | The duplicate command copies the selection with fresh IDs at a fixed offset and selects the copies, as one undoable command. An edge between two copied elements is copied between the copies; an edge with one end copied keeps that end and its other end becomes a free end. Classes and style overrides of the originals carry over. | T-006, T-014, T-029 | 5 | todo | 2026-10-31 | 2026-10-31 |
-| T-071 | 5 | Bring to front and send to back | Move the selected entries to the end or the start of the layout order, keeping their order among themselves, as one undoable command. Nodes and edges share one order. | T-006, T-014 | 3 | todo | 2026-10-31 | 2026-10-31 |
 | T-072 | 5 | Align and distribute | Pure commands that align the selection to its left, centre, right, top, middle or bottom, and distribute three or more elements with equal gaps horizontally or vertically, by bounding boxes. A locked element is not moved. Each is one undoable command, and bend points and free ends of edges that move with their elements follow as in a move. | T-015 | 3 | todo | 2026-10-31 | 2026-10-31 |
-| T-073 | 5 | Arrange panel | An Arrange group in the right panel with buttons for the z-order, align and distribute commands, each enabled only when it can do something for the selection. | T-071, T-072, T-042 | 3 | todo | 2026-10-31 | 2026-10-31 |
+| T-073 | 5 | Arrange panel | An Arrange group in the right panel with buttons for the align and distribute commands, each enabled only when it can do something for the selection. | T-072, T-042 | 3 | todo | 2026-10-31 | 2026-11-04 |
 | T-074 | 5 | Lock and unlock | A command sets or clears `locked` on the selection as one undoable command. A locked element cannot be moved, resized, nudged, deleted or restyled, its edge ends and label cannot be dragged, and it is skipped by drag-box and select all; it can still be clicked. The panel shows the lock state. | T-006, T-014, T-015 | 3 | todo | 2026-10-31 | 2026-10-31 |
 | T-075 | 5 | Select inside | A command selects every element fully inside the selected shape or frame, with the edges whose both ends are among them, and skips locked elements. | T-014, T-074 | 3 | todo | 2026-10-31 | 2026-10-31 |
 | T-076 | 5 | Render frames | Draw frames from the model: an outline and the frame's name at its top left, in layout order. A frame is selected by its outline or its name and not by its inside, is moved and resized like a shape, and is not attached to by edges. | T-012, T-014, T-040 | 3 | todo | 2026-10-31 | 2026-10-31 |
@@ -113,4 +114,6 @@ Phases 0 to 5 are broken into tickets. Later phases are outlined and get tickets
 | T-078 | 5 | Binary files in storage | The storage adapter interface, the in-memory adapter, the HTTP adapter and the Go API read and write binary files inside the opened folder, under the same confinement and size limit as text files. | T-010, T-019, T-021 | 5 | todo | 2026-10-31 | 2026-10-31 |
 | T-079 | 5 | Render images | Draw `image` elements from their `src` at the layout size, or at their natural size when the layout gives none. A file that cannot be read is a dashed placeholder showing its path. | T-012, T-078 | 3 | todo | 2026-10-31 | 2026-10-31 |
 | T-080 | 5 | Add images | Paste or drop an image file onto the canvas: it is written to `assets/` under an unused name and an `image` element is added at its natural size, capped to the canvas, as one undoable command. | T-079, T-006 | 5 | todo | 2026-10-31 | 2026-10-31 |
-| T-081 | 5 | Phase 5 performance check | In Chromium and WebKit, on a generated 500-element file with frames and images: dragging a selection, resizing a shape with attached edges and bringing a selection to the front stay inside the 60fps budget (spec 7.1). | T-076, T-079, T-071 | 3 | todo | 2026-10-31 | 2026-10-31 |
+| T-081 | 5 | Phase 5 performance check | In Chromium and WebKit, on a generated 500-element file with frames and images: dragging a selection and resizing a shape with attached edges stay inside the 60fps budget (spec 7.1). | T-076, T-079 | 3 | todo | 2026-10-31 | 2026-11-04 |
+| T-071 | 8 | Bring to front and send to back | Move the selected entries to the end or the start of the layout order, keeping their order among themselves, as one undoable command. Nodes and edges share one order. | T-006, T-014 | 3 | todo | 2026-10-31 | 2026-11-04 |
+| T-083 | 8 | Z-order buttons | Bring to front and send to back buttons in the Arrange group of the right panel, each enabled only when it can do something for the selection. | T-071, T-073 | 2 | todo | 2026-11-04 | 2026-11-04 |

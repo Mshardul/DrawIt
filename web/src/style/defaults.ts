@@ -28,7 +28,6 @@ const text = {
 } as const satisfies StyleProps;
 
 const outlined = {
-  fill: "$surface",
   stroke: "$line",
   strokeWidth: "$stroke",
   dash: "solid",

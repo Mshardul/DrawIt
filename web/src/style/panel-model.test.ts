@@ -42,8 +42,12 @@ describe("style panel fields", () => {
   });
 
   it("shows the resolved value, so a default shows as the theme's colour", () => {
-    expect(field(["a"], "fill")?.value).toEqual({ state: "same", value: "#dbe8f5" });
+    expect(field(["a"], "stroke")?.value).toEqual({ state: "same", value: "#1f4e79" });
     expect(field(["b"], "fill")?.value).toEqual({ state: "same", value: "#ff0000" });
+  });
+
+  it("shows an unset fill as no value", () => {
+    expect(field(["a"], "fill")?.value).toEqual({ state: "same", value: undefined });
   });
 
   it("shows mixed when the selected elements differ", () => {

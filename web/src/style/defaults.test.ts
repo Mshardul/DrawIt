@@ -28,9 +28,8 @@ describe("built-in theme", () => {
 });
 
 describe("default look", () => {
-  it("draws a node with a surface fill, a line stroke and centred ink text", () => {
+  it("draws a node with no fill, a line stroke and centred ink text", () => {
     expect(resolve(node)).toEqual({
-      fill: "#dbe8f5",
       stroke: "#1f4e79",
       strokeWidth: 1.5,
       dash: "solid",
@@ -47,9 +46,8 @@ describe("default look", () => {
     });
   });
 
-  it("gives a shape a fill and stroke and no text properties", () => {
+  it("gives a shape a stroke, no fill and no text properties", () => {
     expect(resolve(shape)).toEqual({
-      fill: "#dbe8f5",
       stroke: "#1f4e79",
       strokeWidth: 1.5,
       dash: "solid",
@@ -98,8 +96,17 @@ describe("default look", () => {
     expect(resolve({ kind: "image", id: "i", src: "assets/a.png" })).toEqual({});
   });
 
+  it("takes the built-in surface colour for a fill the file sets by token", () => {
+    const filled: Style = { ...bare, classes: [{ name: "filled", props: { fill: "$surface" } }] };
+    expect(createStyleResolver(filled, BUILT_IN_THEME, defaultStyleFor)({ ...node, class: "filled" }).fill).toBe("#dbe8f5");
+  });
+
   it("follows a file's redefined token", () => {
-    const themed: Style = { ...bare, theme: { ...bare.theme, colors: { surface: "#ffeecc" } } };
-    expect(createStyleResolver(themed, BUILT_IN_THEME, defaultStyleFor)(node).fill).toBe("#ffeecc");
+    const themed: Style = {
+      ...bare,
+      theme: { ...bare.theme, colors: { surface: "#ffeecc" } },
+      classes: [{ name: "filled", props: { fill: "$surface" } }],
+    };
+    expect(createStyleResolver(themed, BUILT_IN_THEME, defaultStyleFor)({ ...node, class: "filled" }).fill).toBe("#ffeecc");
   });
 });
