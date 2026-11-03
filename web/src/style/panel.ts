@@ -4,6 +4,7 @@
 import type { OpenFile } from "../app/workspace.ts";
 import { type Command, CommandError } from "../commands/command.ts";
 import { FONT_FAMILIES } from "../text/fonts.ts";
+import { lockCommand, lockState } from "../edit/lock.ts";
 import { clearStyle, setStyle } from "./commands.ts";
 import { RecentColours, themeTokens } from "./colours.ts";
 import { type FieldValue, type PanelField, panelFields } from "./panel-model.ts";
@@ -54,6 +55,14 @@ export function createStylePanel(host: StylePanelHost): StylePanel {
   let rows: Row[] = [];
   let shown = "";
   const recent = new RecentColours();
+
+  const lockBox = document.createElement("input");
+  lockBox.type = "checkbox";
+  lockBox.setAttribute("aria-label", "Locked");
+  const lockRow = document.createElement("label");
+  lockRow.className = "style-row lock-row";
+  lockRow.append("Locked", lockBox);
+  element.append(lockRow);
 
   const closePickers = (): void => {
     for (const row of rows) if (row.picker) row.picker.hidden = true;
@@ -198,7 +207,17 @@ export function createStylePanel(host: StylePanelHost): StylePanel {
     }
     input.removeAttribute("aria-invalid");
     row.clear.hidden = !field.overridden;
+    input.disabled = field.locked;
+    row.clear.disabled = field.locked;
+    if (row.pick) row.pick.disabled = field.locked;
   };
+
+  lockBox.addEventListener("change", () => {
+    const file = host.getFile();
+    const command = file && lockCommand(file.document, file.history.selection, lockBox.checked);
+    if (command) apply(command);
+    else host.refresh();
+  });
 
   element.addEventListener("keydown", (event) => {
     if (event.key === "Escape") closePickers();
@@ -214,6 +233,7 @@ export function createStylePanel(host: StylePanelHost): StylePanel {
         shown = signature;
         rows = fields.map(build);
         element.replaceChildren(
+          lockRow,
           ...rows.map((row) => {
             const label = document.createElement("label");
             label.append(row.field.def.name, row.input);
@@ -227,7 +247,10 @@ export function createStylePanel(host: StylePanelHost): StylePanel {
         );
       }
       rows.forEach((row, i) => { const field = fields[i]; if (field) show(row, field); });
-      element.hidden = fields.length === 0;
+      const state = file ? lockState(file.document, file.history.selection) : null;
+      lockBox.checked = state === "locked";
+      lockBox.indeterminate = state === "mixed";
+      element.hidden = state === null;
     },
   };
 }

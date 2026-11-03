@@ -5,6 +5,7 @@ import { attachBendInput } from "../connectors/bend-input.ts";
 import { attachLabelInput } from "../connectors/label-input.ts";
 import { attachReattachInput } from "../connectors/reattach-input.ts";
 import { attachEditInput } from "../edit/input.ts";
+import { isTextEntry } from "./text-entry.ts";
 import { defaultSize } from "../library/preview.ts";
 import { attachShapeInput } from "../library/input.ts";
 import type { PlacedShape } from "../library/place.ts";
@@ -412,8 +413,7 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter): Pr
     }
   });
   addEventListener("keydown", (event) => {
-    const t = event.target;
-    if (t instanceof HTMLInputElement || t instanceof HTMLSelectElement || t instanceof HTMLTextAreaElement) return;
+    if (isTextEntry(event.target)) return;
     if (!current || !(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== "z") return;
     event.preventDefault();
     if (event.shiftKey ? current.history.redo() : current.history.undo()) refresh();

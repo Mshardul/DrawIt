@@ -35,7 +35,7 @@ const transformable = (doc: DiagramDocument, measurer: TextMeasurer, id: string)
  * every unlocked edge that is selected or has both of its ends on the moving elements. An edge
  * with an end that stays keeps its bend points, so it bends to follow the end that moved.
  */
-function edgeShifts(doc: DiagramDocument, selected: ReadonlySet<string>, moving: ReadonlySet<string>, dx: number, dy: number): SetLayoutCommand["changes"] {
+export function edgeShifts(doc: DiagramDocument, selected: ReadonlySet<string>, moving: ReadonlySet<string>, dx: number, dy: number): SetLayoutCommand["changes"] {
   const entries = new Map<string, LayoutEntry>(doc.layout.map((e) => [e.id, e]));
   const shift = (p: Point): Point => ({ x: p.x + dx, y: p.y + dy });
   const changes: SetLayoutCommand["changes"] = [];

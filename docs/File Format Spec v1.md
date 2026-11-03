@@ -294,7 +294,7 @@ A minimal canvas with floating toolbars.
 - Snapping to the grid.
 - Elements move together by multi-selecting them. Dropping an element over another changes neither.
 - **Select inside:** a command selects every element fully inside the selected shape or frame, so a container can be moved or copied with its contents. Edges with both ends among the selected elements are included; locked elements are skipped. A boundary, such as a subnet or a swimlane, is an ordinary shape drawn behind its contents.
-- Locked elements cannot be moved or selected by drag-box.
+- Locked elements cannot be moved, resized, deleted or restyled, and drag-box and select all skip them; a click still selects one. The style panel shows the lock state and can lock and unlock the selection.
 - A drag is transient until release and commits as one command.
 
 ### 5.3 Connectors

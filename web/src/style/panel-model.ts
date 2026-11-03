@@ -1,6 +1,7 @@
 // What the style panel shows for a selection: one field per property, with the value the
 // selected elements share or "mixed". Pure, so the panel's rules need no browser.
 import type { DiagramDocument, DiagramElement, StyleProps } from "../model/index.ts";
+import { layoutById } from "../model/lookup.ts";
 import { type PropertyDef, PROPERTIES } from "./registry.ts";
 import { styleOf } from "./of.ts";
 
@@ -14,8 +15,10 @@ export type FieldValue = { state: "same"; value: unknown } | { state: "mixed" };
 export interface PanelField {
   def: PropertyDef;
   value: FieldValue;
-  /** The selected elements the property applies to; an edit goes to these. */
+  /** The selected elements the property applies to and that are not locked; an edit goes to these. */
   ids: string[];
+  /** True when every element the property applies to is locked, so nothing can be edited. */
+  locked: boolean;
   /** True when any of them has its own line for the property, so clearing it changes something. */
   overridden: boolean;
 }
@@ -44,6 +47,7 @@ function applies(def: PropertyDef, element: DiagramElement): boolean {
 }
 
 export function panelFields(doc: DiagramDocument, selection: readonly string[]): PanelField[] {
+  const entries = layoutById(doc);
   const picked = selection.flatMap((id) => doc.elements.find((e) => e.id === id) ?? []);
   const fields: PanelField[] = [];
   for (const def of PROPERTIES) {
@@ -53,11 +57,13 @@ export function panelFields(doc: DiagramDocument, selection: readonly string[]):
     const values = targets.map((e) => styleOf(doc, e)[def.key as keyof StyleProps]);
     const first = values[0];
     const value: FieldValue = values.every((v) => v === first) ? { state: "same", value: first } : { state: "mixed" };
-    const overridden = targets.some((e) => {
+    const editable = targets.filter((e) => entries.get(e.id)?.locked !== true);
+    const overridden = editable.some((e) => {
       const line = doc.style.overrides.find((o) => o.id === e.id);
       return line !== undefined && def.key in line.props;
     });
-    fields.push({ def, value, ids: targets.map((e) => e.id), overridden });
+    const ids = editable.map((e) => e.id);
+    fields.push({ def, value, ids, locked: ids.length === 0, overridden });
   }
   return fields;
 }

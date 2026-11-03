@@ -83,7 +83,7 @@ export function attachSelectInput(host: SelectInputHost): () => void {
     const file = host.getFile();
     const t = event.target;
     if (!file || t instanceof HTMLInputElement || t instanceof HTMLSelectElement || t instanceof HTMLTextAreaElement) return;
-    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "a") {
+    if ((event.metaKey || event.ctrlKey) && !event.shiftKey && event.key.toLowerCase() === "a") {
       event.preventDefault();
       select(file, selectAll(file.document, host.measurer));
     } else if (event.key === "Escape") {

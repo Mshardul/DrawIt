@@ -103,4 +103,26 @@ describe("style panel fields", () => {
     expect(field(["a"], "fill")?.overridden).toBe(false);
     expect(field(["a", "b"], "fill")?.overridden).toBe(true);
   });
+
+  describe("locked elements", () => {
+    const lockedBoth = (ids: string[]): DiagramDocument => {
+      const d = sample();
+      d.layout = ids.map((id) => ({ id, x: 0, y: 0, locked: true }));
+      return d;
+    };
+
+    it("takes no edit for a locked element, and says so when every selected element is locked", () => {
+      const fill = panelFields(lockedBoth(["a"]), ["a"]).find((f) => f.def.key === "fill");
+      expect(fill).toMatchObject({ ids: [], locked: true });
+    });
+
+    it("sends an edit only to the elements that are not locked, and still shows the shared value", () => {
+      const fill = panelFields(lockedBoth(["b"]), ["a", "b"]).find((f) => f.def.key === "fill");
+      expect(fill).toMatchObject({ ids: ["a"], locked: false, value: { state: "mixed" } });
+    });
+
+    it("leaves a selection with no locked element as it was", () => {
+      expect(field(["a", "b"], "fill")).toMatchObject({ ids: ["a", "b"], locked: false });
+    });
+  });
 });
