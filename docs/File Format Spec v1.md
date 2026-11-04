@@ -23,7 +23,7 @@ All of the following ship in v1.
 
 **Canvas and navigation**
 
-1. Infinite canvas: pan (space-drag, trackpad), zoom (pinch, Cmd/Ctrl +/−, zoom to fit, zoom to selection).
+1. Infinite canvas: pan (hand tool, space-drag, trackpad), zoom (pinch, Cmd/Ctrl +/−, zoom to fit, zoom to selection with Shift+2).
 2. Grid on/off, snap on/off.
 
 **Creating and editing**
@@ -277,14 +277,16 @@ Every save produces the same bytes for the same diagram.
 
 ### 5.1 Interface
 
-A minimal canvas with two docked panels and two small floating pills.
+A minimal canvas with two docked panels, a floating toolbar and two small floating pills.
 
-- **File pill:** one small pill at the top right of the canvas with Home, the file name, the save state, undo, redo and Export.
-- **Left panel:** the shape library, open by default. Its first group, Tools, holds select, line, arrow, text, frame and image; the groups below hold the shapes, each a drawn tile whose name appears on hover. Search matches names and tags.
-- **Right panel:** open by default; properties of the current selection: fill, stroke, text, arrange, position, size.
-- **Status pill:** a small pill at the bottom left with zoom, cursor position, and the grid and snap toggles.
-- **Command palette:** Cmd/Ctrl+K lists every action with its shortcut.
-- **Configuration:** every panel and the status pill can be shown or hidden from View or Preferences, while the file pill is always shown; every action has a configurable shortcut. Preferences are stored in one file in the OS user config directory.
+- **File pill:** one small pill at the top right of the canvas with Home, the file name, the save state, undo, redo and Export. The save state is a button: clicking Not saved saves.
+- **Toolbar:** a floating pill, at the bottom centre by default, with select, hand, rectangle, ellipse, line, arrow, text, frame and image. A grip at its left end moves it anywhere inside the canvas, and a double-click on the grip returns it to the bottom centre. Hand pans by dragging; holding Space pans for as long as it is held. The keys are V, H, R, O, L, A, T, F and I, and the text tool places a text box with a click and edits it.
+- **Left panel:** the shape library, open by default. Its shapes are grouped by category, each a drawn tile whose name appears on hover. Search matches names and tags.
+- **Panel width:** the edge of each panel drags to resize it, between 180 and 360 px, and dragging never leaves the canvas under 480 px. When the window shrinks, the panels shrink toward their minimum before the canvas goes below 480 px, and below that the canvas shrinks. A double-click on an edge restores the default width, 224 px for the library and 200 px for the properties panel.
+- **Right panel:** open by default; properties of the current selection: fill, stroke, text, arrange, position, size. Position shows the bounding box of the selection, and size shows only for a single unlocked element that is not an edge.
+- **Status pill:** a small pill at the top left of the canvas with zoom, cursor position, and the grid and snap toggles. When it and the file pill do not fit on one row with a gap between them it drops the cursor position, and when the short form does not fit either it is hidden.
+- **Command palette:** Cmd/Ctrl+K lists every action with its shortcut. Every action is registered once, so a new action appears in the palette and in the shortcut list without further work.
+- **Configuration:** every panel, the toolbar and the status pill can be shown or hidden from View or Preferences, while the file pill is always shown; every action has a configurable shortcut. A Preferences dialog lists the shortcuts: the author records a new key, a conflict is refused with a message, and each action can be reset. Defaults avoid the keys browsers keep, such as Cmd/Ctrl+N, W and T. Preferences are stored in one JSON file in the OS user config directory. It holds the grid and snap settings, panel visibility and widths, the toolbar's position, shortcut overrides, recent colours, the last project or folder, and the recent files of each folder. Keys DrawIt does not know are kept when it writes, and a file that cannot be read is left as it is and defaults are used.
 - **Documentation:** an in-app reference covers the file syntax, section by section, with examples, the shape names and the style properties. It is written for people and AI authors, so they can check what a file should contain and what they may have written wrong.
 
 ### 5.2 Canvas and selection
@@ -304,7 +306,7 @@ A minimal canvas with two docked panels and two small floating pills.
 - Routing is straight or elbow. Manual bend points are kept; endpoints always recompute.
 - Arrowheads at either end.
 - **Edge labels:** a label is centred on the point `label-at` of the way along the path (the middle when absent) and moves with the path. It is drawn over a background in the canvas colour, in one line per line break, and is never wrapped. The label's box counts as part of the edge for clicks. A lone selected edge shows a grip over its label: dragging it sets `label-at` to the nearest point of the path, in hundredths, as one command, and Escape cancels. A locked edge's label cannot be dragged.
-- **Drawing:** with the line tool, drag from an element or from empty canvas to an element or to empty canvas. An end on an element is attached with an `auto` anchor; an end on empty canvas is a free end. The new edge is selected and the tool returns to select. Dragging from an element to itself draws nothing.
+- **Drawing:** with the line or arrow tool, drag from an element or from empty canvas to an element or to empty canvas. An end on an element is attached with an `auto` anchor; an end on empty canvas is a free end. Line draws an edge with no heads, and Arrow one with the default heads. The new edge is selected and the tool returns to select. Dragging from an element to itself draws nothing.
 - **Selecting:** a click within a few screen px of an edge's path selects it, and a lone selected edge shows a handle on each end. Edges and shapes share one z-order for clicks. Drag-box selects every edge it touches; select all includes edges; locked edges are skipped by both.
 - **Moving:** moving elements also moves the bend points and free ends of a selected edge and of an edge with both ends on the moving elements. An edge with an end that stays keeps its bend points.
 - **Re-attaching:** dragging an end handle of the selected edge onto an element attaches the end there, at the side and position along it nearest the pointer, never `auto`; dragging it onto empty canvas or a frame makes it a free end at the pointer. The edge keeps its ID and its bend points, and the other end is unchanged. Dropping onto the element at the other end, or leaving the end where it was, changes nothing; a locked edge cannot be dragged. Escape cancels the drag.
@@ -332,31 +334,33 @@ A minimal canvas with two docked panels and two small floating pills.
 
 - DrawIt serves one folder at a time as its workspace: a project in the library or any folder the author opens. Everything it reads or writes stays inside that folder, apart from the preferences file (5.1), the library folder and the names shown by the folder browser (6.2).
 - **Library:** a folder named `DrawIt` in the home directory, created on first run. Each subfolder is a project that holds `.drawit.kdl` files and its `assets/` folder. The start screen lists the projects and creates one. Project names use letters, numbers, spaces, hyphens and underscores, and a name that exists, ignoring case, is refused.
-- **New diagram:** created as a draft in a project named `Drafts`, so it is saved from its first edit, and moved into another project on request.
-- **Import:** a button copies a `.drawit.kdl` file chosen from the computer into a project. A file that fails to parse is refused with its line and column, and a name already in the project gets a different one.
+- **New diagram:** from the start screen it creates an empty draft file at once, named by the server Untitled, then Untitled 2 and so on, in a project named `Drafts`, so it is saved from its first edit; a draft can be renamed and moved into another project. From the landing page of a project or folder it asks for a name in the characters project names use, adds `.drawit.kdl`, refuses a name that exists in the folder, and opens an empty file.
+- **Import:** a button copies a `.drawit.kdl` file chosen from the computer into a project. A file that fails to parse is refused with its line and column, and a name already in the project gets 2, 3 and so on added to it.
 - **Rename and delete:** the start screen and the landing page rename and delete the projects and diagrams of the library after a confirmation. Delete moves the item to the operating system's trash where there is one, and otherwise asks a second time. Items in an opened folder are left to the operating system.
-- **Opening:** the project or folder comes from the command line; without one, from the last one kept in the preferences file; without that, from the start screen. The start screen lists the library's projects and has an Open folder button that uses the folder browser. The browser lists folders and `.drawit.kdl` files, starting at the home directory. Picking a folder opens its landing page; picking a file opens that file, with its folder as the workspace. Choosing again changes the workspace.
-- The landing page lists the `.drawit.kdl` files at the top level of the folder and the files opened most recently in that folder, kept in the preferences file (5.1), and has a button that creates a new file there. The start screen shows projects, and the landing page shows diagrams, as cards with thumbnails drawn by the renderer for the cards on screen; a file that cannot be drawn shows a file icon and its name. Opening a file shows it on the canvas; closing it returns to the landing page.
-- One file is open at a time, in one browser tab. A second tab on the same server shows a notice that DrawIt is open elsewhere and a Use here button, which takes the session over from the first tab.
-- Cmd/Ctrl+S saves. Autosave writes the open file about two seconds after the last edit; it is a preference, on in the library and off in an opened folder. The file pill shows Saving, Saved or an unsaved indicator; closing with unsaved work shows a warning.
-- A file changed on disk with no unsaved edits reloads as one undoable command. With unsaved edits, or when autosave finds the file changed since DrawIt read it, DrawIt asks whether to keep the edits or reload and does not write until answered; it never merges.
+- **Opening:** the project or folder comes from the command line, which takes a folder; without one, from the last one kept in the preferences file, and if that no longer exists the start screen opens; without that, from the start screen. The start screen lists the library's projects and has an Open folder button that uses the folder browser. The browser lists folders and `.drawit.kdl` files, starting at the home directory. Picking a folder opens its landing page; picking a file opens that file, with its folder as the workspace. Choosing again changes the workspace. DrawIt always opens on the start screen or a landing page, never on the last file. On the start screen the served folder is the library, so its cards and recent diagrams come from the whole library; opening a project serves that project.
+- The landing page lists the `.drawit.kdl` files at the top level of the folder and the files opened most recently in that folder, kept in the preferences file (5.1), and has a button that creates a new file there. The start screen shows projects, and the landing page shows diagrams, as cards with thumbnails drawn by the renderer for the cards on screen; a file that is invalid or larger than 1 MiB shows a file icon and its name. Opening a file shows it on the canvas; closing it returns to the landing page. The start screen is called Home; the Home button in the file pill returns to the landing page of the open file's folder, and a back link on a landing page returns to Home.
+- One file is open at a time, in one browser tab. A second tab on the same server shows a notice that DrawIt is open elsewhere and a Use here button, which takes the session over from the first tab. A tab that has not contacted the server for about five seconds no longer holds the session.
+- Cmd/Ctrl+S saves. Autosave writes the open file about two seconds after the last edit; it is a preference, on in the library and off in an opened folder. The file pill shows Saving, Saved or Not saved, and clicking Not saved saves; closing the file or switching folder with unsaved edits offers Save, Discard or Cancel, and leaving the page shows the browser's own warning.
+- A file changed on disk with no unsaved edits reloads as one undoable command. With unsaved edits, or when a save, automatic or manual, finds the file changed since DrawIt read it, DrawIt asks whether to keep the edits or reload and does not write until answered; it never merges. DrawIt checks the open file for changes about once a second, and the landing page refreshes its listing the same way.
 - A file that fails to parse as KDL is refused with the error and its line and column. It is never opened partially and never overwritten.
 - Beyond KDL syntax, DrawIt does not validate hand-edited files; it draws what it can. Everything DrawIt writes is valid.
 - DrawIt recognises its own saves by content hash, so they never count as changes on disk.
 
 ### 5.7 Clipboard
 
-- Copy and paste any element or multi-selection, within a file or across files.
+- Copy, cut and paste any element or multi-selection, within a file or across files. Cut is a copy followed by a delete, as one undoable command; locked elements are copied and stay in place.
 - Pasted elements get fresh IDs. Edges between copied elements are kept; an edge with only one end copied keeps that end, and the other becomes a free end, moved along with the pasted elements.
-- Classes used by pasted elements are copied into the target file if missing.
-- The clipboard holds KDL text.
+- Classes used by pasted elements, and the theme tokens used by those classes and by the elements' own style overrides, are copied into the target file if missing; built-in tokens are not. A class or token the target already has keeps the target's definition.
+- The clipboard holds KDL text: a complete `.drawit.kdl` document with only the selection, the classes it needs and the tokens they use. Text is a DrawIt document when it parses as KDL and has a `diagram` node with a version; other text is ignored on paste.
+- Images in the selection travel with the paste for the session: copy keeps their bytes, and paste writes them into the target's `assets/` under unused names. An image without bytes shows the dashed placeholder.
+- Pasted elements land at the pointer when it is over the canvas, and otherwise offset from the originals as a duplicate is.
 
 ### 5.8 Export
 
 - **SVG:** the canvas, a selection or a frame, with used fonts embedded and a title and description.
 - **PNG:** the canvas, a selection or a frame, at 1x, 2x or 3x, with an optional transparent background.
-- **Delivery:** an export dialog has a Download button, and the browser saves the result as an ordinary file named after the diagram, and the frame when one is exported. The server is not involved.
-- **Scope:** the canvas exports the bounding box of all elements with 16 px of padding. A selection exports its elements. A frame exports everything overlapping its region, clipped to it.
+- **Delivery:** an export dialog has a Download button, and the browser saves the result as an ordinary file named after the diagram's file, with a hyphen and the frame's ID added when a frame is exported. The server is not involved.
+- **Scope:** the canvas exports the bounds of everything drawn, which are elements, routed edges with their labels and arrowheads, stroke widths, shadows and frame names, with 16 px of padding. A selection exports its elements. A frame exports everything overlapping its region, clipped to it with a clip path.
 - **Quality:** an export does not depend on the canvas zoom or pan. SVG stays vector, and PNG is drawn from the SVG at 1x, 2x or 3x of its size, so lines, text and images are sharp at every scale. A PNG too large for the browser's canvas is refused with a message.
 
 ## 6. Architecture
@@ -369,7 +373,7 @@ One TypeScript app runs in any desktop browser and talks only to a local Go bina
 - **Commands:** the only way the document changes; the basis of undo/redo and of all plugin actions.
 - **Renderer:** SVG. It draws the model and turns pointer input into commands; it never owns state.
 - **Storage adapter:** one interface over the local server's HTTP API.
-- **Local server:** one static Go binary per OS (macOS, Linux, Windows) with the web app embedded via `go:embed`. Running it starts the server and opens the browser. It handles file reads, atomic writes and file watching.
+- **Local server:** one static Go binary per OS (macOS, Linux, Windows) with the web app embedded via `go:embed`. Running it starts the server and opens the browser. It handles file reads, atomic writes, the library and the folder browser.
 
 ### 6.2 Local server security
 
@@ -377,7 +381,7 @@ One TypeScript app runs in any desktop browser and talks only to a local Go bina
 - Generates a random session token at startup and opens the browser at a URL carrying it in the fragment, also printed to the terminal. The page keeps it in `sessionStorage`, removes it from the address bar and sends it as an `Authorization` header; requests without it are rejected.
 - Checks `Host` and `Origin` headers.
 - Serves a strict content security policy (`connect-src 'self'`), so neither the app nor its plugins can reach the network, and `Referrer-Policy: no-referrer`.
-- Reads and writes only inside the opened folder, enforced with Go's `os.Root` so symlinks cannot lead out of it. The exceptions are the preferences file in the OS user config directory, the library folder (5.6) for creating, renaming and deleting projects and diagrams, and the folder browser, which lists only the names of folders and `.drawit.kdl` files and never reads a file.
+- Reads and writes only inside the opened folder, enforced with Go's `os.Root` so symlinks cannot lead out of it. The exceptions are the preferences file in the OS user config directory, the library folder (5.6) for creating, renaming and deleting projects and diagrams, and the folder browser, which lists only the names of folders and `.drawit.kdl` files, never reads a file, and creates a new folder on request.
 
 ### 6.3 Packs and plugins
 
