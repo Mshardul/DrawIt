@@ -26,6 +26,8 @@ type fileInfo struct {
 type server struct {
 	ws    workspace
 	prefs *prefs.Store
+	hold  *browserSession
+	trash func(string) error
 }
 
 func New(root *os.Root, folder, library string, assets fs.FS, store *prefs.Store, cfg Config) http.Handler {
@@ -33,8 +35,14 @@ func New(root *os.Root, folder, library string, assets fs.FS, store *prefs.Store
 	if root != nil {
 		kind = kindOf(folder, library)
 	}
-	s := &server{ws: workspace{root: root, id: newWorkspaceID(), path: folder, kind: kind, library: library}, prefs: store}
+	s := &server{
+		ws:    workspace{root: root, id: newWorkspaceID(), path: folder, kind: kind, library: library},
+		prefs: store,
+		hold:  newBrowserSession(cfg.Now),
+		trash: cfg.Trash,
+	}
 	mux := http.NewServeMux()
+	mux.HandleFunc("POST /api/session", s.claimSession)
 	mux.HandleFunc("GET /api/files", s.list)
 	mux.HandleFunc("GET /api/file", s.read)
 	mux.HandleFunc("PUT /api/file", s.write)
@@ -43,9 +51,11 @@ func New(root *os.Root, folder, library string, assets fs.FS, store *prefs.Store
 	mux.HandleFunc("POST /api/workspace", s.openWorkspace)
 	mux.HandleFunc("GET /api/preferences", s.readPreferences)
 	mux.HandleFunc("PATCH /api/preferences", s.patchPreferences)
+	mux.HandleFunc("GET /api/browse", s.listBrowse)
+	mux.HandleFunc("POST /api/browse", s.createBrowse)
 	mux.HandleFunc("GET /api/", http.NotFound)
 	mux.Handle("GET /", http.FileServerFS(assets))
-	return protect(cfg, mux)
+	return protect(cfg, s.hold, mux)
 }
 
 func (s *server) list(w http.ResponseWriter, r *http.Request) {

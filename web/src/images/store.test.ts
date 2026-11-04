@@ -16,6 +16,14 @@ function setup(files: Record<string, string | Uint8Array> = { "assets/logo.png":
     },
     write: (path, data) => storage.write(path, data),
     watch: (listener) => storage.watch(listener),
+    currentWorkspace: () => storage.currentWorkspace(),
+    openWorkspace: (target) => storage.openWorkspace(target),
+    listTop: () => storage.listTop(),
+    stat: (path) => storage.stat(path),
+    claimSession: () => storage.claimSession(),
+    takeoverSession: () => storage.takeoverSession(),
+    readPreferences: () => storage.readPreferences(),
+    patchPreferences: (patch) => storage.patchPreferences(patch),
   };
   const changes: number[] = [];
   const made: { blob: Blob; url: string }[] = [];

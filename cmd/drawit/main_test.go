@@ -87,8 +87,11 @@ func request(t *testing.T, method, url, token string, body io.Reader) (int, stri
 	}
 	if token != "" {
 		req.Header.Set("Authorization", "Bearer "+token)
-		if id := workspaceID(t, url, token); id != "" && fileAPI(url) {
-			req.Header.Set(server.WorkspaceHeader, id)
+		if id, ok := claimRunning(t, url, token); ok {
+			req.Header.Set(server.SessionHeader, id)
+			if workspace := workspaceID(t, url, token, id); workspace != "" && fileAPI(url) {
+				req.Header.Set(server.WorkspaceHeader, workspace)
+			}
 		}
 	}
 	resp, err := http.DefaultClient.Do(req)
@@ -108,7 +111,39 @@ func fileAPI(raw string) bool {
 	return u.Path == "/api/files" || u.Path == "/api/file"
 }
 
-func workspaceID(t *testing.T, raw, token string) string {
+func claimRunning(t *testing.T, raw, token string) (string, bool) {
+	t.Helper()
+	u, err := url.Parse(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	u.Path = "/api/session"
+	u.RawQuery = ""
+	u.Fragment = ""
+	req, err := http.NewRequest(http.MethodPost, u.String(), strings.NewReader(`{"takeover":true}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return "", false
+	}
+	var got struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(body, &got); err != nil {
+		t.Fatal(err)
+	}
+	return got.ID, got.ID != ""
+}
+
+func workspaceID(t *testing.T, raw, token, session string) string {
 	t.Helper()
 	u, err := url.Parse(raw)
 	if err != nil {
@@ -122,6 +157,7 @@ func workspaceID(t *testing.T, raw, token string) string {
 		t.Fatal(err)
 	}
 	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set(server.SessionHeader, session)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatal(err)
@@ -424,6 +460,20 @@ func TestARunningServerRefusesRequestsWithoutTheToken(t *testing.T) {
 	}
 	if status, _, _ := request(t, http.MethodGet, base+"api/files", token+"x", nil); status != http.StatusForbidden {
 		t.Errorf("wrong token: status = %d, want 403", status)
+	}
+	held, err := http.NewRequest(http.MethodGet, base+"api/files", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	held.Header.Set("Authorization", "Bearer "+token)
+	resp, err := http.DefaultClient.Do(held)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lost, _ := io.ReadAll(resp.Body)
+	_ = resp.Body.Close()
+	if resp.StatusCode != http.StatusUnauthorized || !strings.Contains(string(lost), "session lost") {
+		t.Errorf("right token without a session: status = %d, body %q, want session lost", resp.StatusCode, lost)
 	}
 	if status, _, _ := request(t, http.MethodGet, base+"api/files", token, nil); status != http.StatusOK {
 		t.Errorf("right token: status = %d, want 200", status)

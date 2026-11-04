@@ -1,12 +1,4 @@
-// Storage adapter: the one interface the app uses to reach files in the
-// opened workspace folder. Shaped after the local server's API, which the HTTP adapter implements:
-//
-//   list   GET /api/files       { files: [{ path, size, modified }] }
-//   read   GET /api/file?path=  the file's bytes
-//   write  PUT /api/file?path=  replaces the file's bytes atomically
-//
-// Files are bytes: text and binary files such as images go through the same calls. `watch` has no
-// server endpoint yet.
+// The one interface the app uses to reach the local server. Files are bytes; text and images use the same calls.
 
 /** A file in the workspace, as `GET /api/files` reports it. */
 export interface FileInfo {
@@ -33,7 +25,47 @@ export type StorageErrorCode =
   /** The storage refused access (HTTP 403). */
   | "refused"
   /** A write is larger than `MAX_FILE_BYTES` (HTTP 413). */
-  | "too-large";
+  | "too-large"
+  /** This tab no longer holds the server session (HTTP 401). */
+  | "session-lost"
+  /** Another tab holds the session (HTTP 409). */
+  | "open-elsewhere"
+  /** The workspace id is stale, or preferences cannot be written (HTTP 409). */
+  | "conflict";
+
+export type WorkspaceKind = "library" | "project" | "opened" | "";
+
+export interface WorkspaceInfo {
+  id: string;
+  kind: WorkspaceKind;
+  path: string;
+}
+
+export type WorkspaceTarget = { library: true } | { project: string } | { folder: string } | { file: string };
+
+export interface TopFile {
+  path: string;
+  type: "file";
+  size: number;
+  modified: string;
+}
+
+export interface TopFolder {
+  path: string;
+  type: "folder";
+  modified: string;
+  diagrams: number;
+  latest?: { path: string; modified: string };
+}
+
+export type TopEntry = TopFile | TopFolder;
+
+export interface TopListing {
+  revision: string;
+  entries: TopEntry[];
+}
+
+export type Preferences = Record<string, unknown>;
 
 /** Throws `too-large` if `data` cannot be written as the file at `path`. */
 export function assertFitsLimit(path: string, data: Uint8Array): void {
@@ -69,6 +101,21 @@ export interface StorageAdapter {
    * Returns the function that stops listening.
    */
   watch(listener: (event: WatchEvent) => void): Unsubscribe;
+  /** The workspace the server is serving now. */
+  currentWorkspace(): Promise<WorkspaceInfo>;
+  /** Switches the served folder. A failed open leaves the current workspace in place. */
+  openWorkspace(target: WorkspaceTarget): Promise<WorkspaceInfo>;
+  /** The top level of the workspace: files, folders and each folder's latest diagram. */
+  listTop(): Promise<TopListing>;
+  /** Size and modified time of one file. */
+  stat(path: string): Promise<FileInfo>;
+  /** Claims the one server session for this tab, or refreshes it when this tab already holds it. */
+  claimSession(): Promise<string>;
+  /** Takes the session over from whichever tab holds it. */
+  takeoverSession(): Promise<string>;
+  readPreferences(): Promise<Preferences>;
+  /** Merges each namespace's keys. A bad patch changes nothing. */
+  patchPreferences(patch: Record<string, Record<string, unknown>>): Promise<Preferences>;
 }
 
 export async function readText(storage: StorageAdapter, path: string): Promise<string> {

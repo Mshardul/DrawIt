@@ -41,12 +41,23 @@ func do(h http.Handler, method, target string, body io.Reader) *httptest.Respons
 	req := httptest.NewRequest(method, target, body)
 	req.Host = testHost
 	req.Header.Set("Authorization", "Bearer "+testToken)
+	id := claimFor(h)
+	req.Header.Set(SessionHeader, id)
 	if fileAPI(target) {
-		req.Header.Set(WorkspaceHeader, workspaceHeader(h))
+		req.Header.Set(WorkspaceHeader, workspaceHeader(h, id))
 	}
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
 	return rec
+}
+
+func claimFor(h http.Handler) string {
+	rec := postSession(h, bearer(testToken), `{"takeover":true}`)
+	var got struct {
+		ID string `json:"id"`
+	}
+	_ = json.Unmarshal(rec.Body.Bytes(), &got)
+	return got.ID
 }
 
 func fileAPI(target string) bool {
@@ -54,10 +65,11 @@ func fileAPI(target string) bool {
 	return path == "/api/files" || path == "/api/file"
 }
 
-func workspaceHeader(h http.Handler) string {
+func workspaceHeader(h http.Handler, session string) string {
 	req := httptest.NewRequest(http.MethodGet, "/api/workspace", nil)
 	req.Host = testHost
 	req.Header.Set("Authorization", "Bearer "+testToken)
+	req.Header.Set(SessionHeader, session)
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
 	var view workspaceView

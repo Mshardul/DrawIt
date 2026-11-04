@@ -35,6 +35,7 @@ func TestSwitchingFolderRetiresThePreviousId(t *testing.T) {
 
 	rec := send(h, http.MethodPut, "/api/file?path=nope.txt", testHost, map[string]string{
 		"Authorization": "Bearer " + testToken,
+		SessionHeader:   claimFor(h),
 		WorkspaceHeader: first.ID,
 	})
 	if rec.Code != http.StatusConflict {
@@ -50,7 +51,10 @@ func TestSwitchingFolderRetiresThePreviousId(t *testing.T) {
 
 func TestAFileRequestWithoutTheWorkspaceIdIsRefused(t *testing.T) {
 	h, _ := newServer(t)
-	rec := send(h, http.MethodGet, "/api/files", testHost, bearer(testToken))
+	rec := send(h, http.MethodGet, "/api/files", testHost, map[string]string{
+		"Authorization": "Bearer " + testToken,
+		SessionHeader:   claimFor(h),
+	})
 	if rec.Code != http.StatusConflict {
 		t.Fatalf("status = %d, want 409", rec.Code)
 	}

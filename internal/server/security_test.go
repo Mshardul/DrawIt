@@ -38,8 +38,10 @@ func TestUnexpectedHostIsRefused(t *testing.T) {
 func TestListenerHostsAreAccepted(t *testing.T) {
 	h, _ := newServer(t)
 	for _, host := range []string{"127.0.0.1:8080", "localhost:8080", "LOCALHOST:8080"} {
+		id := claimFor(h)
 		header := bearer(testToken)
-		header[WorkspaceHeader] = workspaceHeader(h)
+		header[SessionHeader] = id
+		header[WorkspaceHeader] = workspaceHeader(h, id)
 		if rec := send(h, http.MethodGet, "/api/files", host, header); rec.Code != http.StatusOK {
 			t.Errorf("Host %q: status = %d, want 200", host, rec.Code)
 		}
@@ -67,9 +69,11 @@ func TestForeignOriginIsRefused(t *testing.T) {
 func TestOwnOriginIsAccepted(t *testing.T) {
 	h, _ := newServer(t)
 	for _, origin := range []string{"http://127.0.0.1:8080", "http://localhost:8080"} {
+		id := claimFor(h)
 		header := bearer(testToken)
 		header["Origin"] = origin
-		header[WorkspaceHeader] = workspaceHeader(h)
+		header[SessionHeader] = id
+		header[WorkspaceHeader] = workspaceHeader(h, id)
 		if rec := send(h, http.MethodGet, "/api/files", testHost, header); rec.Code != http.StatusOK {
 			t.Errorf("Origin %q: status = %d, want 200", origin, rec.Code)
 		}

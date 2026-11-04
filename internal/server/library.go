@@ -13,6 +13,8 @@ import (
 	"strings"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/Mshardul/DrawIt/internal/trash"
 )
 
 const (
@@ -28,6 +30,8 @@ type libraryRequest struct {
 	Draft   *bool   `json:"draft"`
 	From    *string `json:"from"`
 	To      *string `json:"to"`
+	Delete  *string `json:"delete"`
+	NoTrash *bool   `json:"noTrash"`
 }
 
 func (q libraryRequest) action() string {
@@ -36,15 +40,18 @@ func (q libraryRequest) action() string {
 	diagram := q.Diagram != nil
 	from := q.From != nil
 	to := q.To != nil
+	del := q.Delete != nil
 	switch {
-	case draft && !project && !diagram && !from && !to:
+	case draft && !project && !diagram && !from && !to && !del:
 		return "draft"
-	case project && !draft && !diagram && !from && !to:
+	case project && !draft && !diagram && !from && !to && !del:
 		return "project"
-	case project && diagram && !draft && !from && !to:
+	case project && diagram && !draft && !from && !to && !del:
 		return "diagram"
-	case from && to && !draft && !project && !diagram:
+	case from && to && !draft && !project && !diagram && !del:
 		return "rename"
+	case del && !draft && !project && !diagram && !from && !to:
+		return "delete"
 	default:
 		return ""
 	}
@@ -76,7 +83,7 @@ func (s *server) library(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer func() { _ = root.Close() }()
-	rel, err := changeLibrary(root, req)
+	rel, err := s.changeLibrary(root, req)
 	if err != nil {
 		writeLibraryError(w, err)
 		return
@@ -95,7 +102,7 @@ func (s *server) openLibrary() (*os.Root, error) {
 	return root, nil
 }
 
-func changeLibrary(root *os.Root, req libraryRequest) (string, error) {
+func (s *server) changeLibrary(root *os.Root, req libraryRequest) (string, error) {
 	switch req.action() {
 	case "project":
 		return createProject(root, *req.Project)
@@ -103,9 +110,103 @@ func changeLibrary(root *os.Root, req libraryRequest) (string, error) {
 		return createDraft(root)
 	case "diagram":
 		return createDiagram(root, *req.Project, *req.Diagram)
+	case "delete":
+		permanent := req.NoTrash != nil && *req.NoTrash
+		move := s.trash
+		if move == nil {
+			move = trash.Move
+		}
+		return deleteLibrary(root, s.ws.library, *req.Delete, permanent, move)
 	default:
 		return renameLibrary(root, *req.From, *req.To)
 	}
+}
+
+func deleteLibrary(root *os.Root, library, rel string, permanent bool, move func(string) error) (string, error) {
+	rel, err := cleanLibraryPath(rel)
+	if err != nil {
+		return "", err
+	}
+	if !deletablePath(rel) {
+		return "", openError(http.StatusBadRequest, "not a project or a diagram")
+	}
+	info, err := root.Stat(rel)
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return "", openError(http.StatusNotFound, "not found")
+		}
+		return "", openError(http.StatusForbidden, "access refused")
+	}
+	if !libraryItem(rel, info) {
+		return "", openError(http.StatusBadRequest, "not a project or a diagram")
+	}
+	abs, err := libraryAbs(library, rel)
+	if err != nil {
+		return "", err
+	}
+	if move == nil {
+		return "", openError(http.StatusInternalServerError, "cannot move to the trash")
+	}
+	if err := move(abs); err != nil {
+		if errors.Is(err, trash.ErrNoTrash) {
+			if !permanent {
+				return "", openError(http.StatusConflict, "no trash")
+			}
+			if err := removeLibraryItem(root, rel); err != nil {
+				return "", err
+			}
+			return rel, nil
+		}
+		return "", err
+	}
+	return rel, nil
+}
+
+func deletablePath(rel string) bool {
+	if !strings.Contains(rel, "/") {
+		return true
+	}
+	project, file, _ := strings.Cut(rel, "/")
+	return project != "" && !strings.Contains(file, "/") && strings.HasSuffix(file, diagramExt)
+}
+
+func libraryItem(rel string, info fs.FileInfo) bool {
+	if strings.Contains(rel, "/") {
+		return info.Mode().IsRegular()
+	}
+	return info.IsDir()
+}
+
+func libraryAbs(library, rel string) (string, error) {
+	abs := filepath.Join(library, filepath.FromSlash(rel))
+	back, err := filepath.Rel(library, abs)
+	if err != nil || back == ".." || strings.HasPrefix(back, ".."+string(filepath.Separator)) {
+		return "", openError(http.StatusBadRequest, "name is not allowed")
+	}
+	return abs, nil
+}
+
+func removeLibraryItem(root *os.Root, rel string) error {
+	var dirs []string
+	err := fs.WalkDir(root.FS(), rel, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			dirs = append(dirs, p)
+			return nil
+		}
+		return root.Remove(p)
+	})
+	if err != nil {
+		return err
+	}
+	for i := len(dirs) - 1; i >= 0; i-- {
+		if err := root.Remove(dirs[i]); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func createProject(root *os.Root, name string) (string, error) {

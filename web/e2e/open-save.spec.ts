@@ -87,12 +87,24 @@ test("a folder with no diagram files says so", async ({ page }) => {
 
 test("the app reads the session token from the URL fragment and talks to the server with it", async ({ page }) => {
   const seen: (string | undefined)[] = [];
+  const sessions: (string | undefined)[] = [];
+  const workspaces: (string | undefined)[] = [];
+  await page.route("**/api/session", async (route) => {
+    await route.fulfill({ json: { id: "tab-1" } });
+  });
+  await page.route("**/api/workspace", async (route) => {
+    await route.fulfill({ json: { id: "ws-1", kind: "opened", path: "/work" } });
+  });
   await page.route("**/api/files", async (route) => {
     seen.push(route.request().headers()["authorization"]);
+    sessions.push(route.request().headers()["x-session-id"]);
+    workspaces.push(route.request().headers()["x-workspace-id"]);
     await route.fulfill({ json: { files: [{ path: "s.drawit.kdl", size: 1, modified: "2026-10-26T00:00:00.000Z" }] } });
   });
   await page.route("**/api/file?path=s.drawit.kdl", async (route) => {
     seen.push(route.request().headers()["authorization"]);
+    sessions.push(route.request().headers()["x-session-id"]);
+    workspaces.push(route.request().headers()["x-workspace-id"]);
     await route.fulfill({ body: good });
   });
   // The page is already at "/", so a fragment-only change would not reload it.
@@ -100,5 +112,7 @@ test("the app reads the session token from the URL fragment and talks to the ser
   await page.goto("/#secret-token");
   await expect(page.locator('g[data-id="a"] text')).toHaveText("Alpha");
   expect(seen).toEqual(["Bearer secret-token", "Bearer secret-token"]);
+  expect(sessions).toEqual(["tab-1", "tab-1"]);
+  expect(workspaces).toEqual(["ws-1", "ws-1"]);
   expect(page.url()).not.toContain("secret-token");
 });
