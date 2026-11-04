@@ -37,12 +37,8 @@ test.beforeEach(async ({ page }) => {
   await page.goto("/");
   await page.evaluate(async (text) => {
     const load = <T>(path: string) => import(path) as Promise<T>;
-    const { startShell } = await load<typeof import("../src/app/shell.ts")>("/src/app/shell.ts");
-    const { MemoryStorage } = await load<typeof import("../src/storage/memory.ts")>("/src/storage/memory.ts");
-    const shell = await startShell(
-      document.getElementById("app") as HTMLElement,
-      new MemoryStorage({ "a.drawit.kdl": text }),
-    );
+    const { mountShell } = await load<typeof import("../src/testing/mount-shell.ts")>("/src/testing/mount-shell.ts");
+    const { shell } = await mountShell({ "a.drawit.kdl": text });
     (window as unknown as { hooks: Hooks }).hooks = {
       select: (ids) => {
         if (shell.file) shell.file.history.selection = ids;

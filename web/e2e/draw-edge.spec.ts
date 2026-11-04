@@ -24,13 +24,9 @@ test.beforeEach(async ({ page }) => {
   await page.goto("/");
   await page.evaluate(async (text) => {
     const load = <T>(path: string) => import(path) as Promise<T>;
-    const { startShell } = await load<typeof import("../src/app/shell.ts")>("/src/app/shell.ts");
-    const { MemoryStorage } = await load<typeof import("../src/storage/memory.ts")>("/src/storage/memory.ts");
+    const { mountShell } = await load<typeof import("../src/testing/mount-shell.ts")>("/src/testing/mount-shell.ts");
     const { writeDiagram } = await load<typeof import("../src/kdl/write.ts")>("/src/kdl/write.ts");
-    const shell = await startShell(
-      document.getElementById("app") as HTMLElement,
-      new MemoryStorage({ "a.drawit.kdl": text }),
-    );
+    const { shell } = await mountShell({ "a.drawit.kdl": text });
     shell.setView({ x: 0, y: 0, scale: 1 });
     (window as unknown as { hooks: Hooks }).hooks = {
       edges: () => (shell.file?.document.elements ?? []).flatMap((e) => (e.kind === "edge" ? [{ id: e.id, from: e.from, to: e.to }] : [])),

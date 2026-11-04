@@ -5,6 +5,8 @@ import { elementsById } from "../model/lookup.ts";
 import { bundledLoader } from "../shapes/bundled-packs.ts";
 import type { ShapeDrawing } from "../shapes/pack-loader.ts";
 import type { TextMeasurer } from "../text/measure.ts";
+import type { ImageLookup } from "./images.ts";
+import { openImages } from "./images.ts";
 import { sizeOf } from "./size.ts";
 
 export interface Box {
@@ -48,8 +50,8 @@ export function isDrawn(element: DiagramElement): boolean {
 }
 
 /** The box an element takes: its layout position with its layout or default size. Null for an element with no layout entry and for an edge, which has no box. */
-export function elementBox(doc: DiagramDocument, element: DiagramElement, entry: LayoutEntry | undefined, measurer: TextMeasurer): Box | null {
-  const size = entry && sizeOf(doc, element, entry, measurer);
+export function elementBox(doc: DiagramDocument, element: DiagramElement, entry: LayoutEntry | undefined, measurer: TextMeasurer, images: ImageLookup = openImages): Box | null {
+  const size = entry && sizeOf(doc, element, entry, measurer, undefined, images);
   return entry && size ? { x: entry.x, y: entry.y, w: size.w, h: size.h } : null;
 }
 

@@ -3,6 +3,8 @@
 import type { DiagramDocument, DiagramElement, EdgeElement, LayoutEntry, Point, StyleProps } from "../model/index.ts";
 import { elementsById, layoutById } from "../model/lookup.ts";
 import { elementBox, outlineKind, packGeometry } from "../render/boxes.ts";
+import type { ImageLookup } from "../render/images.ts";
+import { openImages } from "../render/images.ts";
 import { styleOf } from "../style/of.ts";
 import type { TextMeasurer } from "../text/measure.ts";
 import { type End, route } from "./routing.ts";
@@ -22,7 +24,7 @@ export interface RoutedEdge {
  * Routes the edges of the document, or only those in `only`. An edge whose end names no element
  * with a box, or whose free end has no point in the layout, cannot be drawn and is left out.
  */
-export function routedEdges(doc: DiagramDocument, measurer: TextMeasurer, only?: ReadonlySet<string>): Map<string, RoutedEdge> {
+export function routedEdges(doc: DiagramDocument, measurer: TextMeasurer, only?: ReadonlySet<string>, images: ImageLookup = openImages): Map<string, RoutedEdge> {
   const elements = elementsById(doc);
   const entries = layoutById(doc);
 
@@ -33,7 +35,7 @@ export function routedEdges(doc: DiagramDocument, measurer: TextMeasurer, only?:
       return point ? { point } : null;
     }
     const target: DiagramElement | undefined = elements.get(id);
-    const box = target && elementBox(doc, target, entries.get(id), measurer);
+    const box = target && elementBox(doc, target, entries.get(id), measurer, images);
     if (!target || !box) return null;
     const geometry = packGeometry(target, box);
     return { box, shape: outlineKind(target), anchor: entry?.[which] ?? "auto", ...(geometry && { outline: geometry.outline, anchors: geometry.anchors }) };

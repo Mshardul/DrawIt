@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-// The app shell over an in-memory workspace. `boot` runs the real `startShell` in the page.
+// The app shell over an in-memory workspace. `boot` runs the real shell in the page.
 const good = `diagram version=1
 
 node a "Alpha" shape=rect
@@ -29,11 +29,8 @@ test.beforeEach(async ({ page }) => {
 async function boot(page: import("@playwright/test").Page, files: Files): Promise<void> {
   await page.evaluate(async (initial) => {
     const load = <T>(path: string) => import(path) as Promise<T>;
-    const { startShell } = await load<typeof import("../src/app/shell.ts")>("/src/app/shell.ts");
-    const { MemoryStorage } = await load<typeof import("../src/storage/memory.ts")>("/src/storage/memory.ts");
-    const storage = new MemoryStorage(initial);
-    const app = document.getElementById("app") as HTMLElement;
-    const shell = await startShell(app, storage);
+    const { mountShell } = await load<typeof import("../src/testing/mount-shell.ts")>("/src/testing/mount-shell.ts");
+    const { shell, storage } = await mountShell(initial);
     (window as unknown as { hooks: Hooks }).hooks = {
       read: async (path) => new TextDecoder().decode(await storage.read(path)),
       edit: () => {
@@ -83,6 +80,21 @@ test("refuses a file that is not valid KDL with its line and column, and never o
 test("a folder with no diagram files says so", async ({ page }) => {
   await boot(page, { "notes.txt": "x" });
   await expect(page.getByRole("alert")).toContainText("No .drawit.kdl files");
+});
+
+test("a home or landing start leaves the diagram unopened", async ({ page }) => {
+  for (const show of ["home", "landing"] as const) {
+    await page.goto("/");
+    const started = await page.evaluate(async ({ files, show: screen }) => {
+      const load = <T>(path: string) => import(path) as Promise<T>;
+      const { mountShell } = await load<typeof import("../src/testing/mount-shell.ts")>("/src/testing/mount-shell.ts");
+      const { shell } = await mountShell(files, { show: screen });
+      return { screen: shell.screen, open: shell.file !== null };
+    }, { files: { "a.drawit.kdl": good }, show });
+    expect(started).toEqual({ screen: show, open: false });
+    await expect(page.locator('g[data-id="a"]')).toHaveCount(0);
+    await expect(page.getByRole("alert")).toBeHidden();
+  }
 });
 
 test("the app reads the session token from the URL fragment and talks to the server with it", async ({ page }) => {

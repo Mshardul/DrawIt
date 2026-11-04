@@ -56,7 +56,17 @@ export interface GridSettings {
 /** Cell sizes offered in the status bar. */
 const GRID_SIZES = [4, 8, 16, 32, 64];
 
+/** What the shell shows before a diagram is opened. */
+export type FirstScreen = "file" | "landing" | "home";
+
+export interface StartOptions {
+  /** Defaults to a file, which opens the folder's first diagram. */
+  show?: FirstScreen;
+}
+
 export interface Shell {
+  /** The screen chosen at startup. */
+  readonly screen: FirstScreen;
   /** The open file, or null before one is opened. */
   readonly file: OpenFile | null;
   open(path: string): Promise<void>;
@@ -73,8 +83,9 @@ export interface Shell {
   refresh(): void;
 }
 
-/** Builds the app in `root`, lists the folder and opens its first diagram if there is one. */
-export async function startShell(root: HTMLElement, storage: StorageAdapter): Promise<Shell> {
+/** Builds the app in `root`. A file start lists the folder and opens its first diagram. */
+export async function startShell(root: HTMLElement, storage: StorageAdapter, options: StartOptions = {}): Promise<Shell> {
+  const screen = options.show ?? "file";
   await loadFonts();
   const measurer = createTextMeasurer();
   // Files finish loading one by one; one redraw covers those that finish together.
@@ -271,6 +282,7 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter): Pr
   };
 
   const shell: Shell = {
+    screen,
     get file() {
       return current;
     },
@@ -469,8 +481,10 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter): Pr
 
   const paths = await workspaceFiles(storage);
   picker.replaceChildren(...paths.map((p) => el("option", { value: p, textContent: p })));
-  picker.disabled = paths.length === 0;
-  if (paths.length === 0) showError("No .drawit.kdl files in this folder.");
-  else await shell.open(paths[0] ?? "");
+  if (screen === "file") {
+    picker.disabled = paths.length === 0;
+    if (paths.length === 0) showError("No .drawit.kdl files in this folder.");
+    else await shell.open(paths[0] ?? "");
+  }
   return shell;
 }

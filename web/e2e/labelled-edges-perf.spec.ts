@@ -41,8 +41,7 @@ test.beforeEach(async ({ page }) => {
   await page.evaluate(
     async ({ hub, hubEdges }) => {
       const load = <T>(path: string) => import(path) as Promise<T>;
-      const { startShell } = await load<typeof import("../src/app/shell.ts")>("/src/app/shell.ts");
-      const { MemoryStorage } = await load<typeof import("../src/storage/memory.ts")>("/src/storage/memory.ts");
+      const { mountShell } = await load<typeof import("../src/testing/mount-shell.ts")>("/src/testing/mount-shell.ts");
       const { generateDiagram } = await load<typeof import("../src/testing/generate-diagram.ts")>("/src/testing/generate-diagram.ts");
       const { writeDiagram } = await load<typeof import("../src/kdl/write.ts")>("/src/kdl/write.ts");
       const { createTextMeasurer } = await load<typeof import("../src/text/measure.ts")>("/src/text/measure.ts");
@@ -63,7 +62,7 @@ test.beforeEach(async ({ page }) => {
         layout: [...generated.layout, ...extra.map(({ id }) => ({ id, x: 0, y: 0 }))],
       });
 
-      const shell = await startShell(document.getElementById("app") as HTMLElement, new MemoryStorage({ "perf.drawit.kdl": text }));
+      const { shell } = await mountShell({ "perf.drawit.kdl": text });
       shell.setView({ x: 0, y: 0, scale: 1 });
 
       // Counted from watchRedraws on: the first draw has measured every text.

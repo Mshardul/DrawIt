@@ -12,6 +12,9 @@ import { nearestOnPath, pointAlongPath } from "./path.ts";
 /** Where along the path a label sits when the layout gives no position. */
 export const DEFAULT_LABEL_AT = 0.5;
 
+/** Room around an edge label's text, so the line does not run through it. */
+export const LABEL_PAD = 4;
+
 export interface EdgeLabelLayout {
   /** The text as drawn, one entry per line. A label is never wrapped. */
   lines: string[];

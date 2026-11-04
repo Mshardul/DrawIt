@@ -1,13 +1,12 @@
 import { expect, test } from "@playwright/test";
 
-// `startShell` loads the bundled fonts before it draws, so text is never measured in a fallback font.
+// The shell loads the bundled fonts before it draws, so text is never measured in a fallback font.
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
   await page.evaluate(async () => {
     const load = <T>(path: string) => import(path) as Promise<T>;
-    const { startShell } = await load<typeof import("../src/app/shell.ts")>("/src/app/shell.ts");
-    const { MemoryStorage } = await load<typeof import("../src/storage/memory.ts")>("/src/storage/memory.ts");
-    await startShell(document.getElementById("app") as HTMLElement, new MemoryStorage({}));
+    const { mountShell } = await load<typeof import("../src/testing/mount-shell.ts")>("/src/testing/mount-shell.ts");
+    await mountShell({});
   });
 });
 

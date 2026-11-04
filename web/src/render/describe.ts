@@ -2,7 +2,7 @@
 // data, not DOM, so it needs no browser to test; `mount` puts it on the page. The renderer holds
 // no state: the same document always gives the same tree.
 import { headShape } from "../connectors/heads.ts";
-import { edgeLabelLayout } from "../connectors/label.ts";
+import { edgeLabelLayout, LABEL_PAD } from "../connectors/label.ts";
 import { type RoutedEdge, routedEdges } from "../connectors/edges.ts";
 import type { DiagramDocument, DiagramElement, StyleProps } from "../model/index.ts";
 import { elementsById, layoutById } from "../model/lookup.ts";
@@ -212,9 +212,6 @@ function body(
 }
 
 const fmt = (n: number): string => String(n);
-
-/** The background behind a label, so the line does not run through the text, and its room around the text. */
-const LABEL_PAD = 4;
 
 function labelNodesOnEdge({ edge, points, labelAt, style }: RoutedEdge, measurer: TextMeasurer, paper: string): SvgNode[] {
   const look = textLookOf(style);
