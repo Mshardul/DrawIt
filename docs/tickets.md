@@ -8,7 +8,7 @@ The table has one fixed set of columns and plain-text cells. Changing a column i
 
 - **Columns:** ID, Phase, Title, Description, Depends on, Story Points, Status, Created on, Updated on.
 - **ID:** `T-NNN`, never reused.
-- **Phase:** `0` to `8`.
+- **Phase:** `0` to `10`.
 - **Depends on:** comma-separated IDs, or `none`.
 - **Story Points:** one of `1`, `2`, `3`, `5` or `8`.
 - **Status:** `todo`, `doing`, `done` or `blocked`.
@@ -27,9 +27,11 @@ Phases 0 to 5 are broken into tickets. Later phases are outlined and get tickets
 | 3 | Styling: theme, classes and overrides resolved from the style section, drawn on shapes, edges and text, and edited from a style panel with a colour picker. |
 | 4 | Shape packs: pack loader, pack shapes drawn, hit-tested and routed by their outlines, shape library sidebar and creation tool, and one ticket per shape category, built in parallel from the shape standard (T-022). Category work can start before the renderer exists. |
 | 5 | Editing commands: delete, duplicate, align and distribute, lock, select inside, frames, images. |
-| 6 | Workspace, files, file watching, preferences, clipboard, export. |
-| 7 | Polish: performance budgets, in-app documentation, release. |
-| 8 | After v1: stacking order commands, for diagrams where filled shapes overlap. |
+| 6 | Workspace: library of projects, drafts and import, rename and delete, folder browser, start screen, landing page with recent files, autosave, file watching and the preferences file. |
+| 7 | Output: clipboard and export, with a spike on fonts and images in PNG export. |
+| 8 | Interface: command palette, configurable shortcuts, View toggles and the Preferences dialog. |
+| 9 | Polish: performance budgets, in-app documentation, release. |
+| 10 | After v1: stacking order commands, for diagrams where filled shapes overlap. |
 
 ## Tickets
 
@@ -115,5 +117,5 @@ Phases 0 to 5 are broken into tickets. Later phases are outlined and get tickets
 | T-079 | 5 | Render images | Draw `image` elements from their `src` at the layout size, or at their natural size when the layout gives none. A file that cannot be read is a dashed placeholder showing its path. | T-012, T-078 | 3 | done | 2026-10-31 | 2026-11-04 |
 | T-080 | 5 | Add images | Paste or drop an image file onto the canvas: it is written to `assets/` under an unused name and an `image` element is added at its natural size, capped to the canvas, as one undoable command. | T-079, T-006 | 5 | done | 2026-10-31 | 2026-11-04 |
 | T-081 | 5 | Phase 5 performance check | In Chromium and WebKit, on a generated 500-element file with frames and images: dragging a selection and resizing a shape with attached edges stay inside the 60fps budget (spec 7.1). | T-076, T-079 | 3 | done | 2026-10-31 | 2026-11-04 |
-| T-071 | 8 | Bring to front and send to back | Move the selected entries to the end or the start of the layout order, keeping their order among themselves, as one undoable command. Nodes and edges share one order. | T-006, T-014 | 3 | done | 2026-10-31 | 2026-11-04 |
-| T-083 | 8 | Z-order buttons | Bring to front and send to back buttons in the Arrange group of the right panel, each enabled only when it can do something for the selection. | T-071, T-073 | 2 | done | 2026-11-04 | 2026-11-04 |
+| T-071 | 10 | Bring to front and send to back | Move the selected entries to the end or the start of the layout order, keeping their order among themselves, as one undoable command. Nodes and edges share one order. | T-006, T-014 | 3 | done | 2026-10-31 | 2026-11-04 |
+| T-083 | 10 | Z-order buttons | Bring to front and send to back buttons in the Arrange group of the right panel, each enabled only when it can do something for the selection. | T-071, T-073 | 2 | done | 2026-11-04 | 2026-11-04 |

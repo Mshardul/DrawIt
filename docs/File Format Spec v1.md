@@ -53,9 +53,9 @@ All of the following ship in v1.
 
 **Workspace and files**
 
-19. Open folder, file tree, new/rename/delete file.
-20. Multiple open files as tabs.
-21. Explicit save, unsaved indicator, refusal of invalid files.
+19. A library of projects: create a project or a diagram, import a file, rename and delete; or open any folder or file, from the command line or the in-app browser. A landing page lists a folder's diagrams and its recent files.
+20. One open file at a time; closing it returns to the landing page.
+21. Save and autosave, saved indicator, refusal of invalid files.
 22. Copy/paste elements within and across files.
 23. Undo/redo.
 24. Whole-line comment preservation in files.
@@ -280,7 +280,7 @@ Every save produces the same bytes for the same diagram.
 A minimal canvas with floating toolbars.
 
 - **Toolbar:** select, rectangle, ellipse, line/arrow, text, image, frame; undo/redo; zoom; unsaved indicator.
-- **Left sidebar:** tabs for the workspace file tree, the shape library, and an outline list of all elements in z-order.
+- **Left sidebar:** the shape library.
 - **Right panel:** properties of the current selection: fill, stroke, text, arrange, position, size.
 - **Status bar:** zoom, cursor position, grid and snap toggles.
 - **Command palette:** Cmd/Ctrl+K lists every action with its shortcut.
@@ -326,14 +326,20 @@ A minimal canvas with floating toolbars.
 - Every change is a command producing forward and inverse patches (Immer).
 - A drag, multi-selection move or paste is one step; typing is grouped by pauses.
 - Undo and redo restore the selection.
-- History is per open file and lasts for the session.
+- History belongs to the open file and lasts until the file is closed.
 
 ### 5.6 Workspace, files and saving
 
-- DrawIt opens a folder as its workspace. Everything it reads, writes or exports stays inside that folder, apart from the preferences file (5.1).
-- The file tree supports new, rename and delete. Open files appear as tabs.
-- Saving is explicit (Cmd/Ctrl+S). Each tab shows an unsaved indicator; closing with unsaved work shows a warning.
-- A file changed on disk with no unsaved edits reloads as one undoable command. With unsaved edits, DrawIt asks whether to keep the edits or reload; it never merges.
+- DrawIt serves one folder at a time as its workspace: a project in the library or any folder the author opens. Everything it reads or writes stays inside that folder, apart from the preferences file (5.1), the library folder and the names shown by the folder browser (6.2).
+- **Library:** a folder named `DrawIt` in the home directory, created on first run. Each subfolder is a project that holds `.drawit.kdl` files and its `assets/` folder. The start screen lists the projects and creates one. Project names use letters, numbers, spaces, hyphens and underscores, and a name that exists, ignoring case, is refused.
+- **New diagram:** created as a draft in a project named `Drafts`, so it is saved from its first edit, and moved into another project on request.
+- **Import:** a button copies a `.drawit.kdl` file chosen from the computer into a project. A file that fails to parse is refused with its line and column, and a name already in the project gets a different one.
+- **Rename and delete:** the start screen and the landing page rename and delete the projects and diagrams of the library after a confirmation. Delete moves the item to the operating system's trash where there is one, and otherwise asks a second time. Items in an opened folder are left to the operating system.
+- **Opening:** the project or folder comes from the command line; without one, from the last one kept in the preferences file; without that, from the start screen. The start screen lists the library's projects and has an Open folder button that uses the folder browser. The browser lists folders and `.drawit.kdl` files, starting at the home directory. Picking a folder opens its landing page; picking a file opens that file, with its folder as the workspace. Choosing again changes the workspace.
+- The landing page lists the `.drawit.kdl` files at the top level of the folder and the files opened most recently in that folder, kept in the preferences file (5.1), and has a button that creates a new file there. Opening a file shows it on the canvas; closing it returns to the landing page.
+- One file is open at a time, in one browser tab. A second tab on the same server shows a notice that DrawIt is open elsewhere and a Use here button, which takes the session over from the first tab.
+- Cmd/Ctrl+S saves. Autosave writes the open file about two seconds after the last edit; it is a preference, on in the library and off in an opened folder. The toolbar shows Saving, Saved or an unsaved indicator; closing with unsaved work shows a warning.
+- A file changed on disk with no unsaved edits reloads as one undoable command. With unsaved edits, or when autosave finds the file changed since DrawIt read it, DrawIt asks whether to keep the edits or reload and does not write until answered; it never merges.
 - A file that fails to parse as KDL is refused with the error and its line and column. It is never opened partially and never overwritten.
 - Beyond KDL syntax, DrawIt does not validate hand-edited files; it draws what it can. Everything DrawIt writes is valid.
 - DrawIt recognises its own saves by content hash, so they never count as changes on disk.
@@ -349,6 +355,9 @@ A minimal canvas with floating toolbars.
 
 - **SVG:** the canvas, a selection or a frame, with used fonts embedded and a title and description.
 - **PNG:** the canvas, a selection or a frame, at 1x, 2x or 3x, with an optional transparent background.
+- **Delivery:** an export dialog has a Download button, and the browser saves the result as an ordinary file named after the diagram, and the frame when one is exported. The server is not involved.
+- **Scope:** the canvas exports the bounding box of all elements with 16 px of padding. A selection exports its elements. A frame exports everything overlapping its region, clipped to it.
+- **Quality:** an export does not depend on the canvas zoom or pan. SVG stays vector, and PNG is drawn from the SVG at 1x, 2x or 3x of its size, so lines, text and images are sharp at every scale. A PNG too large for the browser's canvas is refused with a message.
 
 ## 6. Architecture
 
@@ -368,7 +377,7 @@ One TypeScript app runs in any desktop browser and talks only to a local Go bina
 - Generates a random session token at startup and opens the browser at a URL carrying it in the fragment, also printed to the terminal. The page keeps it in `sessionStorage`, removes it from the address bar and sends it as an `Authorization` header; requests without it are rejected.
 - Checks `Host` and `Origin` headers.
 - Serves a strict content security policy (`connect-src 'self'`), so neither the app nor its plugins can reach the network, and `Referrer-Policy: no-referrer`.
-- Reads and writes only inside the opened folder, enforced with Go's `os.Root` so symlinks cannot lead out of it. The one exception is the preferences file in the OS user config directory.
+- Reads and writes only inside the opened folder, enforced with Go's `os.Root` so symlinks cannot lead out of it. The exceptions are the preferences file in the OS user config directory, the library folder (5.6) for creating, renaming and deleting projects and diagrams, and the folder browser, which lists only the names of folders and `.drawit.kdl` files and never reads a file.
 
 ### 6.3 Packs and plugins
 
@@ -429,9 +438,11 @@ Each budget is an automated test against generated 500-element files.
   - Rich text in text boxes, with mixed styles inside one box.
   - Copy style / paste style.
   - Stacking order commands: bring to front and send to back, as buttons in the Arrange group of the right panel.
+  - Outline list: a tab in the left sidebar listing every element in z-order.
+  - Several diagrams open at once, the same or different ones, in tabs or windows, each with its own workspace.
 - **v2, prioritised:** presentation mode (frames as slides), find text on the canvas (Cmd/Ctrl+F), links on shapes (to a URL or another workspace file).
 - **v2:** `.drawio` import, dark mode, code view of the file with diagnostics for hand edits, curved routing, multiple themes, freehand ink, class/ERD compartments with per-field editing.
 - **Plugins and breadth:** plugin API for code extensions, icon packs, charts, auto-layout (ELK), Mermaid and D2 import, PDF export, templates.
 - **Much later:** animation, Visio/Lucidchart import, peer-to-peer real-time collaboration, vendor icon packs (subject to licence review).
-- **Not scheduled:** persistent groups, printing, importing shape packs from the UI, system fonts, autosave and version history, review comments, touch and tablet support, non-English text and UI translations, a desktop app wrapper, git integration, a command-line diff, merging.
+- **Not scheduled:** persistent groups, printing, importing shape packs from the UI, system fonts, version history, review comments, touch and tablet support, non-English text and UI translations, a desktop app wrapper, git integration, a command-line diff, merging.
 - **Never:** accounts and cloud sync.
