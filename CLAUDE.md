@@ -4,6 +4,7 @@ Read these before changing anything:
 
 - `docs/File Format Spec v1.md`: what DrawIt does and the file format.
 - `docs/decisions.md`: why, and what was rejected. Check it before proposing a different design.
+- `docs/ui-mockups.html`: how every screen and state looks. Open it in a browser; UI work matches it.
 - `docs/tickets.md`: the work. Follow its Format section exactly when editing the table.
 
 ## Rules

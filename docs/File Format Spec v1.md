@@ -277,14 +277,14 @@ Every save produces the same bytes for the same diagram.
 
 ### 5.1 Interface
 
-A minimal canvas with floating toolbars.
+A minimal canvas with two docked panels and two small floating pills.
 
-- **Toolbar:** select, rectangle, ellipse, line/arrow, text, image, frame; undo/redo; zoom; unsaved indicator.
-- **Left sidebar:** the shape library.
-- **Right panel:** properties of the current selection: fill, stroke, text, arrange, position, size.
-- **Status bar:** zoom, cursor position, grid and snap toggles.
+- **File pill:** one small pill at the top right of the canvas with Home, the file name, the save state, undo, redo and Export.
+- **Left panel:** the shape library, open by default. Its first group, Tools, holds select, line, arrow, text, frame and image; the groups below hold the shapes, each a drawn tile whose name appears on hover. Search matches names and tags.
+- **Right panel:** open by default; properties of the current selection: fill, stroke, text, arrange, position, size.
+- **Status pill:** a small pill at the bottom left with zoom, cursor position, and the grid and snap toggles.
 - **Command palette:** Cmd/Ctrl+K lists every action with its shortcut.
-- **Configuration:** every panel and toolbar can be shown or hidden from View or Preferences; every action has a configurable shortcut. Preferences are stored in one file in the OS user config directory.
+- **Configuration:** every panel and the status pill can be shown or hidden from View or Preferences, while the file pill is always shown; every action has a configurable shortcut. Preferences are stored in one file in the OS user config directory.
 - **Documentation:** an in-app reference covers the file syntax, section by section, with examples, the shape names and the style properties. It is written for people and AI authors, so they can check what a file should contain and what they may have written wrong.
 
 ### 5.2 Canvas and selection
@@ -336,9 +336,9 @@ A minimal canvas with floating toolbars.
 - **Import:** a button copies a `.drawit.kdl` file chosen from the computer into a project. A file that fails to parse is refused with its line and column, and a name already in the project gets a different one.
 - **Rename and delete:** the start screen and the landing page rename and delete the projects and diagrams of the library after a confirmation. Delete moves the item to the operating system's trash where there is one, and otherwise asks a second time. Items in an opened folder are left to the operating system.
 - **Opening:** the project or folder comes from the command line; without one, from the last one kept in the preferences file; without that, from the start screen. The start screen lists the library's projects and has an Open folder button that uses the folder browser. The browser lists folders and `.drawit.kdl` files, starting at the home directory. Picking a folder opens its landing page; picking a file opens that file, with its folder as the workspace. Choosing again changes the workspace.
-- The landing page lists the `.drawit.kdl` files at the top level of the folder and the files opened most recently in that folder, kept in the preferences file (5.1), and has a button that creates a new file there. Opening a file shows it on the canvas; closing it returns to the landing page.
+- The landing page lists the `.drawit.kdl` files at the top level of the folder and the files opened most recently in that folder, kept in the preferences file (5.1), and has a button that creates a new file there. The start screen shows projects, and the landing page shows diagrams, as cards with thumbnails drawn by the renderer for the cards on screen; a file that cannot be drawn shows a file icon and its name. Opening a file shows it on the canvas; closing it returns to the landing page.
 - One file is open at a time, in one browser tab. A second tab on the same server shows a notice that DrawIt is open elsewhere and a Use here button, which takes the session over from the first tab.
-- Cmd/Ctrl+S saves. Autosave writes the open file about two seconds after the last edit; it is a preference, on in the library and off in an opened folder. The toolbar shows Saving, Saved or an unsaved indicator; closing with unsaved work shows a warning.
+- Cmd/Ctrl+S saves. Autosave writes the open file about two seconds after the last edit; it is a preference, on in the library and off in an opened folder. The file pill shows Saving, Saved or an unsaved indicator; closing with unsaved work shows a warning.
 - A file changed on disk with no unsaved edits reloads as one undoable command. With unsaved edits, or when autosave finds the file changed since DrawIt read it, DrawIt asks whether to keep the edits or reload and does not write until answered; it never merges.
 - A file that fails to parse as KDL is refused with the error and its line and column. It is never opened partially and never overwritten.
 - Beyond KDL syntax, DrawIt does not validate hand-edited files; it draws what it can. Everything DrawIt writes is valid.
