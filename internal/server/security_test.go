@@ -5,9 +5,10 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/Mshardul/DrawIt/internal/prefs"
 )
 
-// send makes a request with exact control over Host, Origin and Authorization.
 func send(h http.Handler, method, target, host string, header map[string]string) *httptest.ResponseRecorder {
 	req := httptest.NewRequest(method, target, strings.NewReader("x"))
 	req.Host = host
@@ -26,7 +27,7 @@ func bearer(token string) map[string]string {
 func TestUnexpectedHostIsRefused(t *testing.T) {
 	h, _ := newServer(t)
 	for _, host := range []string{"evil.example:8080", "evil.example", "127.0.0.1", "127.0.0.1:9999", "localhost.evil.example:8080", ""} {
-		for _, target := range []string{"/", "/api/files"} {
+		for _, target := range []string{"/", "/api/files", "/api/preferences"} {
 			if rec := send(h, http.MethodGet, target, host, bearer(testToken)); rec.Code != http.StatusForbidden {
 				t.Errorf("Host %q GET %s: status = %d, want 403", host, target, rec.Code)
 			}
@@ -37,7 +38,9 @@ func TestUnexpectedHostIsRefused(t *testing.T) {
 func TestListenerHostsAreAccepted(t *testing.T) {
 	h, _ := newServer(t)
 	for _, host := range []string{"127.0.0.1:8080", "localhost:8080", "LOCALHOST:8080"} {
-		if rec := send(h, http.MethodGet, "/api/files", host, bearer(testToken)); rec.Code != http.StatusOK {
+		header := bearer(testToken)
+		header[WorkspaceHeader] = workspaceHeader(h)
+		if rec := send(h, http.MethodGet, "/api/files", host, header); rec.Code != http.StatusOK {
 			t.Errorf("Host %q: status = %d, want 200", host, rec.Code)
 		}
 	}
@@ -51,6 +54,7 @@ func TestForeignOriginIsRefused(t *testing.T) {
 		for _, c := range []struct{ method, target string }{
 			{http.MethodGet, "/api/files"},
 			{http.MethodPut, "/api/file?path=a.drawit.kdl"},
+			{http.MethodPatch, "/api/preferences"},
 			{http.MethodGet, "/"},
 		} {
 			if rec := send(h, c.method, c.target, testHost, h1); rec.Code != http.StatusForbidden {
@@ -65,6 +69,7 @@ func TestOwnOriginIsAccepted(t *testing.T) {
 	for _, origin := range []string{"http://127.0.0.1:8080", "http://localhost:8080"} {
 		header := bearer(testToken)
 		header["Origin"] = origin
+		header[WorkspaceHeader] = workspaceHeader(h)
 		if rec := send(h, http.MethodGet, "/api/files", testHost, header); rec.Code != http.StatusOK {
 			t.Errorf("Origin %q: status = %d, want 200", origin, rec.Code)
 		}
@@ -87,6 +92,8 @@ func TestAPIRequiresTheTokenHeader(t *testing.T) {
 			{http.MethodGet, "/api/files"},
 			{http.MethodGet, "/api/file?path=a.drawit.kdl"},
 			{http.MethodPut, "/api/file?path=a.drawit.kdl"},
+			{http.MethodGet, "/api/preferences"},
+			{http.MethodPatch, "/api/preferences"},
 			{http.MethodGet, "/api/nothing"},
 		} {
 			if rec := send(h, c.method, c.target, testHost, header); rec.Code != http.StatusForbidden {
@@ -118,7 +125,7 @@ func TestRefusedWriteChangesNothing(t *testing.T) {
 func TestAServerWithoutATokenRefusesTheAPI(t *testing.T) {
 	_, dir := newServer(t)
 	root := openRoot(t, dir)
-	h := New(root, nil, Config{Hosts: []string{testHost}})
+	h := New(root, dir, "", nil, prefs.Open(t.TempDir()), Config{Hosts: []string{testHost}})
 	for _, header := range []map[string]string{nil, bearer(""), bearer("anything")} {
 		if rec := send(h, http.MethodGet, "/api/files", testHost, header); rec.Code != http.StatusForbidden {
 			t.Errorf("status = %d, want 403", rec.Code)

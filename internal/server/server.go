@@ -1,12 +1,8 @@
-// Package server is DrawIt's local HTTP server: it serves the embedded app and the file API for
-// one opened folder. Every file access goes through os.Root, so paths and
-// symlinks cannot lead out of the folder. Security checks are in security.go; the bind address is the caller's.
 package server
 
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"io"
 	"io/fs"
@@ -15,10 +11,10 @@ import (
 	"path"
 	"path/filepath"
 	"time"
+
+	"github.com/Mshardul/DrawIt/internal/prefs"
 )
 
-// MaxFileBytes is the largest file the server writes, whatever the file holds. Every file is read
-// into memory by the app, so the limit bounds what one write can cost.
 const MaxFileBytes = 32 << 20
 
 type fileInfo struct {
@@ -28,49 +24,54 @@ type fileInfo struct {
 }
 
 type server struct {
-	root *os.Root
+	ws    workspace
+	prefs *prefs.Store
 }
 
-// New returns the handler for the opened folder `root` and the app files in `assets`, guarded as
-// `cfg` says.
-func New(root *os.Root, assets fs.FS, cfg Config) http.Handler {
-	s := &server{root: root}
+func New(root *os.Root, folder, library string, assets fs.FS, store *prefs.Store, cfg Config) http.Handler {
+	kind := ""
+	if root != nil {
+		kind = kindOf(folder, library)
+	}
+	s := &server{ws: workspace{root: root, id: newWorkspaceID(), path: folder, kind: kind, library: library}, prefs: store}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/files", s.list)
 	mux.HandleFunc("GET /api/file", s.read)
 	mux.HandleFunc("PUT /api/file", s.write)
+	mux.HandleFunc("POST /api/library", s.library)
+	mux.HandleFunc("GET /api/workspace", s.currentWorkspace)
+	mux.HandleFunc("POST /api/workspace", s.openWorkspace)
+	mux.HandleFunc("GET /api/preferences", s.readPreferences)
+	mux.HandleFunc("PATCH /api/preferences", s.patchPreferences)
 	mux.HandleFunc("GET /api/", http.NotFound)
 	mux.Handle("GET /", http.FileServerFS(assets))
 	return protect(cfg, mux)
 }
 
-// list returns every regular file in the folder, in path order. Symlinks are not listed.
-func (s *server) list(w http.ResponseWriter, _ *http.Request) {
-	files := []fileInfo{}
-	err := fs.WalkDir(s.root.FS(), ".", func(p string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if !d.Type().IsRegular() {
-			return nil
-		}
-		info, err := d.Info()
-		if err != nil {
-			return err
-		}
-		files = append(files, fileInfo{Path: p, Size: info.Size(), Modified: info.ModTime().UTC()})
-		return nil
-	})
-	if err != nil {
-		http.Error(w, "cannot list folder", http.StatusInternalServerError)
+func (s *server) list(w http.ResponseWriter, r *http.Request) {
+	root, release, ok := s.fileRoot(w, r)
+	if !ok {
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string][]fileInfo{"files": files})
+	defer release()
+	if err := serveListing(w, r, root); err != nil {
+		http.Error(w, "cannot list folder", http.StatusInternalServerError)
+	}
 }
 
-// filePath returns the requested path, or false after answering 400 if it is not a file path
-// inside the folder.
+func (s *server) fileRoot(w http.ResponseWriter, r *http.Request) (*os.Root, func(), bool) {
+	root, release, stale := s.ws.borrow(r.Header.Get(WorkspaceHeader))
+	if stale {
+		http.Error(w, "workspace is stale", http.StatusConflict)
+		return nil, nil, false
+	}
+	if root == nil {
+		http.Error(w, "no folder open", http.StatusNotFound)
+		return nil, nil, false
+	}
+	return root, release, true
+}
+
 func filePath(w http.ResponseWriter, r *http.Request) (string, bool) {
 	p := r.URL.Query().Get("path")
 	if !filepath.IsLocal(p) || path.Clean(filepath.ToSlash(p)) == "." {
@@ -81,11 +82,16 @@ func filePath(w http.ResponseWriter, r *http.Request) (string, bool) {
 }
 
 func (s *server) read(w http.ResponseWriter, r *http.Request) {
+	root, release, ok := s.fileRoot(w, r)
+	if !ok {
+		return
+	}
+	defer release()
 	p, ok := filePath(w, r)
 	if !ok {
 		return
 	}
-	f, err := s.root.Open(p)
+	f, err := root.Open(p)
 	if err != nil {
 		openFailed(w, err)
 		return
@@ -100,11 +106,24 @@ func (s *server) read(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "not a file", http.StatusBadRequest)
 		return
 	}
+	if _, stat := r.URL.Query()["stat"]; stat {
+		if r.URL.Query().Get("stat") != "1" {
+			http.Error(w, "stat must be 1", http.StatusBadRequest)
+			return
+		}
+		writeJSONValue(w, fileInfo{Path: p, Size: info.Size(), Modified: info.ModTime().UTC()})
+		return
+	}
 	w.Header().Set("Content-Type", "application/octet-stream")
 	_, _ = io.Copy(w, f)
 }
 
 func (s *server) write(w http.ResponseWriter, r *http.Request) {
+	root, release, ok := s.fileRoot(w, r)
+	if !ok {
+		return
+	}
+	defer release()
 	p, ok := filePath(w, r)
 	if !ok {
 		return
@@ -119,32 +138,57 @@ func (s *server) write(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "cannot read request body", http.StatusBadRequest)
 		return
 	}
-	if info, err := s.root.Lstat(p); err == nil && info.IsDir() {
+	if info, err := root.Lstat(p); err == nil && info.IsDir() {
 		http.Error(w, "path is a folder", http.StatusBadRequest)
 		return
 	}
-	if dir := path.Dir(p); dir != "." {
-		if err := s.root.MkdirAll(dir, 0o755); err != nil {
-			openFailed(w, err)
+	if err := parentReady(root, p); err != nil {
+		var status *statusError
+		if errors.As(err, &status) {
+			http.Error(w, status.text, status.code)
 			return
 		}
-	}
-	if err := s.replace(p, body); err != nil {
 		openFailed(w, err)
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
+	if err := replace(root, p, body); err != nil {
+		openFailed(w, err)
+		return
+	}
+	info, err := root.Stat(p)
+	if err != nil {
+		openFailed(w, err)
+		return
+	}
+	writeJSONValue(w, fileInfo{Path: p, Size: info.Size(), Modified: info.ModTime().UTC()})
 }
 
-// replace writes data to a temporary file next to p and renames it over p, so readers see the
-// old file or the new one, never a partial write.
-func (s *server) replace(p string, data []byte) error {
+// A write may create assets/ at the top of the folder and no other folder.
+func parentReady(root *os.Root, p string) error {
+	dir := path.Dir(p)
+	if dir == "." {
+		return nil
+	}
+	if dir == "assets" {
+		err := root.Mkdir(dir, 0o755)
+		if err != nil && !errors.Is(err, os.ErrExist) {
+			return err
+		}
+	}
+	info, err := root.Lstat(dir)
+	if err != nil || !info.IsDir() {
+		return openError(http.StatusBadRequest, "folder does not exist")
+	}
+	return nil
+}
+
+func replace(root *os.Root, p string, data []byte) error {
 	var suffix [6]byte
 	if _, err := rand.Read(suffix[:]); err != nil {
 		return err
 	}
 	tmp := path.Join(path.Dir(p), "."+path.Base(p)+".tmp-"+hex.EncodeToString(suffix[:]))
-	f, err := s.root.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+	f, err := root.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
 	if err != nil {
 		return err
 	}
@@ -156,16 +200,57 @@ func (s *server) replace(p string, data []byte) error {
 		err = closeErr
 	}
 	if err == nil {
-		err = s.root.Rename(tmp, p)
+		err = root.Rename(tmp, p)
 	}
 	if err != nil {
-		_ = s.root.Remove(tmp)
+		_ = root.Remove(tmp)
 	}
 	return err
 }
 
-// openFailed answers for an error from os.Root: a missing file is 404, anything else, such as a
-// path that leaves the folder through a symlink, is refused.
+const preferencesLimit = 1 << 20
+
+func (s *server) readPreferences(w http.ResponseWriter, _ *http.Request) {
+	view, err := s.prefs.Read()
+	if err != nil {
+		http.Error(w, "cannot read preferences", http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, view.JSON)
+}
+
+func (s *server) patchPreferences(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, preferencesLimit))
+	var tooLarge *http.MaxBytesError
+	if errors.As(err, &tooLarge) {
+		http.Error(w, "preferences are larger than the limit", http.StatusRequestEntityTooLarge)
+		return
+	}
+	if err != nil {
+		http.Error(w, "cannot read request body", http.StatusBadRequest)
+		return
+	}
+	view, err := s.prefs.Patch(body)
+	if errors.Is(err, prefs.ErrUnreadable) {
+		http.Error(w, "preferences file cannot be read", http.StatusConflict)
+		return
+	}
+	if errors.Is(err, prefs.ErrBadPatch) || errors.Is(err, prefs.ErrNotObject) {
+		http.Error(w, "patch must be an object of objects", http.StatusBadRequest)
+		return
+	}
+	if err != nil {
+		http.Error(w, "cannot write preferences", http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, view.JSON)
+}
+
+func writeJSON(w http.ResponseWriter, body []byte) {
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write(body)
+}
+
 func openFailed(w http.ResponseWriter, err error) {
 	if errors.Is(err, fs.ErrNotExist) {
 		http.Error(w, "not found", http.StatusNotFound)

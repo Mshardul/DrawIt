@@ -9,7 +9,7 @@ Read these before changing anything:
 
 ## Rules
 
-- Code never mentions tickets, decisions, spec sections or project status: not in comments, test titles, test names, log labels or identifiers. Those references live in `docs/` only. Comments explain a non-obvious why, nothing else.
+- Code never mentions tickets, decisions, spec sections or project status: not in comments, test titles, test names, log labels or identifiers. Those references live in `docs/` only. No multi-line comments. A comment is one line, and only where the why is not obvious from the code. Do not restate what the code does.
 - Do not copy a convention from surrounding code because it is there. Decide what is right for this codebase and apply that, and if existing code has the wrong convention, fix it where you touch it.
 - Test-first: write the failing test, then the code.
 - Docs describe the current state only. Edit rows and paragraphs in place; never write changelog wording ("replaces", "no longer", "now", "was", "removed"). Git holds the history.

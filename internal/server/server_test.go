@@ -11,6 +11,8 @@ import (
 	"strings"
 	"testing"
 	"testing/fstest"
+
+	"github.com/Mshardul/DrawIt/internal/prefs"
 )
 
 const (
@@ -20,8 +22,6 @@ const (
 
 var testConfig = Config{Token: testToken, Hosts: []string{testHost, "localhost:8080"}}
 
-// newServer serves a fresh temp folder. The returned dir is the opened folder; its parent is
-// the "outside" that the server must never touch.
 func newServer(t *testing.T) (http.Handler, string) {
 	t.Helper()
 	dir := filepath.Join(t.TempDir(), "workspace")
@@ -34,17 +34,35 @@ func newServer(t *testing.T) (http.Handler, string) {
 	}
 	t.Cleanup(func() { _ = root.Close() })
 	assets := fstest.MapFS{"index.html": {Data: []byte("<title>DrawIt</title>")}}
-	return New(root, assets, testConfig), dir
+	return New(root, dir, "", assets, prefs.Open(t.TempDir()), testConfig), dir
 }
 
-// do sends a request as the app would: right Host, right token.
 func do(h http.Handler, method, target string, body io.Reader) *httptest.ResponseRecorder {
 	req := httptest.NewRequest(method, target, body)
 	req.Host = testHost
 	req.Header.Set("Authorization", "Bearer "+testToken)
+	if fileAPI(target) {
+		req.Header.Set(WorkspaceHeader, workspaceHeader(h))
+	}
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
 	return rec
+}
+
+func fileAPI(target string) bool {
+	path, _, _ := strings.Cut(target, "?")
+	return path == "/api/files" || path == "/api/file"
+}
+
+func workspaceHeader(h http.Handler) string {
+	req := httptest.NewRequest(http.MethodGet, "/api/workspace", nil)
+	req.Host = testHost
+	req.Header.Set("Authorization", "Bearer "+testToken)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	var view workspaceView
+	_ = json.Unmarshal(rec.Body.Bytes(), &view)
+	return view.ID
 }
 
 func writeFile(t *testing.T, path, content string) {
@@ -151,26 +169,49 @@ func TestReadOfDirectoryIsRefused(t *testing.T) {
 func TestWriteCreatesAndReplacesAFile(t *testing.T) {
 	h, dir := newServer(t)
 
-	if rec := do(h, http.MethodPut, "/api/file?path=a.drawit.kdl", strings.NewReader("one")); rec.Code != http.StatusNoContent {
-		t.Fatalf("create status = %d, want 204", rec.Code)
+	if rec := do(h, http.MethodPut, "/api/file?path=a.drawit.kdl", strings.NewReader("one")); rec.Code != http.StatusOK {
+		t.Fatalf("create status = %d, want 200", rec.Code)
 	}
 	if got := readFile(t, filepath.Join(dir, "a.drawit.kdl")); got != "one" {
 		t.Fatalf("content = %q, want one", got)
 	}
-	if rec := do(h, http.MethodPut, "/api/file?path=a.drawit.kdl", strings.NewReader("two")); rec.Code != http.StatusNoContent {
-		t.Fatalf("replace status = %d, want 204", rec.Code)
+	if rec := do(h, http.MethodPut, "/api/file?path=a.drawit.kdl", strings.NewReader("two")); rec.Code != http.StatusOK {
+		t.Fatalf("replace status = %d, want 200", rec.Code)
 	}
 	if got := readFile(t, filepath.Join(dir, "a.drawit.kdl")); got != "two" {
 		t.Fatalf("content = %q, want two", got)
 	}
 }
 
-func TestWriteCreatesMissingFolders(t *testing.T) {
+func TestWriteCreatesOnlyTheAssetsFolder(t *testing.T) {
 	h, dir := newServer(t)
-	if rec := do(h, http.MethodPut, "/api/file?path=assets/img/a.svg", strings.NewReader("<svg/>")); rec.Code != http.StatusNoContent {
-		t.Fatalf("status = %d, want 204", rec.Code)
+	if rec := do(h, http.MethodPut, "/api/file?path=assets/a.svg", strings.NewReader("<svg/>")); rec.Code != http.StatusOK {
+		t.Fatalf("assets status = %d, want 200", rec.Code)
 	}
-	if got := readFile(t, filepath.Join(dir, "assets", "img", "a.svg")); got != "<svg/>" {
+	if got := readFile(t, filepath.Join(dir, "assets", "a.svg")); got != "<svg/>" {
+		t.Fatalf("content = %q", got)
+	}
+
+	if rec := do(h, http.MethodPut, "/api/file?path=assets/img/a.svg", strings.NewReader("<svg/>")); rec.Code != http.StatusBadRequest {
+		t.Fatalf("nested status = %d, want 400", rec.Code)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "assets", "img")); !os.IsNotExist(err) {
+		t.Fatalf("a write created assets/img: %v", err)
+	}
+	if rec := do(h, http.MethodPut, "/api/file?path=Demo/a.drawit.kdl", strings.NewReader("x")); rec.Code != http.StatusBadRequest {
+		t.Fatalf("project status = %d, want 400", rec.Code)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "Demo")); !os.IsNotExist(err) {
+		t.Fatalf("a write created Demo: %v", err)
+	}
+
+	if err := os.Mkdir(filepath.Join(dir, "Demo"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if rec := do(h, http.MethodPut, "/api/file?path=Demo/a.drawit.kdl", strings.NewReader("x")); rec.Code != http.StatusOK {
+		t.Fatalf("existing folder status = %d, want 200", rec.Code)
+	}
+	if got := readFile(t, filepath.Join(dir, "Demo", "a.drawit.kdl")); got != "x" {
 		t.Fatalf("content = %q", got)
 	}
 }
@@ -189,7 +230,6 @@ func TestWriteLeavesNoTemporaryFiles(t *testing.T) {
 	}
 }
 
-// failingBody delivers some bytes, then fails, like a connection dropped mid-upload.
 type failingBody struct{ sent bool }
 
 func (b *failingBody) Read(p []byte) (int, error) {
@@ -363,7 +403,6 @@ func openRoot(t *testing.T, dir string) *os.Root {
 	return root
 }
 
-// allBytes holds every byte value twice, so it is not valid UTF-8 and has NULs and line ends.
 func allBytes() []byte {
 	b := make([]byte, 0, 512)
 	for range 2 {
@@ -378,8 +417,8 @@ func TestBinaryFileRoundTripsByteForByte(t *testing.T) {
 	h, dir := newServer(t)
 	want := allBytes()
 
-	if rec := do(h, http.MethodPut, "/api/file?path=assets/logo.png", strings.NewReader(string(want))); rec.Code != http.StatusNoContent {
-		t.Fatalf("write status = %d, want 204", rec.Code)
+	if rec := do(h, http.MethodPut, "/api/file?path=assets/logo.png", strings.NewReader(string(want))); rec.Code != http.StatusOK {
+		t.Fatalf("write status = %d, want 200", rec.Code)
 	}
 	if got := readFile(t, filepath.Join(dir, "assets", "logo.png")); got != string(want) {
 		t.Fatal("bytes on disk differ from the bytes written")
@@ -397,8 +436,8 @@ func TestWriteOfExactlyTheLimitIsAccepted(t *testing.T) {
 	h, dir := newServer(t)
 	body := strings.NewReader(strings.Repeat("x", MaxFileBytes))
 
-	if rec := do(h, http.MethodPut, "/api/file?path=big.bin", body); rec.Code != http.StatusNoContent {
-		t.Fatalf("status = %d, want 204", rec.Code)
+	if rec := do(h, http.MethodPut, "/api/file?path=big.bin", body); rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rec.Code)
 	}
 	info, err := os.Stat(filepath.Join(dir, "big.bin"))
 	if err != nil || info.Size() != MaxFileBytes {
@@ -436,5 +475,114 @@ func TestWriteOverTheLimitCreatesNoFolders(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(dir, "assets")); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("assets folder exists after a refused write: %v", err)
+	}
+}
+
+func TestPreferencesWorkWithNoFolderOpen(t *testing.T) {
+	dir := t.TempDir()
+	h := New(nil, "", "", fstest.MapFS{"index.html": {Data: []byte("<title>DrawIt</title>")}}, prefs.Open(dir), testConfig)
+
+	rec := do(h, http.MethodGet, "/api/preferences", nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rec.Code)
+	}
+	if ct := rec.Header().Get("Content-Type"); !strings.HasPrefix(ct, "application/json") {
+		t.Fatalf("Content-Type = %q, want JSON", ct)
+	}
+	assertPrefsJSON(t, rec.Body.Bytes(), `{"version":1}`)
+	if _, err := os.Stat(filepath.Join(dir, "preferences.json")); !os.IsNotExist(err) {
+		t.Fatalf("GET created the preferences file: %v", err)
+	}
+
+	rec = do(h, http.MethodPatch, "/api/preferences", strings.NewReader(`{"editor":{"grid":true}}`))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("patch status = %d, body %s", rec.Code, rec.Body.Bytes())
+	}
+	assertPrefsJSON(t, rec.Body.Bytes(), `{"version":1,"editor":{"grid":true}}`)
+
+	rec = do(h, http.MethodGet, "/api/preferences", nil)
+	assertPrefsJSON(t, rec.Body.Bytes(), `{"version":1,"editor":{"grid":true}}`)
+
+	rec = do(h, http.MethodPatch, "/api/preferences", strings.NewReader(`{"panels":{"library":224}}`))
+	assertPrefsJSON(t, rec.Body.Bytes(), `{"version":1,"editor":{"grid":true},"panels":{"library":224}}`)
+
+	if rec := do(h, http.MethodGet, "/api/files", nil); rec.Code != http.StatusNotFound {
+		t.Fatalf("list with no folder: status = %d, want 404", rec.Code)
+	}
+}
+
+func TestPreferencesStayBehindTheTokenAndHostChecks(t *testing.T) {
+	dir := t.TempDir()
+	h := New(nil, "", "", nil, prefs.Open(dir), testConfig)
+	for _, c := range []struct {
+		method, host string
+		header       map[string]string
+	}{
+		{http.MethodGet, "evil.example", bearer(testToken)},
+		{http.MethodPatch, testHost, nil},
+		{http.MethodGet, testHost, bearer("wrong")},
+	} {
+		rec := send(h, c.method, "/api/preferences", c.host, c.header)
+		if rec.Code != http.StatusForbidden {
+			t.Errorf("%s host %q: status = %d, want 403", c.method, c.host, rec.Code)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(dir, "preferences.json")); !os.IsNotExist(err) {
+		t.Fatalf("a refused request created the preferences file: %v", err)
+	}
+}
+
+func TestUnreadablePreferencesAreDefaultsAndPatchIsRefused(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "preferences.json")
+	body := []byte("{not json")
+	if err := os.WriteFile(path, body, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	h := New(nil, "", "", nil, prefs.Open(dir), testConfig)
+
+	rec := do(h, http.MethodGet, "/api/preferences", nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rec.Code)
+	}
+	assertPrefsJSON(t, rec.Body.Bytes(), `{"version":1}`)
+
+	rec = do(h, http.MethodPatch, "/api/preferences", strings.NewReader(`{"editor":{"grid":true}}`))
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("patch status = %d, want 409", rec.Code)
+	}
+	got, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != string(body) {
+		t.Fatalf("file changed to %q", got)
+	}
+}
+
+func TestPreferencesPatchMustBeJSONObjects(t *testing.T) {
+	h := New(nil, "", "", nil, prefs.Open(t.TempDir()), testConfig)
+	rec := do(h, http.MethodPatch, "/api/preferences", strings.NewReader(`{"editor":1}`))
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400", rec.Code)
+	}
+}
+
+func assertPrefsJSON(t *testing.T, got []byte, want string) {
+	t.Helper()
+	var have, need any
+	if err := json.Unmarshal(got, &have); err != nil {
+		t.Fatalf("got is not JSON (%v): %s", err, got)
+	}
+	if err := json.Unmarshal([]byte(want), &need); err != nil {
+		t.Fatal(err)
+	}
+	if have == nil && need == nil {
+		return
+	}
+	hb, _ := json.Marshal(have)
+	nb, _ := json.Marshal(need)
+	if string(hb) != string(nb) {
+		t.Fatalf("got %s, want %s", got, want)
 	}
 }

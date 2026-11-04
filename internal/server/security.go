@@ -6,23 +6,14 @@ import (
 	"strings"
 )
 
-// Config holds what the server needs to defend itself.
 type Config struct {
-	// Token is the session token every /api/ request must carry as `Authorization: Bearer`.
-	// With no token the API refuses every request.
 	Token string
-	// Hosts are the Host header values the server answers to, such as "127.0.0.1:8080".
 	Hosts []string
 }
 
-// csp lets the app load only its own files and talk only to its own server, so neither the
-// app nor a pack can reach the network. Images are the app's own files or blob URLs the app makes
-// from the bytes it read through the API, because the API needs a token that an image request
-// cannot carry.
+// Image requests cannot carry the API token, so images are blob URLs.
 const csp = "default-src 'self'; connect-src 'self'; img-src 'self' blob:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'"
 
-// protect wraps next with the security headers, the Host and Origin checks, and the token check
-// for /api/. A request that fails a check gets 403 and never reaches next.
 func protect(cfg Config, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		h := w.Header()
@@ -47,7 +38,6 @@ func (c Config) allowsHost(host string) bool {
 	return false
 }
 
-// allowsOrigin accepts a request with no Origin header, or one naming the server itself.
 func (c Config) allowsOrigin(r *http.Request) bool {
 	origin, ok := r.Header["Origin"]
 	if !ok {
