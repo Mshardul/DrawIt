@@ -12,9 +12,11 @@ export type DrawEnd = { id: string } | { point: Point };
 
 /** Shapes and text boxes an edge can attach to, bottom to top. Frames are regions, not things to connect. */
 export function attachTargets(doc: DiagramDocument, measurer: TextMeasurer): Target[] {
-  return drawnBoxes(doc, measurer).map(({ x, y, w, h, element }) => {
-    return { id: element.id, box: { x, y, w, h }, shape: outlineKind(element), ...packGeometry(element, { x, y, w, h }) };
-  });
+  return drawnBoxes(doc, measurer)
+    .filter(({ element }) => element.kind !== "frame")
+    .map(({ x, y, w, h, element }) => {
+      return { id: element.id, box: { x, y, w, h }, shape: outlineKind(element), ...packGeometry(element, { x, y, w, h }) };
+    });
 }
 
 const roundPoint = (p: Point): Point => ({ x: Math.round(p.x), y: Math.round(p.y) });

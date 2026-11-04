@@ -82,3 +82,19 @@ export function distributeCommand(doc: DiagramDocument, measurer: TextMeasurer, 
   }
   return moves(doc, deltas);
 }
+
+export interface ArrangeAvailability {
+  align: Record<AlignMode, boolean>;
+  distribute: Record<Axis, boolean>;
+}
+
+export const ALIGN_MODES: readonly AlignMode[] = ["left", "centre", "right", "top", "middle", "bottom"];
+export const AXES: readonly Axis[] = ["horizontal", "vertical"];
+
+/** Which align and distribute commands would change the document for this selection. */
+export function arrangeAvailability(doc: DiagramDocument, measurer: TextMeasurer, ids: readonly string[]): ArrangeAvailability {
+  return {
+    align: Object.fromEntries(ALIGN_MODES.map((m) => [m, alignCommand(doc, measurer, ids, m) !== null])) as Record<AlignMode, boolean>,
+    distribute: Object.fromEntries(AXES.map((a) => [a, distributeCommand(doc, measurer, ids, a) !== null])) as Record<Axis, boolean>,
+  };
+}

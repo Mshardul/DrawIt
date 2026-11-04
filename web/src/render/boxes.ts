@@ -42,9 +42,9 @@ export interface DrawnBox extends Box {
   locked: boolean;
 }
 
-/** Nodes, decorative shapes and text boxes; edges, frames, images and unknown elements are not drawn. */
+/** Nodes, decorative shapes, text boxes, frames and images; edges and unknown elements have no box here. */
 export function isDrawn(element: DiagramElement): boolean {
-  return element.kind === "node" || element.kind === "shape" || element.kind === "text";
+  return element.kind === "node" || element.kind === "shape" || element.kind === "text" || element.kind === "frame" || element.kind === "image";
 }
 
 /** The box an element takes: its layout position with its layout or default size. Null for an element with no layout entry and for an edge, which has no box. */

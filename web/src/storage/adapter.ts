@@ -5,7 +5,8 @@
 //   read   GET /api/file?path=  the file's bytes
 //   write  PUT /api/file?path=  replaces the file's bytes atomically
 //
-// `watch` has no server endpoint yet.
+// Files are bytes: text and binary files such as images go through the same calls. `watch` has no
+// server endpoint yet.
 
 /** A file in the workspace, as `GET /api/files` reports it. */
 export interface FileInfo {
@@ -15,6 +16,9 @@ export interface FileInfo {
   /** UTC time of the last change, ISO 8601 as `Date.toISOString` writes it. */
   modified: string;
 }
+
+/** The largest file a write may hold, in bytes, whatever the file is. The server refuses a larger one. */
+export const MAX_FILE_BYTES = 32 * 1024 * 1024;
 
 export type WatchEvent =
   | { type: "created" | "changed" | "removed"; path: string };
@@ -27,7 +31,16 @@ export type StorageErrorCode =
   /** The path is not a file path inside the folder, or names a folder where a file is needed (HTTP 400). */
   | "invalid-path"
   /** The storage refused access (HTTP 403). */
-  | "refused";
+  | "refused"
+  /** A write is larger than `MAX_FILE_BYTES` (HTTP 413). */
+  | "too-large";
+
+/** Throws `too-large` if `data` cannot be written as the file at `path`. */
+export function assertFitsLimit(path: string, data: Uint8Array): void {
+  if (data.length > MAX_FILE_BYTES) {
+    throw new StorageError("too-large", `${path} is ${String(data.length)} bytes, over the limit of ${String(MAX_FILE_BYTES)}`);
+  }
+}
 
 export class StorageError extends Error {
   readonly code: StorageErrorCode;
@@ -46,7 +59,8 @@ export interface StorageAdapter {
   read(path: string): Promise<Uint8Array>;
   /**
    * Replaces the file, creating it and its folders if needed. Atomic: a reader sees the old
-   * bytes or the new, never a mix. Rejects with `StorageError` `invalid-path` for a folder.
+   * bytes or the new, never a mix. Rejects with `StorageError` `invalid-path` for a folder and
+   * `too-large` for more than `MAX_FILE_BYTES`, changing nothing.
    */
   write(path: string, data: Uint8Array): Promise<void>;
   /**

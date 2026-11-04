@@ -16,6 +16,15 @@ describe("diagram generator", () => {
     expect(countKinds(doc)).toEqual({ node: 300, edge: 175, text: 15, frame: 5, shape: 5 });
   });
 
+  it("makes images when asked, each with a source and a size, and none by default", () => {
+    const doc = generateDiagram({ count: 100, ratios: { node: 8, edge: 4, image: 2 } });
+    expect(countKinds(doc)).toEqual({ node: 57, edge: 29, image: 14 });
+    const images = doc.elements.flatMap((e) => (e.kind === "image" ? [e] : []));
+    expect(images.every((e) => e.src === "assets/pic.png")).toBe(true);
+    for (const e of images) expect(doc.layout.find((l) => l.id === e.id)).toMatchObject({ w: 160, h: 100 });
+    expect(countKinds(generateDiagram())["image"]).toBeUndefined();
+  });
+
   it("gives the same document for the same seed and a different one for another", () => {
     expect(generateDiagram({ seed: 7 })).toEqual(generateDiagram({ seed: 7 }));
     expect(generateDiagram({ seed: 7 })).not.toEqual(generateDiagram({ seed: 8 }));

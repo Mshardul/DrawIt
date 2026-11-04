@@ -6,6 +6,7 @@ import { edgeLabelLayout } from "../connectors/label.ts";
 import { type DiagramDocument, unusedId } from "../model/index.ts";
 import { bundledLoader } from "../shapes/bundled-packs.ts";
 import type { ShapeLookup } from "../shapes/pack-loader.ts";
+import { frameNameArea } from "../render/frame.ts";
 import { sizeOf } from "../render/size.ts";
 import { labelLayout, layoutTextBox } from "../render/text-layout.ts";
 import { textLookFor } from "../style/of.ts";
@@ -16,7 +17,7 @@ import type { TextMeasurer } from "./measure.ts";
 export interface EditTarget {
   id: string;
   /** The element field the text is stored in. */
-  field: "label" | "content" | "edgeLabel";
+  field: "label" | "content" | "edgeLabel" | "name";
   text: string;
   /** The text as drawn, one entry per line. */
   lines: string[];
@@ -38,6 +39,11 @@ export function editTarget(doc: DiagramDocument, id: string, measurer: TextMeasu
     return layout ? { id, field: "edgeLabel", text, lines: layout.lines, box: layout.box, look } : null;
   }
   if (!element || !entry) return null;
+  if (element.kind === "frame") {
+    const area = frameNameArea(doc, element, measurer);
+    const text = element.name ?? "";
+    return area && { id, field: "name", text, lines: [text], box: area.box, look: area.look };
+  }
   if (element.kind === "node") {
     const size = sizeOf(doc, element, entry, measurer, shapes);
     if (!size) return null;
@@ -62,12 +68,14 @@ export function editTarget(doc: DiagramDocument, id: string, measurer: TextMeasu
 }
 
 /**
- * Sets the text of the field `editTarget` named. An edge with an empty label has no label, where a
- * node with an empty label keeps it, because a node with none shows its ID.
+ * Sets the text of the field `editTarget` named. An edge with an empty label has no label and a
+ * frame with an empty name has no name, where a node with an empty label keeps it, because a node
+ * with none shows its ID.
  */
 export function setTextCommand(field: EditTarget["field"], id: string, value: string): Command {
   if (field === "content") return { type: "setElement", id, set: { content: value } };
   if (field === "edgeLabel" && value === "") return { type: "setElement", id, unset: ["label"] };
+  if (field === "name") return value === "" ? { type: "setElement", id, unset: ["name"] } : { type: "setElement", id, set: { name: value } };
   return { type: "setElement", id, set: { label: value } };
 }
 

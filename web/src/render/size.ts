@@ -6,6 +6,7 @@ import type { ShapeLookup } from "../shapes/pack-loader.ts";
 import { textLookFor } from "../style/of.ts";
 import type { TextLook } from "../style/text-look.ts";
 import type { TextMeasurer } from "../text/measure.ts";
+import { type ImageLookup, openImages } from "./images.ts";
 import { layoutTextBox } from "./text-layout.ts";
 
 export const SHAPE_W = 160;
@@ -21,8 +22,17 @@ export interface Size {
 
 const bundledShapes: ShapeLookup = (name) => bundledLoader.shape(name);
 
-/** Default size of an element, or null for an edge, which has no box. A text box fits its content. */
-export function defaultSize(element: DiagramElement, measurer: TextMeasurer, look: TextLook, shapes: ShapeLookup = bundledShapes): Size | null {
+/**
+ * Default size of an element, or null for an edge, which has no box. A text box fits its content and
+ * an image is as big as its file once that is loaded.
+ */
+export function defaultSize(
+  element: DiagramElement,
+  measurer: TextMeasurer,
+  look: TextLook,
+  shapes: ShapeLookup = bundledShapes,
+  images: ImageLookup = openImages,
+): Size | null {
   switch (element.kind) {
     case "node":
     case "shape":
@@ -31,8 +41,10 @@ export function defaultSize(element: DiagramElement, measurer: TextMeasurer, loo
       return { w: SHAPE_W, h: SHAPE_H };
     case "text":
       return layoutTextBox(element.content, undefined, measurer, look);
-    case "image":
-      return { w: IMAGE_SIZE, h: IMAGE_SIZE };
+    case "image": {
+      const file = images(element.src);
+      return file.status === "ready" && file.w > 0 && file.h > 0 ? { w: file.w, h: file.h } : { w: IMAGE_SIZE, h: IMAGE_SIZE };
+    }
     case "frame":
       return { w: FRAME_W, h: FRAME_H };
     case "edge":
@@ -44,10 +56,17 @@ export function defaultSize(element: DiagramElement, measurer: TextMeasurer, loo
  * The size layout gives an element, falling back to its default per axis. A text box takes only
  * `w` from layout: it wraps there, and its height is the wrapped lines.
  */
-export function sizeOf(doc: DiagramDocument, element: DiagramElement, entry: LayoutEntry | undefined, measurer: TextMeasurer, shapes: ShapeLookup = bundledShapes): Size | null {
+export function sizeOf(
+  doc: DiagramDocument,
+  element: DiagramElement,
+  entry: LayoutEntry | undefined,
+  measurer: TextMeasurer,
+  shapes: ShapeLookup = bundledShapes,
+  images: ImageLookup = openImages,
+): Size | null {
   const look = textLookFor(doc, element);
   if (element.kind === "text") return layoutTextBox(element.content, entry?.w, measurer, look);
-  const size = defaultSize(element, measurer, look, shapes);
+  const size = defaultSize(element, measurer, look, shapes, images);
   if (!size) return null;
   return { w: entry?.w ?? size.w, h: entry?.h ?? size.h };
 }

@@ -362,3 +362,79 @@ func openRoot(t *testing.T, dir string) *os.Root {
 	t.Cleanup(func() { _ = root.Close() })
 	return root
 }
+
+// allBytes holds every byte value twice, so it is not valid UTF-8 and has NULs and line ends.
+func allBytes() []byte {
+	b := make([]byte, 0, 512)
+	for range 2 {
+		for i := range 256 {
+			b = append(b, byte(i))
+		}
+	}
+	return b
+}
+
+func TestBinaryFileRoundTripsByteForByte(t *testing.T) {
+	h, dir := newServer(t)
+	want := allBytes()
+
+	if rec := do(h, http.MethodPut, "/api/file?path=assets/logo.png", strings.NewReader(string(want))); rec.Code != http.StatusNoContent {
+		t.Fatalf("write status = %d, want 204", rec.Code)
+	}
+	if got := readFile(t, filepath.Join(dir, "assets", "logo.png")); got != string(want) {
+		t.Fatal("bytes on disk differ from the bytes written")
+	}
+	rec := do(h, http.MethodGet, "/api/file?path=assets/logo.png", nil)
+	if rec.Code != http.StatusOK || rec.Body.String() != string(want) {
+		t.Fatalf("read status = %d, body differs = %v", rec.Code, rec.Body.String() != string(want))
+	}
+	if got := rec.Header().Get("Content-Type"); got != "application/octet-stream" {
+		t.Fatalf("content type = %q, want application/octet-stream", got)
+	}
+}
+
+func TestWriteOfExactlyTheLimitIsAccepted(t *testing.T) {
+	h, dir := newServer(t)
+	body := strings.NewReader(strings.Repeat("x", MaxFileBytes))
+
+	if rec := do(h, http.MethodPut, "/api/file?path=big.bin", body); rec.Code != http.StatusNoContent {
+		t.Fatalf("status = %d, want 204", rec.Code)
+	}
+	info, err := os.Stat(filepath.Join(dir, "big.bin"))
+	if err != nil || info.Size() != MaxFileBytes {
+		t.Fatalf("stat = %v, %v", info, err)
+	}
+}
+
+func TestWriteOverTheLimitIsRefusedAndKeepsTheOldFile(t *testing.T) {
+	h, dir := newServer(t)
+	writeFile(t, filepath.Join(dir, "a.bin"), "old")
+	body := strings.NewReader(strings.Repeat("x", MaxFileBytes+1))
+
+	rec := do(h, http.MethodPut, "/api/file?path=a.bin", body)
+	if rec.Code != http.StatusRequestEntityTooLarge {
+		t.Fatalf("status = %d, want 413", rec.Code)
+	}
+	if got := readFile(t, filepath.Join(dir, "a.bin")); got != "old" {
+		t.Fatalf("content = %q, want old", got)
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("folder holds %d entries, want only a.bin", len(entries))
+	}
+}
+
+func TestWriteOverTheLimitCreatesNoFolders(t *testing.T) {
+	h, dir := newServer(t)
+	body := strings.NewReader(strings.Repeat("x", MaxFileBytes+1))
+
+	if rec := do(h, http.MethodPut, "/api/file?path=assets/big.png", body); rec.Code != http.StatusRequestEntityTooLarge {
+		t.Fatalf("status = %d, want 413", rec.Code)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "assets")); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("assets folder exists after a refused write: %v", err)
+	}
+}

@@ -7,14 +7,18 @@ import { attachReattachInput } from "../connectors/reattach-input.ts";
 import { attachEditInput } from "../edit/input.ts";
 import { isTextEntry } from "./text-entry.ts";
 import { defaultSize } from "../library/preview.ts";
-import { attachShapeInput } from "../library/input.ts";
-import type { PlacedShape } from "../library/place.ts";
+import { attachPlaceInput } from "../library/input.ts";
+import { newShapeCommand, type PlacedShape } from "../library/place.ts";
+import { newFrameCommand } from "../frames/place.ts";
 import { createLibrarySidebar } from "../library/sidebar.ts";
 import type { DiagramDocument, Point } from "../model/index.ts";
 import type { Box } from "../render/boxes.ts";
 import { countShadowed, describeDefs, SHADOW_DRAG_LIMIT } from "../render/defs.ts";
 import { describeDiagram } from "../render/describe.ts";
 import { describeGrid } from "../render/grid.ts";
+import { attachImageInput } from "../images/input.ts";
+import { decodeInBrowser, ImageStore } from "../images/store.ts";
+import { useImages } from "../render/images.ts";
 import { mount, patch } from "../render/mount.ts";
 import { describeOverlay } from "../render/overlay.ts";
 import { attachTransformInput } from "../move/input.ts";
@@ -73,15 +77,33 @@ export interface Shell {
 export async function startShell(root: HTMLElement, storage: StorageAdapter): Promise<Shell> {
   await loadFonts();
   const measurer = createTextMeasurer();
+  // Files finish loading one by one; one redraw covers those that finish together.
+  let imagesChanged = false;
+  const images = new ImageStore({
+    storage,
+    onChange: () => {
+      if (imagesChanged) return;
+      imagesChanged = true;
+      queueMicrotask(() => {
+        imagesChanged = false;
+        refresh();
+      });
+    },
+    decode: decodeInBrowser,
+    createUrl: (blob) => URL.createObjectURL(blob),
+    revokeUrl: (url) => { URL.revokeObjectURL(url); },
+  });
+  useImages(images.lookup);
   const picker = el("select", { ariaLabel: "File" });
   const name = el("span", { className: "name" });
   const unsaved = el("span", { className: "unsaved", textContent: "Unsaved changes", hidden: true });
   const saveButton = el("button", { type: "button", textContent: "Save", disabled: true });
   const toolButtons: Record<Exclude<Tool, "shape">, HTMLButtonElement> = {
+    frame: el("button", { type: "button", textContent: "Frame", title: "Frame (F)" }),
     select: el("button", { type: "button", textContent: "Select", title: "Select (V)" }),
     edge: el("button", { type: "button", textContent: "Arrow", title: "Line and arrow (L)" }),
   };
-  const tools = el("div", { className: "tools" }, toolButtons.select, toolButtons.edge);
+  const tools = el("div", { className: "tools" }, toolButtons.select, toolButtons.edge, toolButtons.frame);
   tools.setAttribute("role", "toolbar");
   tools.setAttribute("aria-label", "Tools");
   const zoom = el("span", { className: "zoom" });
@@ -96,7 +118,7 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter): Pr
     el("label", {}, snapToggle, "Snap"),
     el("label", {}, "Grid size", gridSize),
   );
-  const stylePanel = createStylePanel({ getFile: () => current, refresh: () => { refresh(); } });
+  const stylePanel = createStylePanel({ getFile: () => current, measurer, refresh: () => { refresh(); } });
   const library = createLibrarySidebar({
     loader: bundledLoader,
     measurer,
@@ -233,6 +255,7 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter): Pr
       const result = await openFile(storage, path, measurer);
       if (result.ok) {
         current = result.file;
+        images.setBase(path);
         showError(null);
         fit();
       } else {
@@ -368,18 +391,39 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter): Pr
     redrawOverlay: drawOverlay,
     refresh,
   });
-  attachShapeInput({
+  const placeHost = {
     target: canvas,
     getView: () => view,
     getFile: () => current,
     getTool: () => tool,
     setTool,
-    getArmed: () => armed,
     getGrid: () => (grid.snap ? grid.size : 0),
-    setDraft: (box) => {
+    setDraft: (box: Box | null) => {
       shapeDraft = box;
     },
     redrawOverlay: drawOverlay,
+    refresh,
+  };
+  attachPlaceInput({
+    ...placeHost,
+    tool: "shape",
+    isArmed: () => armed !== null,
+    place: (doc, from, to, snap) => newShapeCommand(doc, armed ?? { shape: "rect", size: { w: 160, h: 80 } }, from, to, snap),
+  });
+  attachPlaceInput({
+    ...placeHost,
+    tool: "frame",
+    key: "f",
+    isArmed: () => true,
+    place: newFrameCommand,
+    placed: (id) => { textEdit.edit(id); },
+  });
+  attachImageInput({
+    target: canvas,
+    getView: () => view,
+    getFile: () => current,
+    storage,
+    showError,
     refresh,
   });
   attachViewInput({
@@ -395,6 +439,7 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter): Pr
   saveButton.addEventListener("click", () => void shell.save());
   toolButtons.select.addEventListener("click", () => { setTool("select"); });
   toolButtons.edge.addEventListener("click", () => { setTool("edge"); });
+  toolButtons.frame.addEventListener("click", () => { setTool("frame"); });
   gridToggle.addEventListener("change", () => { setGrid({ show: gridToggle.checked }); gridToggle.blur(); });
   snapToggle.addEventListener("change", () => { setGrid({ snap: snapToggle.checked }); snapToggle.blur(); });
   gridSize.addEventListener("change", () => { setGrid({ size: Number(gridSize.value) }); gridSize.blur(); });

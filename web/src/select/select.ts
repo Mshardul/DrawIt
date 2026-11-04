@@ -1,12 +1,14 @@
 // Selection rules as pure functions over the document, so they need no browser. They see what the
 // renderer draws: shapes and text boxes by their boxes, edges by their routed paths, in one
-// z-order. Frames, images and unknown elements cannot be selected until they are drawn.
+// z-order. A frame is picked by its outline and its name, not its inside. Images and unknown
+// elements cannot be selected until they are drawn.
 import { routedEdges } from "../connectors/edges.ts";
 import { textLookOf } from "../style/text-look.ts";
 import { edgeLabelLayout } from "../connectors/label.ts";
 import { distanceToPath, pathTouchesRect } from "../connectors/path.ts";
 import type { DiagramDocument } from "../model/index.ts";
 import { type Box, type DrawnBox, drawnBoxes, outlineKind, packGeometry, stackOrder } from "../render/boxes.ts";
+import { frameName } from "../render/frame.ts";
 import { insideOutline, nearOutline } from "../shapes/outline.ts";
 import type { TextMeasurer } from "../text/measure.ts";
 import type { Pt } from "../view/view.ts";
@@ -46,9 +48,36 @@ function boxPickable(box: DrawnBox): Pickable {
   };
 }
 
+const touches = (a: Box, b: Box): boolean => a.x <= b.x + b.w && a.x + a.w >= b.x && a.y <= b.y + b.h && a.y + a.h >= b.y;
+const holds = (outer: Box, inner: Box): boolean =>
+  inner.x >= outer.x && inner.y >= outer.y && inner.x + inner.w <= outer.x + outer.w && inner.y + inner.h <= outer.y + outer.h;
+
+/**
+ * A frame is hit on its outline and its name, so what it holds stays clickable. A drag-box takes it
+ * when the box crosses or surrounds the frame, not when the box lies wholly inside it.
+ */
+function framePickable(box: DrawnBox, name: Box | undefined): Pickable {
+  return {
+    id: box.element.id,
+    locked: box.locked,
+    covers(p, reach) {
+      const onName = name !== undefined && p.x >= name.x && p.x <= name.x + name.w && p.y >= name.y && p.y <= name.y + name.h;
+      const inner = p.x > box.x + reach && p.x < box.x + box.w - reach && p.y > box.y + reach && p.y < box.y + box.h - reach;
+      const near = p.x >= box.x - reach && p.x <= box.x + box.w + reach && p.y >= box.y - reach && p.y <= box.y + box.h + reach;
+      return onName || (near && !inner);
+    },
+    overlaps: (r) => (name !== undefined && touches(name, r)) || (touches(box, r) && !holds(box, r)),
+  };
+}
+
 /** Everything that can be selected, bottom to top. */
 function pickables(doc: DiagramDocument, measurer: TextMeasurer): Pickable[] {
-  const boxes = new Map(drawnBoxes(doc, measurer).map((b) => [b.element.id, boxPickable(b)]));
+  const boxes = new Map(
+    drawnBoxes(doc, measurer).map((b) => [
+      b.element.id,
+      b.element.kind === "frame" ? framePickable(b, frameName(doc, b.element, measurer)?.box) : boxPickable(b),
+    ]),
+  );
   const edges = routedEdges(doc, measurer);
   const out: Pickable[] = [];
   for (const id of stackOrder(doc)) {

@@ -10,12 +10,15 @@ import { bundledLoader } from "../shapes/bundled-packs.ts";
 import type { ShapeDrawing } from "../shapes/pack-loader.ts";
 import type { SvgEl } from "../shapes/svg.ts";
 import type { ShapeManifest, Size } from "../shapes/types.ts";
+import { BUILT_IN_THEME } from "../style/defaults.ts";
 import { styleOf, themeColour } from "../style/of.ts";
 import { type TextLook, textLookOf } from "../style/text-look.ts";
 import { COLOUR } from "../style/values.ts";
 import { svgTextAttrs, type TextMeasurer } from "../text/measure.ts";
 import { fillPaint, shadowFilter } from "./defs.ts";
 import { isBuiltInShape, outlineKind, stackOrder } from "./boxes.ts";
+import { frameName } from "./frame.ts";
+import { type ImageLookup, openImages } from "./images.ts";
 import { sizeOf } from "./size.ts";
 import { alignedX, labelLayout, layoutTextBox } from "./text-layout.ts";
 
@@ -34,6 +37,8 @@ export interface DescribeOptions {
   packs?: ShapeSource;
   /** Elements drawn without their text, because an editor is showing it. */
   hideText?: ReadonlySet<string>;
+  /** Where image files come from; the open diagram's images when absent. */
+  images?: ImageLookup;
   /** Leave out shadow filters, which are the costly part of painting while elements move. */
   plain?: boolean;
 }
@@ -155,6 +160,7 @@ function body(
   h: number,
   measurer: TextMeasurer,
   packs: ShapeSource,
+  images: ImageLookup,
   hideText: boolean,
 ): SvgNode[] | null {
   switch (element.kind) {
@@ -184,6 +190,21 @@ function body(
       const at = alignedX(look.align, 0, w);
       const lines = hideText ? [] : lineNodes(layoutTextBox(element.content, w, measurer, look).lines, at.x, 0, at.anchor, look);
       return [...background, ...lines];
+    }
+    case "image": {
+      const file = images(element.src);
+      if (file.status === "ready") return [node("image", { href: file.url, width: w, height: h, preserveAspectRatio: "none" })];
+      // An image has no style of its own, so the placeholder takes the theme's line colour and width.
+      const look: StyleProps = {
+        stroke: themeColour(doc, "line") ?? BUILT_IN_THEME.colors["line"] ?? "none",
+        strokeWidth: doc.style.theme.sizes["stroke"] ?? BUILT_IN_THEME.sizes["stroke"] ?? 1,
+      };
+      return placeholderNodes(doc, look, element.src, w, h, measurer, file.status === "loading");
+    }
+    case "frame": {
+      const outline = node("rect", { width: w, height: h, ...cornerAttrs(style), ...outlineAttrs(doc, style) });
+      const name = hideText ? null : frameName(doc, element, measurer);
+      return [outline, ...(name ? lineNodes([name.text], 0, -name.look.lineHeight, "start", name.look) : [])];
     }
     default:
       return null;
@@ -238,12 +259,12 @@ function edgeNode(doc: DiagramDocument, routed: RoutedEdge, measurer: TextMeasur
 /**
  * Describes the drawable elements bottom to top, which is z-order: the layout order, with edges
  * that have no layout entry on top. Each element is a `g` carrying its ID in `data-id`. Rectangles,
- * ellipses, pack shapes, text boxes and edges are drawn, and a shape no pack provides is a dashed
- * placeholder; frames, images, unknown elements, elements without a layout entry and edges that
+ * ellipses, pack shapes, text boxes, frames, images and edges are drawn, and a shape no pack provides is a dashed
+ * placeholder; images, unknown elements, elements without a layout entry and edges that
  * cannot be routed are not.
  */
 export function describeDiagram(doc: DiagramDocument, measurer: TextMeasurer, options: DescribeOptions = {}): SvgNode[] {
-  const { only, packs = bundledLoader, hideText, plain } = options;
+  const { only, packs = bundledLoader, images = openImages, hideText, plain } = options;
   const elements = elementsById(doc);
   const entries = layoutById(doc);
   const edges = routedEdges(doc, measurer, only);
@@ -259,10 +280,10 @@ export function describeDiagram(doc: DiagramDocument, measurer: TextMeasurer, op
       continue;
     }
     const entry = entries.get(id);
-    const size = sizeOf(doc, element, entry, measurer, (name) => packs.shape(name));
+    const size = sizeOf(doc, element, entry, measurer, (name) => packs.shape(name), images);
     if (!entry || !size) continue;
     const style = styleOf(doc, element);
-    const children = body(doc, element, style, size.w, size.h, measurer, packs, hideText?.has(element.id) === true);
+    const children = body(doc, element, style, size.w, size.h, measurer, packs, images, hideText?.has(element.id) === true);
     if (!children) continue;
     const attrs = { "data-id": element.id, transform: `translate(${fmt(entry.x)} ${fmt(entry.y)})`, ...opacityAttrs(style), ...shadowAttrs(doc, style, plain) };
     out.push(node("g", attrs, children));

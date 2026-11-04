@@ -9,6 +9,7 @@ const resolve = createStyleResolver(bare, BUILT_IN_THEME, defaultStyleFor);
 const node: DiagramElement = { kind: "node", id: "n", shape: "rect" };
 const shape: DiagramElement = { kind: "shape", id: "s", shape: "rect" };
 const text: DiagramElement = { kind: "text", id: "t", content: "x" };
+const frame: DiagramElement = { kind: "frame", id: "f" };
 const edge: DiagramElement = { kind: "edge", id: "e", from: "a", to: "b" };
 
 describe("built-in theme", () => {
@@ -44,6 +45,11 @@ describe("default look", () => {
       align: "center",
       lineHeight: 24,
     });
+  });
+
+  it("gives a frame a line stroke, no fill and small left-aligned ink text for its name", () => {
+    expect(resolve(frame)).toMatchObject({ stroke: "#1f4e79", strokeWidth: 1.5, size: 12, align: "left", color: "#1a1a1a" });
+    expect(resolve(frame)["fill"]).toBeUndefined();
   });
 
   it("gives a shape a stroke, no fill and no text properties", () => {
@@ -91,8 +97,7 @@ describe("default look", () => {
     });
   });
 
-  it("gives frames, images and unknown nodes no style", () => {
-    expect(resolve({ kind: "frame", id: "f" })).toEqual({});
+  it("gives images and unknown nodes no style", () => {
     expect(resolve({ kind: "image", id: "i", src: "assets/a.png" })).toEqual({});
   });
 

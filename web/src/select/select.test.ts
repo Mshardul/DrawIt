@@ -38,7 +38,7 @@ describe("selection", () => {
   });
 
   it("a click on an ellipse corner misses, and on its body hits", () => {
-    expect(hitTest(sample, monoMeasurer, { x: 202, y: 2 })).toBeNull();
+    expect(hitTest(sample, monoMeasurer, { x: 202, y: 10 })).toBeNull();
     expect(hitTest(sample, monoMeasurer, { x: 250, y: 50 })).toBe("oval");
   });
 
@@ -103,8 +103,65 @@ describe("selection", () => {
     expect(hitTest(overlapping, monoMeasurer, { x: 25, y: 25 })).toBe("under");
   });
 
-  it("frames, images and unknown elements are not hit", () => {
+  it("unknown elements are not hit, and a frame is not hit inside its outline", () => {
     expect(hitTest(sample, monoMeasurer, { x: 800, y: 800 })).toBeNull();
+  });
+
+  it("an image is hit anywhere in its box", () => {
+    const pictured = doc([{ kind: "image", id: "pic", src: "assets/x.png" }], [{ id: "pic", x: 100, y: 100, w: 200, h: 100 }]);
+    expect(hitTest(pictured, monoMeasurer, { x: 200, y: 150 })).toBe("pic");
+    expect(hitTest(pictured, monoMeasurer, { x: 50, y: 150 })).toBeNull();
+    expect(idsInRect(pictured, monoMeasurer, { x: 0, y: 0, w: 150, h: 150 })).toEqual(["pic"]);
+    expect(selectAll(pictured, monoMeasurer)).toEqual(["pic"]);
+  });
+
+  describe("frames", () => {
+    const framed = doc(
+      [
+        { kind: "frame", id: "f", name: "Group" },
+        { kind: "node", id: "n", shape: "rect" },
+      ],
+      [
+        { id: "f", x: 100, y: 100, w: 400, h: 300 },
+        { id: "n", x: 150, y: 150, w: 100, h: 50 },
+      ],
+    );
+
+    it("is hit on its outline and not inside it, so what is inside stays clickable", () => {
+      expect(hitTest(framed, monoMeasurer, { x: 100, y: 250 })).toBe("f");
+      expect(hitTest(framed, monoMeasurer, { x: 300, y: 399 })).toBe("f");
+      expect(hitTest(framed, monoMeasurer, { x: 400, y: 300 })).toBeNull();
+      expect(hitTest(framed, monoMeasurer, { x: 200, y: 175 })).toBe("n");
+    });
+
+    it("is hit on its name, which sits above its top left", () => {
+      expect(hitTest(framed, monoMeasurer, { x: 120, y: 90 })).toBe("f");
+      expect(hitTest(framed, monoMeasurer, { x: 300, y: 90 })).toBeNull();
+    });
+
+    it("the outline reach is a fixed number of screen px", () => {
+      expect(hitTest(framed, monoMeasurer, { x: 103, y: 250 }, 1)).toBe("f");
+      expect(hitTest(framed, monoMeasurer, { x: 103, y: 250 }, 4)).toBeNull();
+    });
+
+    it("a drag-box inside the frame does not take it, and one that crosses its outline does", () => {
+      expect(idsInRect(framed, monoMeasurer, { x: 120, y: 120, w: 200, h: 200 })).toEqual(["n"]);
+      expect(idsInRect(framed, monoMeasurer, { x: 50, y: 150, w: 100, h: 100 })).toEqual(["f", "n"]);
+    });
+
+    it("a drag-box around the whole frame takes it", () => {
+      expect(idsInRect(framed, monoMeasurer, { x: 0, y: 0, w: 900, h: 900 })).toEqual(["f", "n"]);
+    });
+
+    it("a drag-box that holds only the name takes the frame", () => {
+      expect(idsInRect(framed, monoMeasurer, { x: 100, y: 70, w: 50, h: 28 })).toEqual(["f"]);
+    });
+
+    it("select all includes unlocked frames and skips locked ones", () => {
+      expect(selectAll(framed, monoMeasurer)).toEqual(["f", "n"]);
+      const locked = { ...framed, layout: framed.layout.map((e) => (e.id === "f" ? { ...e, locked: true } : e)) };
+      expect(selectAll(locked, monoMeasurer)).toEqual(["n"]);
+    });
   });
 
   it("a click on an edge's path hits the edge, and a click a little beside it does too", () => {
@@ -189,7 +246,7 @@ describe("selection", () => {
   });
 
   it("select all selects the drawn, unlocked elements and the edges", () => {
-    expect(selectAll(sample, monoMeasurer)).toEqual(["box", "oval", "note", "e"]);
+    expect(selectAll(sample, monoMeasurer)).toEqual(["frame", "box", "oval", "note", "e"]);
   });
 
   it("a locked edge can be clicked but is skipped by drag-box and select all", () => {

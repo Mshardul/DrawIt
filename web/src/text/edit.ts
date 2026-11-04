@@ -32,6 +32,8 @@ export interface TextEditHost {
 export interface TextEdit {
   /** Puts the editor back over its text after the view moved. */
   reposition(): void;
+  /** Starts editing the text of an element, as a double-click on it does. Typing joins `group` when it is given. */
+  edit(id: string, group?: string): void;
   /** Ends editing, keeping the text typed so far. */
   close(): void;
   /** Removes the listeners. */
@@ -177,7 +179,8 @@ export function attachTextEdit(host: TextEditHost): TextEdit {
     });
     editor.addEventListener("keydown", (event) => {
       const f = host.getFile();
-      if (event.key === "Escape" || ((event.metaKey || event.ctrlKey) && event.key === "Enter")) {
+      // A frame's name is one line, so Enter ends it.
+      if (event.key === "Escape" || ((event.metaKey || event.ctrlKey || s.field === "name") && event.key === "Enter")) {
         event.preventDefault();
         end();
       } else if (f && (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "z") {
@@ -228,6 +231,10 @@ export function attachTextEdit(host: TextEditHost): TextEdit {
 
   return {
     reposition,
+    edit(id, group) {
+      const file = host.getFile();
+      if (file) begin(file, id, false, group ?? newGroup());
+    },
     close: end,
     detach: () => {
       end();

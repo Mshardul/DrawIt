@@ -17,6 +17,10 @@ import (
 	"time"
 )
 
+// MaxFileBytes is the largest file the server writes, whatever the file holds. Every file is read
+// into memory by the app, so the limit bounds what one write can cost.
+const MaxFileBytes = 32 << 20
+
 type fileInfo struct {
 	Path     string    `json:"path"`
 	Size     int64     `json:"size"`
@@ -105,7 +109,12 @@ func (s *server) write(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	body, err := io.ReadAll(r.Body)
+	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, MaxFileBytes))
+	var tooLarge *http.MaxBytesError
+	if errors.As(err, &tooLarge) {
+		http.Error(w, "file is larger than the limit", http.StatusRequestEntityTooLarge)
+		return
+	}
 	if err != nil {
 		http.Error(w, "cannot read request body", http.StatusBadRequest)
 		return

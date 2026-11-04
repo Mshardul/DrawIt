@@ -16,8 +16,10 @@ type Config struct {
 }
 
 // csp lets the app load only its own files and talk only to its own server, so neither the
-// app nor a pack can reach the network.
-const csp = "default-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'"
+// app nor a pack can reach the network. Images are the app's own files or blob URLs the app makes
+// from the bytes it read through the API, because the API needs a token that an image request
+// cannot carry.
+const csp = "default-src 'self'; connect-src 'self'; img-src 'self' blob:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'"
 
 // protect wraps next with the security headers, the Host and Origin checks, and the token check
 // for /api/. A request that fails a check gets 403 and never reaches next.

@@ -1,4 +1,4 @@
-import { type FileInfo, type StorageAdapter, StorageError, type StorageErrorCode, type Unsubscribe } from "./adapter.ts";
+import { assertFitsLimit, type FileInfo, type StorageAdapter, StorageError, type StorageErrorCode, type Unsubscribe } from "./adapter.ts";
 
 export interface HttpStorageOptions {
   /** The session token, sent as `Authorization: Bearer` on every request. */
@@ -11,6 +11,7 @@ const errorCodes: Record<number, StorageErrorCode> = {
   404: "not-found",
   400: "invalid-path",
   403: "refused",
+  413: "too-large",
 };
 
 /** The storage adapter over the local server's API. */
@@ -35,6 +36,7 @@ export class HttpStorage implements StorageAdapter {
   }
 
   async write(path: string, data: Uint8Array): Promise<void> {
+    assertFitsLimit(path, data);
     await this.#request(fileUrl(path), { method: "PUT", body: data as BodyInit });
   }
 

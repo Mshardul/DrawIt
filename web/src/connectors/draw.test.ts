@@ -116,6 +116,10 @@ describe("the end under the pointer", () => {
     expect(drawEndAt(doc(), monoMeasurer, { x: 600.4, y: 700.6 })).toEqual({ point: { x: 600, y: 701 } });
   });
 
+  it("is a free point over a frame's outline, since a frame is not something to connect", () => {
+    expect(drawEndAt(doc(), monoMeasurer, { x: 0, y: 1000 })).toEqual({ point: { x: 0, y: 1000 } });
+  });
+
   it("a corner of an ellipse's box is not on the ellipse", () => {
     expect(drawEndAt(doc(), monoMeasurer, { x: 302, y: 2 })).toEqual({ point: { x: 302, y: 2 } });
   });

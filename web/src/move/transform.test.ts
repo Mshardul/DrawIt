@@ -50,9 +50,20 @@ describe("move", () => {
   });
 
   it("locked elements and ids that are not drawn do not move", () => {
-    expect(moveCommand(sample, monoMeasurer, ["lock", "f", "missing"], 5, 5)).toBeNull();
+    expect(moveCommand(sample, monoMeasurer, ["lock", "missing"], 5, 5)).toBeNull();
     const layout = after(moveCommand(sample, monoMeasurer, ["a", "lock"], 5, 5));
     expect(layout.find((e) => e.id === "lock")).toMatchObject({ x: 400, y: 20 });
+  });
+
+  it("an image moves like a shape", () => {
+    const withImage = doc([{ kind: "image", id: "pic", src: "assets/x.png" }], [{ id: "pic", x: 10, y: 10, w: 100, h: 50 }]);
+    const command = moveCommand(withImage, monoMeasurer, ["pic"], 5, 7);
+    if (!command) throw new Error("no command");
+    expect(applyCommand(withImage, command).document.layout[0]).toMatchObject({ x: 15, y: 17, w: 100, h: 50 });
+  });
+
+  it("a frame moves like a shape", () => {
+    expect(after(moveCommand(sample, monoMeasurer, ["f"], 5, 7)).find((e) => e.id === "f")).toMatchObject({ x: 5, y: 7 });
   });
 
   it("a move by nothing is not a command", () => {
@@ -108,7 +119,11 @@ describe("resize", () => {
 
   it("locked and undrawn elements do not resize", () => {
     expect(resizeCommand(sample, monoMeasurer, "lock", "se", 5, 5)).toBeNull();
-    expect(resizeCommand(sample, monoMeasurer, "f", "se", 5, 5)).toBeNull();
+    expect(resizeCommand(sample, monoMeasurer, "missing", "se", 5, 5)).toBeNull();
+  });
+
+  it("a frame resizes like a shape", () => {
+    expect(after(resizeCommand(sample, monoMeasurer, "f", "se", 20, 10)).find((e) => e.id === "f")).toMatchObject({ x: 0, y: 0, w: 500, h: 330 });
   });
 
   it("a resize by nothing is not a command", () => {

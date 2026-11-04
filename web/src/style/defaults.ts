@@ -37,6 +37,7 @@ const outlined = {
 
 const NODE: StyleProps = { ...outlined, ...text, align: "center" };
 const SHAPE: StyleProps = outlined;
+const FRAME: StyleProps = { ...outlined, ...text, size: "$small", align: "left" };
 const TEXT_BOX: StyleProps = { radius: 0, opacity: 1, ...text, align: "left" };
 const EDGE: StyleProps = {
   stroke: "$ink",
@@ -60,6 +61,8 @@ export function defaultStyleFor(kind: DiagramElement["kind"]): StyleProps {
       return SHAPE;
     case "text":
       return TEXT_BOX;
+    case "frame":
+      return FRAME;
     case "edge":
       return EDGE;
     default:

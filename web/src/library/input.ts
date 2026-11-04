@@ -1,23 +1,33 @@
-// Pointer and key input for the shape tool: a click on the canvas places the armed shape at its
-// default size, a drag sizes it. The node is added as one command on release. The tool lasts for one shape.
+// Pointer and key input for the tools that place an element: a click on the canvas places it at its
+// default size, a drag sizes it. The element is added as one command on release. A tool lasts for
+// one element.
 import type { OpenFile } from "../app/workspace.ts";
 import type { Tool } from "../connectors/input.ts";
 import type { Point } from "../model/index.ts";
 import type { Box } from "../render/boxes.ts";
 import { screenToWorld, type View } from "../view/view.ts";
-import { newShapeCommand, type PlacedShape } from "./place.ts";
+import type { Command } from "../commands/command.ts";
+import type { DiagramDocument } from "../model/index.ts";
 
 /** Pointer travel (screen px) before a press becomes a drag. */
 const DRAG_THRESHOLD = 3;
 
-export interface ShapeInputHost {
+export interface PlaceInputHost {
   target: SVGSVGElement;
+  /** The tool this input serves. */
+  tool: Tool;
+  /** A key that arms the tool, or undefined for a tool the sidebar arms. */
+  key?: string;
   getView(): View;
   getFile(): OpenFile | null;
   getTool(): Tool;
   setTool(tool: Tool): void;
-  /** The shape the tool places. */
-  getArmed(): PlacedShape | null;
+  /** Whether there is something to place; a press does nothing otherwise. */
+  isArmed(): boolean;
+  /** The command that places the element for a click (`to` is null) or a drag, and its ID. */
+  place(doc: DiagramDocument, from: Point, to: Point | null, grid: number): { command: Command; id: string };
+  /** Called after the element was added and the tool went back to select. */
+  placed?(id: string): void;
   /** Grid size to snap to, or 0 when snap is off. */
   getGrid(): number;
   /** The box being dragged out, or null when there is none. */
@@ -35,8 +45,8 @@ interface Press {
   active: boolean;
 }
 
-/** Wires the shape tool to `host`. Returns a function that removes it. */
-export function attachShapeInput(host: ShapeInputHost): () => void {
+/** Wires a placing tool to `host`. Returns a function that removes it. */
+export function attachPlaceInput(host: PlaceInputHost): () => void {
   const { target } = host;
   let press: Press | null = null;
   // Read once per press: reading it on every move would force a layout of the whole canvas.
@@ -51,7 +61,7 @@ export function attachShapeInput(host: ShapeInputHost): () => void {
   };
 
   const onPointerDown = (event: PointerEvent): void => {
-    if (host.getTool() !== "shape" || event.button !== 0 || !host.getFile() || !host.getArmed()) return;
+    if (host.getTool() !== host.tool || event.button !== 0 || !host.getFile() || !host.isArmed()) return;
     box = target.getBoundingClientRect();
     target.setPointerCapture(event.pointerId);
     press = { pointer: event.pointerId, from: world(event), screen: { x: event.clientX, y: event.clientY }, active: false };
@@ -69,20 +79,23 @@ export function attachShapeInput(host: ShapeInputHost): () => void {
     const { from, active } = press;
     end();
     const file = host.getFile();
-    const armed = host.getArmed();
-    if (!file || !armed) return;
+    if (!file || !host.isArmed()) return;
     // Alt (Option) bypasses snap for that event.
-    const made = newShapeCommand(file.document, armed, from, active ? world(event) : null, event.altKey ? 0 : host.getGrid());
+    const made = host.place(file.document, from, active ? world(event) : null, event.altKey ? 0 : host.getGrid());
     file.history.execute(made.command, { selection: [made.id] });
     host.setTool("select");
     host.refresh();
+    host.placed?.(made.id);
   };
   const onKeyDown = (event: KeyboardEvent): void => {
     const t = event.target;
     if (t instanceof HTMLInputElement || t instanceof HTMLSelectElement || t instanceof HTMLTextAreaElement) return;
-    if (event.key !== "Escape") return;
-    if (press) end();
-    else if (host.getTool() === "shape") host.setTool("select");
+    if (event.key === "Escape") {
+      if (press) end();
+      else if (host.getTool() === host.tool) host.setTool("select");
+    } else if (host.key !== undefined && event.key === host.key && !event.metaKey && !event.ctrlKey && !event.altKey && !press) {
+      host.setTool(host.tool);
+    }
   };
 
   target.addEventListener("pointerdown", onPointerDown);

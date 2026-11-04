@@ -3,7 +3,7 @@ import { applyCommand } from "../commands/command.ts";
 import { History } from "../commands/history.ts";
 import type { DiagramDocument, DiagramElement, LayoutEntry } from "../model/index.ts";
 import { monoMeasurer } from "../testing/measurer.ts";
-import { alignCommand, distributeCommand } from "./arrange.ts";
+import { alignCommand, arrangeAvailability, distributeCommand } from "./arrange.ts";
 import type { AlignMode } from "./arrange.ts";
 
 const doc = (elements: DiagramElement[], layout: LayoutEntry[]): DiagramDocument => ({
@@ -61,7 +61,7 @@ describe("align", () => {
 
   it("is null for one element, for elements already aligned, and for ids that are not drawn", () => {
     expect(alignCommand(three(), monoMeasurer, ["a"], "left")).toBeNull();
-    expect(alignCommand(three(), monoMeasurer, ["a", "f", "a->b", "missing"], "left")).toBeNull();
+    expect(alignCommand(three(), monoMeasurer, ["a", "a->b", "missing"], "left")).toBeNull();
     const aligned = alignCommand(three(), monoMeasurer, ["a", "b", "c"], "left");
     const d = three();
     d.layout = d.layout.map((e) => (aligned?.type === "setLayout" ? { ...e, ...aligned.changes.find((c) => c.id === e.id)?.set } : e));
@@ -171,5 +171,35 @@ describe("distribute", () => {
     history.execute(command);
     expect(history.undo()).toBe(true);
     expect(history.document).toEqual(row());
+  });
+});
+
+describe("arrange availability", () => {
+  const none = { align: { left: false, centre: false, right: false, top: false, middle: false, bottom: false }, distribute: { horizontal: false, vertical: false } };
+
+  it("enables nothing for a single element or an empty selection", () => {
+    expect(arrangeAvailability(three(), monoMeasurer, ["a"])).toEqual(none);
+    expect(arrangeAvailability(three(), monoMeasurer, [])).toEqual(none);
+  });
+
+  it("enables an align button only when it would move something", () => {
+    const d = three();
+    d.layout = d.layout.map((e) => (e.id === "b" ? { ...e, x: 10, y: 20, w: 100, h: 50 } : e));
+    const result = arrangeAvailability(d, monoMeasurer, ["a", "b"]);
+    expect(result.align).toEqual({ left: false, centre: false, right: false, top: false, middle: false, bottom: false });
+    const moved = arrangeAvailability(three(), monoMeasurer, ["a", "b"]);
+    expect(moved.align.left).toBe(true);
+    expect(moved.align.top).toBe(true);
+  });
+
+  it("enables distribute for three elements with unequal gaps and not for two", () => {
+    expect(arrangeAvailability(three(), monoMeasurer, ["a", "b", "c"]).distribute.horizontal).toBe(true);
+    expect(arrangeAvailability(three(), monoMeasurer, ["a", "b"]).distribute).toEqual({ horizontal: false, vertical: false });
+  });
+
+  it("enables nothing when every selected element is locked", () => {
+    const d = three();
+    d.layout = d.layout.map((e) => ({ ...e, locked: true }));
+    expect(arrangeAvailability(d, monoMeasurer, ["a", "b", "c"])).toEqual(none);
   });
 });

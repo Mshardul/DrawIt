@@ -5,12 +5,15 @@ import type { OpenFile } from "../app/workspace.ts";
 import { type Command, CommandError } from "../commands/command.ts";
 import { FONT_FAMILIES } from "../text/fonts.ts";
 import { lockCommand, lockState } from "../edit/lock.ts";
+import type { TextMeasurer } from "../text/measure.ts";
+import { createArrangeGroup } from "./arrange-group.ts";
 import { clearStyle, setStyle } from "./commands.ts";
 import { RecentColours, themeTokens } from "./colours.ts";
 import { type FieldValue, type PanelField, panelFields } from "./panel-model.ts";
 
 export interface StylePanelHost {
   getFile(): OpenFile | null;
+  measurer: TextMeasurer;
   /** Redraws the canvas and the unsaved indicator after the document changed. */
   refresh(): void;
 }
@@ -62,7 +65,8 @@ export function createStylePanel(host: StylePanelHost): StylePanel {
   const lockRow = document.createElement("label");
   lockRow.className = "style-row lock-row";
   lockRow.append("Locked", lockBox);
-  element.append(lockRow);
+  const arrange = createArrangeGroup(host);
+  element.append(arrange.element, lockRow);
 
   const closePickers = (): void => {
     for (const row of rows) if (row.picker) row.picker.hidden = true;
@@ -233,6 +237,7 @@ export function createStylePanel(host: StylePanelHost): StylePanel {
         shown = signature;
         rows = fields.map(build);
         element.replaceChildren(
+          arrange.element,
           lockRow,
           ...rows.map((row) => {
             const label = document.createElement("label");
@@ -247,6 +252,7 @@ export function createStylePanel(host: StylePanelHost): StylePanel {
         );
       }
       rows.forEach((row, i) => { const field = fields[i]; if (field) show(row, field); });
+      arrange.update();
       const state = file ? lockState(file.document, file.history.selection) : null;
       lockBox.checked = state === "locked";
       lockBox.indeterminate = state === "mixed";

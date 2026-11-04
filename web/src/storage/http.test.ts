@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { type StorageAdapter, StorageError } from "./adapter.ts";
+import { MAX_FILE_BYTES, type StorageAdapter, StorageError } from "./adapter.ts";
 import { HttpStorage } from "./http.ts";
 import { type SessionEnv, startSession } from "./session.ts";
 
@@ -52,10 +52,27 @@ describe("HTTP storage adapter", () => {
     ]);
   });
 
+  it("reads and writes binary bytes unchanged", async () => {
+    const all = Uint8Array.from({ length: 512 }, (_, i) => i % 256);
+    const { fetchFn, seen } = fakeFetch(() => new Response(all));
+    const storage = new HttpStorage({ token: "tok", fetch: fetchFn });
+    expect(await storage.read("assets/logo.png")).toEqual(all);
+    await storage.write("assets/logo.png", all);
+    expect(seen[1]?.body).toEqual(all);
+  });
+
+  it("does not send a write over the size limit", async () => {
+    const { fetchFn, seen } = fakeFetch(() => new Response(null, { status: 204 }));
+    const storage = new HttpStorage({ token: "tok", fetch: fetchFn });
+    await expect(storage.write("big.bin", new Uint8Array(MAX_FILE_BYTES + 1))).rejects.toMatchObject({ name: "StorageError", code: "too-large" });
+    expect(seen).toEqual([]);
+  });
+
   it.each([
     [404, "not-found"],
     [400, "invalid-path"],
     [403, "refused"],
+    [413, "too-large"],
   ] as const)("maps HTTP %i to StorageError %s", async (status, code) => {
     const { fetchFn } = fakeFetch(() => new Response("no", { status }));
     const storage = new HttpStorage({ token: "tok", fetch: fetchFn });

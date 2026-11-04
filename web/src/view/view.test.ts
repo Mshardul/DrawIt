@@ -67,7 +67,7 @@ describe("view transform", () => {
         [
           { kind: "node", id: "a", shape: "rect" },
           { kind: "shape", id: "b", shape: "rect" },
-          { kind: "frame", id: "f" },
+          { kind: "unknown", id: "f", node: { name: "chart", args: [], props: {}, children: [] } },
         ],
       ), monoMeasurer,
     );

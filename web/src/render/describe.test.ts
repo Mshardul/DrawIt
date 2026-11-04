@@ -3,6 +3,7 @@ import type { DiagramDocument, DiagramElement, LayoutEntry } from "../model/inde
 import { monoMeasurer } from "../testing/measurer.ts";
 import { describeDefs } from "./defs.ts";
 import { describeDiagram, type SvgNode } from "./describe.ts";
+import type { ImageLookup } from "./images.ts";
 import { DEFAULT_LOOK } from "../style/text-look.ts";
 
 const LINE_HEIGHT = DEFAULT_LOOK.lineHeight;
@@ -109,20 +110,16 @@ describe("SVG renderer, basic elements", () => {
     expect(out.map((g) => g.attrs["data-id"])).toEqual(["b", "a"]);
   });
 
-  it("skips frames, images, unknown elements, elements with no layout entry and layout entries with no element", () => {
+  it("skips unknown elements, elements with no layout entry and layout entries with no element", () => {
     const out = describeDiagram(
       doc(
         [
           { kind: "node", id: "a", shape: "rect" },
           { kind: "node", id: "unplaced", shape: "rect" },
-          { kind: "frame", id: "f" },
-          { kind: "image", id: "i", src: "assets/x.png" },
           { kind: "unknown", id: "u", node: { name: "chart", args: [], props: {}, children: [] } },
         ],
         [
           { id: "a", x: 0, y: 0 },
-          { id: "f", x: 0, y: 0 },
-          { id: "i", x: 0, y: 0 },
           { id: "u", x: 0, y: 0 },
           { id: "ghost", x: 0, y: 0 },
         ],
@@ -130,6 +127,72 @@ describe("SVG renderer, basic elements", () => {
       monoMeasurer,
     );
     expect(out.map((g) => g.attrs["data-id"])).toEqual(["a"]);
+  });
+
+  describe("images", () => {
+    const ready: ImageLookup = () => ({ status: "ready", url: "blob:x", w: 300, h: 150 });
+    const one = (entry: Omit<LayoutEntry, "id">, images: ImageLookup) =>
+      describeDiagram(doc([{ kind: "image", id: "i", src: "assets/x.png" }], [{ id: "i", ...entry }]), monoMeasurer, { images })[0];
+
+    it("draws the file at the layout size, stretched to the box", () => {
+      const g = one({ x: 10, y: 20, w: 120, h: 60 }, ready);
+      expect(g?.attrs).toMatchObject({ "data-id": "i", transform: "translate(10 20)" });
+      expect(g && find(g, "image")?.attrs).toMatchObject({ href: "blob:x", width: 120, height: 60, preserveAspectRatio: "none" });
+    });
+
+    it("draws at the natural size when layout gives none, and takes each missing side from it", () => {
+      expect(one({ x: 0, y: 0 }, ready) && find(one({ x: 0, y: 0 }, ready) as SvgNode, "image")?.attrs).toMatchObject({ width: 300, height: 150 });
+      expect(find(one({ x: 0, y: 0, w: 90 }, ready) as SvgNode, "image")?.attrs).toMatchObject({ width: 90, height: 150 });
+    });
+
+    it("draws a dashed outline of the default size while the file loads, with no text", () => {
+      const g = one({ x: 0, y: 0 }, () => ({ status: "loading" }));
+      expect(g && find(g, "rect")?.attrs).toMatchObject({ width: 80, height: 80, fill: "none", "stroke-dasharray": "6 4" });
+      expect(g && find(g, "image")).toBeUndefined();
+      expect(g && texts(g)).toEqual([]);
+    });
+
+    it("draws a dashed placeholder showing the path when the file cannot be read", () => {
+      const g = one({ x: 0, y: 0, w: 200, h: 100 }, () => ({ status: "failed" }));
+      expect(g && find(g, "rect")?.attrs).toMatchObject({ width: 200, height: 100, "stroke-dasharray": "6 4" });
+      expect(g && find(g, "rect")?.attrs["stroke"]).not.toBe("none");
+      expect(g && texts(g)).toEqual(["assets/x.png"]);
+    });
+
+    it("asks for each image by the path as written", () => {
+      const asked: string[] = [];
+      one({ x: 0, y: 0 }, (src) => {
+        asked.push(src);
+        return { status: "loading" };
+      });
+      expect(asked).toContain("assets/x.png");
+    });
+  });
+
+  it("draws a frame as an unfilled outline of its size with its name above the top left", () => {
+    const [g] = describeDiagram(
+      doc([{ kind: "frame", id: "f", name: "Overview" }], [{ id: "f", x: 40, y: 60, w: 300, h: 200 }]),
+      monoMeasurer,
+    );
+    expect(g?.attrs["data-id"]).toBe("f");
+    expect(g?.attrs["transform"]).toBe("translate(40 60)");
+    const outline = g && find(g, "rect");
+    expect(outline?.attrs).toMatchObject({ width: 300, height: 200, fill: "none", stroke: "#1f4e79" });
+    const label = g && find(g, "text");
+    expect(label?.text).toBe("Overview");
+    expect(label?.attrs).toMatchObject({ x: 0, "text-anchor": "start" });
+    expect(Number(label?.attrs["y"])).toBeLessThan(0);
+  });
+
+  it("draws a frame with no name as the outline alone, and at the default frame size without w and h", () => {
+    const [g] = describeDiagram(doc([{ kind: "frame", id: "f" }], [{ id: "f", x: 0, y: 0 }]), monoMeasurer);
+    expect(g && find(g, "text")).toBeUndefined();
+    expect(g && find(g, "rect")?.attrs).toMatchObject({ width: 480, height: 320 });
+  });
+
+  it("leaves a frame's name out while it is being edited", () => {
+    const [g] = describeDiagram(doc([{ kind: "frame", id: "f", name: "Overview" }], [{ id: "f", x: 0, y: 0 }]), monoMeasurer, { hideText: new Set(["f"]) });
+    expect(g && find(g, "text")).toBeUndefined();
   });
 
   it("holds no state: the same document gives equal output and the document is not changed", () => {

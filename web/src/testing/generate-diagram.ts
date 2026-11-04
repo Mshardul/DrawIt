@@ -1,6 +1,6 @@
 import type { DiagramDocument, DiagramElement, LayoutEntry } from "../model/index.ts";
 
-export type GeneratedKind = "frame" | "node" | "shape" | "text" | "edge";
+export type GeneratedKind = "frame" | "node" | "shape" | "text" | "image" | "edge";
 
 export interface GenerateOptions {
   /** Total number of elements. Default 500. */
@@ -13,10 +13,10 @@ export interface GenerateOptions {
   shapes?: string[];
 }
 
-const DEFAULT_RATIOS: Record<GeneratedKind, number> = { node: 0.6, edge: 0.35, text: 0.03, frame: 0.01, shape: 0.01 };
+const DEFAULT_RATIOS: Record<GeneratedKind, number> = { node: 0.6, edge: 0.35, text: 0.03, frame: 0.01, shape: 0.01, image: 0 };
 
 /** Kinds in structure order: frames sit behind everything, edges come last. */
-const KINDS: GeneratedKind[] = ["frame", "node", "shape", "text", "edge"];
+const KINDS: GeneratedKind[] = ["frame", "node", "shape", "text", "image", "edge"];
 
 const NODE_SHAPES = ["rect", "ellipse", "arch.server", "arch.database", "arch.queue"];
 
@@ -98,6 +98,11 @@ export function generateDiagram(options: GenerateOptions = {}): DiagramDocument 
     const id = `t${String(i + 1)}`;
     elements.push({ kind: "text", id, content: `Text ${String(i + 1)}` });
     layout.push({ id, x: pick(width), y: pick(height), w: 200 });
+  }
+  for (let i = 0; i < n.image; i++) {
+    const id = `i${String(i + 1)}`;
+    elements.push({ kind: "image", id, src: "assets/pic.png" });
+    layout.push({ id, x: pick(width), y: pick(height), w: 160, h: 100 });
   }
   // Each edge joins a node to a grid neighbour, as in a typical connected diagram.
   const offsets = [1, -1, cols, -cols];

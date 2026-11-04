@@ -3,6 +3,7 @@ import type { DiagramDocument, DiagramElement, LayoutEntry } from "../model/inde
 import { monoMeasurer } from "../testing/measurer.ts";
 import { drawnBoxes, elementBox, outlineKind, stackOrder } from "./boxes.ts";
 import { DEFAULT_LOOK } from "../style/text-look.ts";
+import { useImages } from "./images.ts";
 
 const LINE_HEIGHT = DEFAULT_LOOK.lineHeight;
 
@@ -12,6 +13,31 @@ const doc = (elements: DiagramElement[], layout: LayoutEntry[]): DiagramDocument
   elements,
   layout,
   style: { theme: { name: "default", colors: {}, fonts: {}, sizes: {}, spaces: {} }, classes: [], overrides: [] },
+});
+
+describe("image boxes", () => {
+  const picture = (entry: Omit<LayoutEntry, "id">) => doc([{ kind: "image", id: "i", src: "assets/x.png" }], [{ id: "i", ...entry }]);
+
+  it("take the layout size, then the natural size of the loaded file, then the default size", () => {
+    expect(drawnBoxes(picture({ x: 0, y: 0, w: 40, h: 30 }), monoMeasurer)[0]).toMatchObject({ w: 40, h: 30 });
+    expect(drawnBoxes(picture({ x: 0, y: 0 }), monoMeasurer)[0]).toMatchObject({ w: 80, h: 80 });
+    useImages(() => ({ status: "ready", url: "blob:x", w: 300, h: 150 }));
+    try {
+      expect(drawnBoxes(picture({ x: 0, y: 0 }), monoMeasurer)[0]).toMatchObject({ w: 300, h: 150 });
+      expect(drawnBoxes(picture({ x: 0, y: 0, h: 60 }), monoMeasurer)[0]).toMatchObject({ w: 300, h: 60 });
+    } finally {
+      useImages(() => ({ status: "loading" }));
+    }
+  });
+
+  it("fall back to the default size when the file reports no natural size", () => {
+    useImages(() => ({ status: "ready", url: "blob:x", w: 0, h: 0 }));
+    try {
+      expect(drawnBoxes(picture({ x: 0, y: 0 }), monoMeasurer)[0]).toMatchObject({ w: 80, h: 80 });
+    } finally {
+      useImages(() => ({ status: "loading" }));
+    }
+  });
 });
 
 describe("drawn boxes", () => {

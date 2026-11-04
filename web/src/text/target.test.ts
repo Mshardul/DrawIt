@@ -67,15 +67,15 @@ describe("edit target", () => {
       [
         { kind: "shape", id: "s", shape: "rect" },
         { kind: "edge", id: "e", from: "a", to: "a" },
-        { kind: "frame", id: "f" },
+        { kind: "image", id: "i", src: "assets/a.png" },
         { kind: "node", id: "unplaced", shape: "rect" },
       ],
       [
         { id: "s", x: 0, y: 0 },
-        { id: "f", x: 0, y: 0 },
+        { id: "i", x: 0, y: 0 },
       ],
     );
-    for (const id of ["s", "e", "f", "unplaced", "missing"]) expect(editTarget(d, id, monoMeasurer), id).toBeNull();
+    for (const id of ["s", "e", "i", "unplaced", "missing"]) expect(editTarget(d, id, monoMeasurer), id).toBeNull();
   });
 });
 
@@ -175,5 +175,41 @@ describe("edit target of styled text", () => {
     const target = editTarget(styled({ size: 20, lineHeight: 30 }), "t", sizedMeasurer);
     expect(target?.lines).toEqual(["aa", "bb", "cc"]);
     expect(target?.box).toEqual({ x: 0, y: 100, w: 30, h: 90 });
+  });
+});
+
+describe("edit target of a frame name", () => {
+  const framed = (name?: string) =>
+    doc([{ kind: "frame", id: "f", ...(name !== undefined && { name }) }], [{ id: "f", x: 100, y: 200, w: 300, h: 150 }]);
+
+  it("is the name where it is drawn, one line above the frame's top left", () => {
+    expect(editTarget(framed("Overview"), "f", monoMeasurer)).toMatchObject({
+      id: "f",
+      field: "name",
+      text: "Overview",
+      lines: ["Overview"],
+      box: { x: 100, y: 200 - LINE_HEIGHT, w: 80, h: LINE_HEIGHT },
+    });
+  });
+
+  it("is an empty text in a box wide enough to click and type in, for a frame with no name", () => {
+    const target = editTarget(framed(), "f", monoMeasurer);
+    expect(target).toMatchObject({ field: "name", text: "", lines: [""] });
+    expect(target?.box.x).toBe(100);
+    expect(target?.box.w).toBeGreaterThanOrEqual(40);
+  });
+
+  it("is null for a frame with no layout entry", () => {
+    const d = framed("A");
+    d.layout = [];
+    expect(editTarget(d, "f", monoMeasurer)).toBeNull();
+  });
+
+  it("sets the name, and removes it when emptied so the file keeps no empty name", () => {
+    const d = framed("Old");
+    const renamed = applyCommand(d, setTextCommand("name", "f", "New")).document;
+    expect(renamed.elements[0]).toEqual({ kind: "frame", id: "f", name: "New" });
+    const emptied = applyCommand(renamed, setTextCommand("name", "f", "")).document;
+    expect(emptied.elements[0]).toEqual({ kind: "frame", id: "f" });
   });
 });

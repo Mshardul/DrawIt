@@ -1,4 +1,4 @@
-import { StorageError } from "./adapter.ts";
+import { assertFitsLimit, StorageError } from "./adapter.ts";
 import type { FileInfo, StorageAdapter, Unsubscribe, WatchEvent } from "./adapter.ts";
 
 export interface MemoryStorageOptions {
@@ -79,6 +79,7 @@ export class MemoryStorage implements StorageAdapter {
   write(path: string, data: Uint8Array): Promise<void> {
     try {
       const clear = clean(path);
+      assertFitsLimit(clear, data);
       if (this.isFolder(clear)) throw new StorageError("invalid-path", `${clear} is a folder`);
       const segments = clear.split("/");
       for (let i = 1; i < segments.length; i++) {

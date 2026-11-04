@@ -9,13 +9,13 @@ const doc: DiagramDocument = {
   elements: [
     { kind: "node", id: "a", shape: "rect" },
     { kind: "node", id: "b", shape: "ellipse" },
-    { kind: "frame", id: "f" },
+    { kind: "unknown", id: "i", node: { name: "chart", args: [], props: {}, children: [] } },
   ],
   style: { theme: { name: "default", colors: {}, fonts: {}, sizes: {}, spaces: {} }, classes: [], overrides: [] },
   layout: [
     { id: "a", x: 10, y: 20, w: 100, h: 50 },
     { id: "b", x: 200, y: 0 },
-    { id: "f", x: 0, y: 0 },
+    { id: "i", x: 0, y: 0 },
   ],
 };
 
@@ -28,7 +28,7 @@ describe("selection overlay", () => {
   });
 
   it("skips ids that are gone or not drawn", () => {
-    expect(describeOverlay(doc, monoMeasurer, ["f", "missing"], null)).toEqual([]);
+    expect(describeOverlay(doc, monoMeasurer, ["i", "missing"], null)).toEqual([]);
   });
 
   it("draws the drag-box with a positive size however it was dragged", () => {

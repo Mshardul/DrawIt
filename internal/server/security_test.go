@@ -150,12 +150,12 @@ func TestEveryResponseCarriesSecurityHeaders(t *testing.T) {
 			t.Errorf("%s: X-Content-Type-Options = %q, want nosniff", name, got)
 		}
 		csp := rec.Header().Get("Content-Security-Policy")
-		for _, want := range []string{"default-src 'self'", "connect-src 'self'", "object-src 'none'", "base-uri 'none'", "frame-ancestors 'none'", "form-action 'none'"} {
+		for _, want := range []string{"default-src 'self'", "connect-src 'self'", "img-src 'self' blob:", "object-src 'none'", "base-uri 'none'", "frame-ancestors 'none'", "form-action 'none'"} {
 			if !strings.Contains(csp, want) {
 				t.Errorf("%s: CSP %q lacks %s", name, csp, want)
 			}
 		}
-		if strings.Contains(csp, "unsafe-") || strings.Contains(csp, "*") {
+		if strings.Contains(csp, "unsafe-") || strings.Contains(csp, "*") || strings.Contains(csp, "data:") {
 			t.Errorf("%s: CSP %q is not strict", name, csp)
 		}
 	}

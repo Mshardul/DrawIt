@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { StorageError, readText, writeText } from "./adapter.ts";
+import { MAX_FILE_BYTES, StorageError, readText, writeText } from "./adapter.ts";
 import type { StorageAdapter, WatchEvent } from "./adapter.ts";
 import { MemoryStorage } from "./memory.ts";
 
@@ -99,6 +99,28 @@ describe("in-memory storage adapter", () => {
     const read = await s.read("a");
     read[1] = 99;
     expect(await s.read("a")).toEqual(bytes(1, 2));
+  });
+
+  it("binary files round-trip byte for byte, whether given at the start or written later", async () => {
+    const all = Uint8Array.from({ length: 512 }, (_, i) => i % 256);
+    const s = new MemoryStorage({ "start.png": all });
+    await s.write("assets/later.png", all);
+    expect(await s.read("start.png")).toEqual(all);
+    expect(await s.read("assets/later.png")).toEqual(all);
+    expect((await s.list()).map((f) => f.size)).toEqual([512, 512]);
+  });
+
+  it("a write of exactly the size limit is kept, and one byte more is refused and changes nothing", async () => {
+    const s = new MemoryStorage({ "a.bin": "old" });
+    const events = [] as WatchEvent[];
+    s.watch((e) => events.push(e));
+    await s.write("a.bin", new Uint8Array(MAX_FILE_BYTES));
+    expect((await s.read("a.bin")).length).toBe(MAX_FILE_BYTES);
+    expect(await codeOf(s.write("a.bin", new Uint8Array(MAX_FILE_BYTES + 1)))).toBe("too-large");
+    expect(await codeOf(s.write("new/b.bin", new Uint8Array(MAX_FILE_BYTES + 1)))).toBe("too-large");
+    expect((await s.read("a.bin")).length).toBe(MAX_FILE_BYTES);
+    expect(await paths(s)).toEqual(["a.bin"]);
+    expect(events).toEqual([{ type: "changed", path: "a.bin" }]);
   });
 
   it("text helpers round-trip UTF-8", async () => {
