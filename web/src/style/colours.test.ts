@@ -74,4 +74,15 @@ describe("recent colours", () => {
   it("starts empty for each session", () => {
     expect(new RecentColours().list()).toEqual([]);
   });
+
+  it("starts from the colours it is given and writes each new one", () => {
+    const written: string[][] = [];
+    const recent = new RecentColours({
+      load: () => ["#ABCDEF", "$accent", "#111111", "#111111"],
+      save: (colours) => { written.push([...colours]); },
+    });
+    expect(recent.list()).toEqual(["#abcdef", "#111111"]);
+    recent.add("#222222");
+    expect(written).toEqual([["#222222", "#abcdef", "#111111"]]);
+  });
 });

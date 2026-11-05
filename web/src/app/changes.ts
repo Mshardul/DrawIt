@@ -9,11 +9,25 @@ export interface WatchOptions {
   measurer: TextMeasurer;
   /** Called after an outside change replaces the document. */
   onReload?: () => void;
+  /** Called with the new bytes when they differ and the file has unsaved edits. The hash of the last read stays. */
+  onConflict?: (text: string) => void;
   visible?: () => boolean;
   clock?: PollClock;
 }
 
-/** Polls an open file and reloads it when the bytes change and there are no unsaved edits. */
+/** Reloads `text` as one undo step. Returns the parse error when `text` is not a diagram. */
+export function replaceFromDisk(file: OpenFile, text: string, measurer: TextMeasurer): string | null {
+  try {
+    const document = readDiagram(text).document;
+    file.reloadFromDisk(placeUnplaced(document, measurer), text);
+    return null;
+  } catch (error) {
+    if (error instanceof KdlSyntaxError) return error.message;
+    throw error;
+  }
+}
+
+/** Polls an open file. A clean change reloads; unsaved edits are reported and left in place. */
 export function watchChanges(file: OpenFile, storage: StorageAdapter, options: WatchOptions): Unsubscribe {
   return pollFile(
     storage,
@@ -23,21 +37,15 @@ export function watchChanges(file: OpenFile, storage: StorageAdapter, options: W
         file.noteDisk(text);
         return;
       }
-      let document;
-      try {
-        document = readDiagram(text).document;
-      } catch (error) {
-        if (error instanceof KdlSyntaxError) {
-          file.noteDisk(text);
-          return;
-        }
-        throw error;
-      }
       if (file.dirty) {
+        options.onConflict?.(text);
+        return;
+      }
+      const reason = replaceFromDisk(file, text, options.measurer);
+      if (reason !== null) {
         file.noteDisk(text);
         return;
       }
-      file.reloadFromDisk(placeUnplaced(document, options.measurer), text);
       options.onReload?.();
     },
     { baselineHash: file.diskHash(), visible: options.visible, clock: options.clock },

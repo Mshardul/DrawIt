@@ -8,6 +8,7 @@ node b "Beta" shape=rect
 node e "Eta" shape=ellipse
 text t "note"
 shape s shape=rect
+edge a b
 
 style {
   el b fill="#ff0000"
@@ -30,6 +31,8 @@ interface Hooks {
   select(ids: string[]): void;
   overrides(): Override[];
   undo(): void;
+  layout(id: string): { x: number; y: number; w?: number; h?: number } | null;
+  preferences(): Promise<Record<string, unknown>>;
 }
 
 test.beforeEach(async ({ page }) => {
@@ -38,7 +41,7 @@ test.beforeEach(async ({ page }) => {
   await page.evaluate(async (text) => {
     const load = <T>(path: string) => import(path) as Promise<T>;
     const { mountShell } = await load<typeof import("../src/testing/mount-shell.ts")>("/src/testing/mount-shell.ts");
-    const { shell } = await mountShell({ "a.drawit.kdl": text });
+    const { shell, storage } = await mountShell({ "a.drawit.kdl": text });
     (window as unknown as { hooks: Hooks }).hooks = {
       select: (ids) => {
         if (shell.file) shell.file.history.selection = ids;
@@ -49,12 +52,19 @@ test.beforeEach(async ({ page }) => {
         shell.file?.history.undo();
         shell.refresh();
       },
+      layout: (id) => {
+        const entry = shell.file?.document.layout.find((item) => item.id === id);
+        return entry ? { x: entry.x, y: entry.y, w: entry.w, h: entry.h } : null;
+      },
+      preferences: () => storage.readPreferences(),
     };
   }, file);
 });
 
 const select = (page: Page, ids: string[]): Promise<void> =>
   page.evaluate((i) => { (window as unknown as { hooks: Hooks }).hooks.select(i); }, ids);
+const layout = (page: Page, id: string) =>
+  page.evaluate((i) => (window as unknown as { hooks: Hooks }).hooks.layout(i), id);
 const overrides = (page: Page): Promise<Override[]> =>
   page.evaluate(() => (window as unknown as { hooks: Hooks }).hooks.overrides());
 const panel = (page: Page) => page.getByRole("complementary", { name: "Style" });
@@ -255,4 +265,94 @@ test("a gradient is typed into fill and drawn, and a bad one is refused", async 
   await fill.fill("linear(90, #ff0000)");
   await fill.press("Enter");
   await expect(fill).toHaveAttribute("aria-invalid", "true");
+});
+
+test("position and size follow the selection, and a typed width is kept", async ({ page }) => {
+  await select(page, ["a"]);
+  await expect(field(page, "x")).toHaveValue("40");
+  await expect(field(page, "y")).toHaveValue("40");
+  await expect(field(page, "width")).toHaveValue("100");
+  await expect(field(page, "height")).toHaveValue("50");
+  await field(page, "x").fill("10");
+  await field(page, "x").press("Enter");
+  expect(await layout(page, "a")).toMatchObject({ x: 10, y: 40 });
+  await field(page, "width").fill("4");
+  await field(page, "width").press("Enter");
+  await expect(field(page, "width")).toHaveValue("8");
+  expect(await layout(page, "a")).toMatchObject({ w: 8 });
+  await field(page, "y").fill("");
+  await field(page, "y").press("Enter");
+  await expect(field(page, "y")).toHaveAttribute("aria-invalid", "true");
+  expect(await layout(page, "a")).toMatchObject({ y: 40 });
+});
+
+test("several elements share a position and have no single size", async ({ page }) => {
+  await select(page, ["a", "b"]);
+  await expect(field(page, "x")).toHaveValue("40");
+  await expect(field(page, "y")).toHaveValue("40");
+  await expect(field(page, "width")).toHaveCount(0);
+  await expect(field(page, "height")).toHaveCount(0);
+});
+
+test("a locked element keeps its position fields and loses its size", async ({ page }) => {
+  await select(page, ["a"]);
+  await field(page, "Locked").check();
+  await expect(field(page, "x")).toBeDisabled();
+  await expect(field(page, "y")).toBeDisabled();
+  await expect(field(page, "width")).toHaveCount(0);
+});
+
+test("an edge has no position or size", async ({ page }) => {
+  await select(page, ["a->b"]);
+  await expect(panel(page)).toBeVisible();
+  await expect(field(page, "stroke")).toBeVisible();
+  await expect(field(page, "x")).toHaveCount(0);
+  await expect(field(page, "width")).toHaveCount(0);
+});
+
+test("a text box has a width and a height that cannot be typed", async ({ page }) => {
+  await select(page, ["t"]);
+  await expect(field(page, "width")).toHaveValue("200");
+  await expect(field(page, "height")).toBeDisabled();
+  await field(page, "width").fill("80");
+  await field(page, "width").press("Enter");
+  expect(await layout(page, "t")).toMatchObject({ w: 80 });
+  await expect(field(page, "height")).toBeDisabled();
+});
+
+test("a custom colour is kept and offered again when the shell starts with it", async ({ page }) => {
+  await select(page, ["a"]);
+  await panel(page).getByRole("button", { name: "Pick fill" }).click();
+  await picker(page, "fill").getByLabel("Custom fill").fill("#123456");
+  const saved = await page.evaluate(() => (window as unknown as { hooks: Hooks }).hooks.preferences());
+  const colours = saved["colours"];
+  expect(colours).toMatchObject({ recent: ["#123456"] });
+  if (typeof colours !== "object" || colours === null || !("recent" in colours)) throw new Error("no colours");
+  await page.goto("/");
+  await page.evaluate(async ({ text, stored }) => {
+    const load = <T>(path: string) => import(path) as Promise<T>;
+    const { MemoryStorage } = await load<typeof import("../src/storage/memory.ts")>("/src/storage/memory.ts");
+    const { startShell } = await load<typeof import("../src/app/shell.ts")>("/src/app/shell.ts");
+    const root = document.getElementById("app");
+    if (!root) throw new Error("missing app root");
+    const storage = new MemoryStorage({ "a.drawit.kdl": text });
+    await storage.patchPreferences({ colours: { recent: stored.recent } });
+    const shell = await startShell(root, storage);
+    (window as unknown as { hooks: Hooks }).hooks = {
+      select: (ids) => {
+        if (shell.file) shell.file.history.selection = ids;
+        shell.refresh();
+      },
+      overrides: () => shell.file?.document.style.overrides ?? [],
+      undo: () => {
+        shell.file?.history.undo();
+        shell.refresh();
+      },
+      layout: () => null,
+      preferences: () => storage.readPreferences(),
+    };
+  }, { text: file, stored: colours });
+  await select(page, ["b"]);
+  await panel(page).getByRole("button", { name: "Pick stroke" }).click();
+  await expect(picker(page, "stroke").getByRole("group", { name: "Recent" }).getByRole("button", { name: "#123456" })).toBeVisible();
 });

@@ -34,6 +34,8 @@ export class History {
   private redoStack: Step[] = [];
   private readonly pause: number;
   private readonly now: () => number;
+  /** Bumps on every change, so a dirty check can remember the text of one version. */
+  #version = 0;
 
   constructor(document: DiagramDocument, options: HistoryOptions = {}) {
     this.document = document;
@@ -49,6 +51,10 @@ export class History {
     return this.redoStack.length > 0;
   }
 
+  get version(): number {
+    return this.#version;
+  }
+
   /** Applies a command as one undo step, or merges it into the last step of the same group. Throws `CommandError` and changes nothing if it does not fit. */
   execute(command: Command, options: ExecuteOptions = {}): void {
     const { document, patches, inverse } = applyCommand(this.document, command);
@@ -60,6 +66,7 @@ export class History {
     this.document = document;
     this.selection = selectionAfter;
     this.redoStack = [];
+    this.#version += 1;
     if (last && group !== undefined && last.group === group && at - last.at <= this.pause) {
       last.patches = [...last.patches, ...patches];
       last.inverse = [...inverse, ...last.inverse];
@@ -78,6 +85,7 @@ export class History {
     this.document = applyPatches(this.document, step.inverse);
     this.selection = step.selectionBefore;
     this.redoStack.push(step);
+    this.#version += 1;
     return true;
   }
 
@@ -87,6 +95,7 @@ export class History {
     this.document = applyPatches(this.document, step.patches);
     this.selection = step.selectionAfter;
     this.undoStack.push(step);
+    this.#version += 1;
     return true;
   }
 }

@@ -40,7 +40,7 @@ async function boot(page: import("@playwright/test").Page, files: Files, show: "
         shell.refresh();
       },
       open: (path) => shell.open(path),
-      prefs: () => storage.readPreferences() as Promise<{ workspace?: { folder?: string } }>,
+      prefs: () => storage.readPreferences(),
     };
   }, { initial: files, show });
 }
@@ -94,16 +94,42 @@ test("a folder with no diagram files says so", async ({ page }) => {
 test("closing a diagram with unsaved changes asks before discarding it", async ({ page }) => {
   await boot(page, { "a.drawit.kdl": good });
   await page.evaluate(() => { (window as unknown as { hooks: Hooks }).hooks.edit(); });
-  page.once("dialog", (dialog) => {
-    expect(dialog.message()).toContain("Discard unsaved changes to a.drawit.kdl");
-    return dialog.dismiss();
-  });
   await page.getByRole("button", { name: "Home" }).click();
+  const dialog = page.getByRole("dialog", { name: 'Save changes to "a"?' });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByText("Your edits since the last save are lost if you discard them.")).toBeVisible();
+  await expect(dialog.getByRole("button")).toHaveText(["Discard", "Cancel", "Save"]);
+  await expect(dialog.getByRole("button", { name: "Discard" })).toHaveClass(/danger/);
+  await dialog.getByRole("button", { name: "Cancel" }).click();
   await expect(page.locator('g[data-id="a"] text')).toHaveText("Alpha");
-  page.once("dialog", (dialog) => dialog.accept());
+  await expect(page.locator('g[data-id="a"]')).toHaveAttribute("transform", "translate(40 20)");
   await page.getByRole("button", { name: "Home" }).click();
+  await page.getByRole("button", { name: "Discard" }).click();
   await expect(page.getByRole("heading", { name: "Files" })).toBeVisible();
   await expect(page.locator('g[data-id="a"]')).toHaveCount(0);
+  expect(await page.evaluate(() => (window as unknown as { hooks: Hooks }).hooks.read("a.drawit.kdl"))).toBe(good);
+});
+
+test("saving from the leave dialog writes the diagram and closes it", async ({ page }) => {
+  await boot(page, { "a.drawit.kdl": good });
+  await page.evaluate(() => { (window as unknown as { hooks: Hooks }).hooks.edit(); });
+  await page.getByRole("button", { name: "Home" }).click();
+  await page.getByRole("dialog", { name: 'Save changes to "a"?' }).getByRole("button", { name: "Save" }).click();
+  await expect(page.getByRole("heading", { name: "Files" })).toBeVisible();
+  expect(await page.evaluate(() => (window as unknown as { hooks: Hooks }).hooks.read("a.drawit.kdl"))).toBe(good.replace("a x=10", "a x=40"));
+});
+
+test("opening another diagram with unsaved changes asks first", async ({ page }) => {
+  await boot(page, { "a.drawit.kdl": good, "b.drawit.kdl": good.replace("Alpha", "Other") });
+  await page.evaluate(() => { (window as unknown as { hooks: Hooks }).hooks.edit(); });
+  await page.evaluate(() => { void (window as unknown as { hooks: Hooks }).hooks.open("b.drawit.kdl"); });
+  const dialog = page.getByRole("dialog", { name: 'Save changes to "a"?' });
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  await expect(page.locator('g[data-id="a"] text')).toHaveText("Alpha");
+  await page.evaluate(() => { void (window as unknown as { hooks: Hooks }).hooks.open("b.drawit.kdl"); });
+  await page.getByRole("button", { name: "Discard" }).click();
+  await expect(page.locator('g[data-id="a"] text')).toHaveText("Other");
 });
 
 test("a home or landing start leaves the diagram unopened", async ({ page }) => {
@@ -138,10 +164,10 @@ test("opening a project lists its diagrams and remembers the folder", async ({ p
     await storage.claimSession();
     await startShell(root, storage, { show: "home" });
     (window as unknown as { hooks: Hooks }).hooks = {
-      read: async () => "",
+      read: () => Promise.resolve(""),
       edit: () => {},
       open: async () => {},
-      prefs: () => storage.readPreferences() as Promise<{ workspace?: { folder?: string } }>,
+      prefs: () => storage.readPreferences(),
     };
   }, good);
   await page.getByRole("button", { name: "Demo" }).click();

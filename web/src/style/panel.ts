@@ -1,6 +1,4 @@
-// The style panel: one row per property of the selection, built from the property registry.
-// It holds no state of its own; every edit goes through the style commands and the panel is
-// redrawn from the document.
+// The style panel: one row per property of the selection, built from the property registry. Every edit goes through a command and the panel is redrawn from the document.
 import type { OpenFile } from "../app/workspace.ts";
 import { type Command, CommandError } from "../commands/command.ts";
 import { FONT_FAMILIES } from "../text/fonts.ts";
@@ -8,7 +6,8 @@ import { lockCommand, lockState } from "../edit/lock.ts";
 import type { TextMeasurer } from "../text/measure.ts";
 import { createArrangeGroup } from "./arrange-group.ts";
 import { clearStyle, setStyle } from "./commands.ts";
-import { RecentColours, themeTokens } from "./colours.ts";
+import { type ColourStore, RecentColours, themeTokens } from "./colours.ts";
+import { geometryCommand, geometryFields, type GeometryField, type GeometryName } from "./geometry.ts";
 import { type FieldValue, type PanelField, panelFields } from "./panel-model.ts";
 
 export interface StylePanelHost {
@@ -16,6 +15,8 @@ export interface StylePanelHost {
   measurer: TextMeasurer;
   /** Redraws the canvas and the unsaved indicator after the document changed. */
   refresh(): void;
+  /** Recent colours. Absent colours stay in this panel only. */
+  colours?: ColourStore;
 }
 
 export interface StylePanel {
@@ -57,7 +58,8 @@ export function createStylePanel(host: StylePanelHost): StylePanel {
   element.setAttribute("aria-label", "Style");
   let rows: Row[] = [];
   let shown = "";
-  const recent = new RecentColours();
+  const recent = new RecentColours(host.colours);
+  const geometry = document.createElement("div");
 
   const lockBox = document.createElement("input");
   lockBox.type = "checkbox";
@@ -66,7 +68,7 @@ export function createStylePanel(host: StylePanelHost): StylePanel {
   lockRow.className = "style-row lock-row";
   lockRow.append("Locked", lockBox);
   const arrange = createArrangeGroup(host);
-  element.append(arrange.element, lockRow);
+  element.append(arrange.element, lockRow, geometry);
 
   const closePickers = (): void => {
     for (const row of rows) if (row.picker) row.picker.hidden = true;
@@ -216,6 +218,52 @@ export function createStylePanel(host: StylePanelHost): StylePanel {
     if (row.pick) row.pick.disabled = field.locked;
   };
 
+  let geometryShown = "";
+  let geometryRows: { name: GeometryName; input: HTMLInputElement; line: HTMLDivElement }[] = [];
+  const commitGeometry = (name: GeometryName, input: HTMLInputElement): void => {
+    const file = host.getFile();
+    if (!file) return;
+    const raw = input.value.trim();
+    const value = Number(raw);
+    if (raw === "" || !Number.isFinite(value)) {
+      input.setAttribute("aria-invalid", "true");
+      return;
+    }
+    input.removeAttribute("aria-invalid");
+    const command = geometryCommand(file.document, host.measurer, file.history.selection, name, value);
+    if (command) apply(command);
+    else host.refresh();
+  };
+  const paintGeometry = (fields: GeometryField[]): void => {
+    const signature = fields.map((field) => field.name).join();
+    if (signature !== geometryShown) {
+      geometryShown = signature;
+      geometryRows = fields.map((field) => {
+        const input = document.createElement("input");
+        input.type = "number";
+        input.step = "1";
+        input.setAttribute("aria-label", field.name);
+        input.addEventListener("change", () => { commitGeometry(field.name, input); });
+        const label = document.createElement("label");
+        label.append(field.name, input);
+        const line = document.createElement("div");
+        line.className = "style-row";
+        line.append(label);
+        return { name: field.name, input, line };
+      });
+      geometry.replaceChildren(...geometryRows.map((row) => row.line));
+    }
+    for (const row of geometryRows) {
+      const field = fields.find((item) => item.name === row.name);
+      if (!field) continue;
+      const mixed = field.value.state === "mixed";
+      row.input.value = field.value.state === "same" ? String(field.value.value) : "";
+      row.input.placeholder = mixed ? "Mixed" : "";
+      row.input.disabled = field.disabled;
+      row.input.removeAttribute("aria-invalid");
+    }
+  };
+
   lockBox.addEventListener("change", () => {
     const file = host.getFile();
     const command = file && lockCommand(file.document, file.history.selection, lockBox.checked);
@@ -239,6 +287,7 @@ export function createStylePanel(host: StylePanelHost): StylePanel {
         element.replaceChildren(
           arrange.element,
           lockRow,
+          geometry,
           ...rows.map((row) => {
             const label = document.createElement("label");
             label.append(row.field.def.name, row.input);
@@ -252,6 +301,7 @@ export function createStylePanel(host: StylePanelHost): StylePanel {
         );
       }
       rows.forEach((row, i) => { const field = fields[i]; if (field) show(row, field); });
+      paintGeometry(file ? geometryFields(file.document, host.measurer, file.history.selection) : []);
       arrange.update();
       const state = file ? lockState(file.document, file.history.selection) : null;
       lockBox.checked = state === "locked";

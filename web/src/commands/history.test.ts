@@ -158,4 +158,29 @@ describe("history", () => {
     h.execute(move("a", 9));
     expect(start).toEqual(sample());
   });
+
+  it("counts each change, including one merged into the same undo step", () => {
+    const c = clock();
+    const h = new History(sample(), { now: c.now });
+    expect(h.version).toBe(0);
+    expect(h.undo()).toBe(false);
+    expect(h.redo()).toBe(false);
+    expect(h.version).toBe(0);
+    h.execute(move("a", 10));
+    h.execute(label("H"), { group: "typing:a" });
+    c.tick(200);
+    h.execute(label("Hi"), { group: "typing:a" });
+    expect(h.version).toBe(3);
+    expect(() => {
+      h.execute({ type: "delete", ids: ["nope"] });
+    }).toThrow(CommandError);
+    expect(h.version).toBe(3);
+    h.undo();
+    h.redo();
+    expect(h.version).toBe(5);
+    expect(h.undo()).toBe(true);
+    expect(h.undo()).toBe(true);
+    expect(h.undo()).toBe(false);
+    expect(h.version).toBe(7);
+  });
 });

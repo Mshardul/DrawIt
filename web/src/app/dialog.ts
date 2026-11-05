@@ -11,11 +11,15 @@ export interface DialogRequest {
   title: string;
   body: Node | string;
   choices: DialogChoice[];
+  /** Button on the left of the footer, before the spacer. */
+  aside?: DialogChoice;
   /** Called after the buttons exist, before focus moves in. */
   prepare?: (sheet: HTMLElement) => void;
 }
 
 export interface NoticeRequest {
+  /** Bold sentence in front of the body. Included in the accessible name. */
+  lead?: string;
   body: string;
   choices: DialogChoice[];
 }
@@ -143,14 +147,16 @@ export function openDialog(parent: HTMLElement, request: DialogRequest): Promise
   parent.append(scrim);
   return new Promise((resolve) => {
     const finish = finishLater(release, scrim, previous, resolve);
+    if (request.aside) foot.append(button(request.aside, finish));
     foot.append(spacer, ...request.choices.map((choice) => button(choice, finish)));
     request.prepare?.(sheet);
     scrim.addEventListener("click", (event) => {
       if (event.target === scrim) finish(null);
     });
     trap(sheet, () => { finish(null); });
-    const first = focusables(sheet)[0];
-    if (first) first.focus();
+    const inBody = focusables(body);
+    const preferred = inBody[0] ?? foot.querySelector<HTMLElement>(".btn.primary") ?? focusables(sheet)[0];
+    if (preferred) preferred.focus();
     else sheet.focus();
   });
 }
@@ -162,9 +168,15 @@ export function openNotice(parent: HTMLElement, request: NoticeRequest): Promise
   notice.className = "notice";
   notice.setAttribute("role", "dialog");
   notice.setAttribute("aria-modal", "true");
-  notice.setAttribute("aria-label", request.body);
+  notice.setAttribute("aria-label", request.lead ? `${request.lead} ${request.body}` : request.body);
   const text = document.createElement("span");
-  text.textContent = request.body;
+  if (request.lead) {
+    const strong = document.createElement("b");
+    strong.textContent = request.lead;
+    text.append(strong, ` ${request.body}`);
+  } else {
+    text.textContent = request.body;
+  }
   const spacer = document.createElement("span");
   spacer.className = "sp";
   notice.append(text, spacer);

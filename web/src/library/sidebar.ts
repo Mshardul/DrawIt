@@ -1,6 +1,4 @@
-// The shape library sidebar: a search box and the shapes by category. A preview is drawn by the
-// renderer only when its entry scrolls into view. The sidebar keeps no state besides the search text
-// and the armed shape it was told about.
+// A search box and the shapes by category. A tile is drawn when it scrolls into view.
 import { mount } from "../render/mount.ts";
 import type { PackLoader } from "../shapes/pack-loader.ts";
 import type { TextMeasurer } from "../text/measure.ts";
@@ -21,9 +19,9 @@ export interface LibrarySidebar {
 }
 
 const SVG_NS = "http://www.w3.org/2000/svg";
-/** The box every preview fits in, in px. */
-const PREVIEW_W = 72;
-const PREVIEW_H = 52;
+/** The drawing inside a tile, in px. */
+const TILE_W = 34;
+const TILE_H = 26;
 
 export function createLibrarySidebar(host: LibrarySidebarHost): LibrarySidebar {
   const entries = libraryEntries(host.loader);
@@ -51,8 +49,8 @@ export function createLibrarySidebar(host: LibrarySidebarHost): LibrarySidebar {
   const button = (entry: LibraryEntry): HTMLButtonElement => {
     const size = defaultSize(entry, host.loader);
     const preview = document.createElementNS(SVG_NS, "svg");
-    preview.setAttribute("width", String(PREVIEW_W));
-    preview.setAttribute("height", String(PREVIEW_H));
+    preview.setAttribute("width", String(TILE_W));
+    preview.setAttribute("height", String(TILE_H));
     preview.setAttribute("viewBox", `0 0 ${String(size.w)} ${String(size.h)}`);
     preview.setAttribute("aria-hidden", "true");
     preview.setAttribute("data-shape", entry.shape);
@@ -60,9 +58,10 @@ export function createLibrarySidebar(host: LibrarySidebarHost): LibrarySidebar {
     item.type = "button";
     item.className = "library-item";
     item.title = entry.name;
+    item.setAttribute("aria-label", entry.name);
     item.dataset["shape"] = entry.shape;
     item.setAttribute("aria-pressed", String(entry.shape === armed));
-    item.append(preview, entry.name);
+    item.append(preview);
     item.addEventListener("click", () => { host.onPick(entry); });
     seen.observe(preview);
     return item;

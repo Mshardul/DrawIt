@@ -6,7 +6,7 @@ import { attachLabelInput } from "../connectors/label-input.ts";
 import { attachReattachInput } from "../connectors/reattach-input.ts";
 import { attachEditInput } from "../edit/input.ts";
 import { dispatchKey, editorActions } from "./actions.ts";
-import { installKeyGuard, openDialog } from "./dialog.ts";
+import { installKeyGuard, openDialog, openNotice } from "./dialog.ts";
 import { isTextEntry } from "./text-entry.ts";
 import { defaultSize } from "../library/preview.ts";
 import { attachPlaceInput } from "../library/input.ts";
@@ -29,6 +29,7 @@ import { attachTransformInput } from "../move/input.ts";
 import { attachSelectInput } from "../select/input.ts";
 import { type FileInfo, type Preferences, type StorageAdapter, StorageError, writeText } from "../storage/adapter.ts";
 import { bundledLoader } from "../shapes/bundled-packs.ts";
+import type { ColourStore } from "../style/colours.ts";
 import { createStylePanel } from "../style/panel.ts";
 import { loadFonts } from "../text/fonts.ts";
 import { attachTextEdit, type TextEdit } from "../text/edit.ts";
@@ -36,9 +37,11 @@ import { createTextMeasurer } from "../text/measure.ts";
 import { createTextCommand, newTextId } from "../text/target.ts";
 import { attachViewInput, ZOOM_STEP } from "../view/input.ts";
 import { documentBounds, IDENTITY, screenToWorld, type View, viewTransform, zoomAt, zoomToFit } from "../view/view.ts";
-import { watchChanges } from "./changes.ts";
+import { autosaveOn, createAutosave } from "./autosave.ts";
+import { replaceFromDisk, watchChanges } from "./changes.ts";
 import { cardFace, ThumbnailCache, type CardFace } from "./thumbnail.ts";
 import type { Tool } from "./tool.ts";
+import { dragPanel, fitPanels, LIBRARY_WIDTH, PROPERTIES_WIDTH, readPanels, type PanelWidths } from "./panels.ts";
 import { clampToolbar, readToolbar, TOOLBAR_BOTTOM } from "./toolbar.ts";
 import { askMove, askName } from "./create.ts";
 import { askBrowse, askImport } from "./pick.ts";
@@ -48,7 +51,7 @@ import { moveToProject } from "./move.ts";
 import { diagramNameCheck, projectNameCheck } from "./names.ts";
 import { deleteWording } from "./remove.ts";
 import { enterWorkspace, type EditorSession } from "./session.ts";
-import { type OpenFile, openFile, workspaceFiles } from "./workspace.ts";
+import { FILE_EXTENSION, FileChanged, type OpenFile, openFile, workspaceFiles } from "./workspace.ts";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
@@ -188,7 +191,21 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
     el("label", {}, snapToggle, "Snap"),
     el("label", {}, "Grid size", gridSize),
   );
-  const stylePanel = createStylePanel({ getFile: () => session.file, measurer, refresh: () => { refresh(); } });
+  const colours: ColourStore = {
+    load: () => {
+      const stored = preferenceFile["colours"];
+      if (typeof stored !== "object" || stored === null) return [];
+      const recent = (stored as Record<string, unknown>)["recent"];
+      return Array.isArray(recent) ? recent.filter((item): item is string => typeof item === "string") : [];
+    },
+    save: (list) => {
+      const stored = preferenceFile["colours"];
+      const base = typeof stored === "object" && stored !== null ? stored as Record<string, unknown> : {};
+      preferenceFile = { ...preferenceFile, colours: { ...base, recent: [...list] } };
+      void storage.patchPreferences({ colours: { recent: [...list] } });
+    },
+  };
+  const stylePanel = createStylePanel({ getFile: () => session.file, measurer, refresh: () => { refresh(); }, colours });
   const library = createLibrarySidebar({
     loader: bundledLoader,
     measurer,
@@ -226,7 +243,9 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
   const listing = el("nav", { className: "listing", hidden: screen === "file" });
   listing.setAttribute("aria-label", screen === "home" ? "Home" : "Files");
   const canvasWrap = el("div", { className: "stage" }, canvas, filePill, toolbar, imageInput);
-  const stage = el("div", { className: "workspace", hidden: screen !== "file" }, library.element, canvasWrap, stylePanel.element);
+  const libraryEdge = el("div", { className: "resizer", role: "separator", ariaLabel: "Library width" });
+  const propertiesEdge = el("div", { className: "resizer", role: "separator", ariaLabel: "Properties width" });
+  const stage = el("div", { className: "workspace", hidden: screen !== "file" }, library.element, canvasWrap, stylePanel.element, libraryEdge, propertiesEdge);
   root.replaceChildren(
     el("header", { className: "bar" }, el("h1", { textContent: "DrawIt" }), boardNav),
     error,
@@ -276,16 +295,118 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
     drawOverlay();
   };
 
+  let saving = false;
+  let seenVersion = -1;
+  let preferenceFile: Preferences = {};
+  const autosave = createAutosave({
+    enabled: () => autosaveOn(preferenceFile, session.info.kind),
+    dirty: () => session.file?.dirty === true,
+    save: async () => {
+      const file = session.file;
+      if (!file) return;
+      saving = true;
+      refresh();
+      try {
+        await file.save(storage);
+        if (session.file === file) showError(null);
+      } catch (e) {
+        if (e instanceof FileChanged) {
+          if (session.file === file) void askConflict(file, e.text);
+        } else if (session.file === file) {
+          showError(`${file.path} was not saved: ${e instanceof Error ? e.message : String(e)}`);
+        }
+      } finally {
+        saving = false;
+        if (session.file === file) refresh();
+      }
+    },
+  });
   const refresh = (changed?: ReadonlySet<string>): void => {
     redraw(changed);
     fileName.textContent = session.file?.path ?? "";
     const dirty = session.file?.dirty === true;
-    saveState.textContent = dirty ? "Not saved" : "Saved";
-    saveState.classList.toggle("dirty", dirty);
+    const writing = session.file !== null && saving;
+    saveState.textContent = writing ? "Saving" : dirty ? "Not saved" : "Saved";
+    saveState.classList.toggle("dirty", !writing && dirty);
     saveState.disabled = session.file === null;
     undoButton.disabled = session.file?.history.canUndo !== true;
     redoButton.disabled = session.file?.history.canRedo !== true;
     stylePanel.update();
+    propertiesEdge.hidden = stylePanel.element.hidden;
+    const version = session.file?.history.version;
+    if (session.file && version !== undefined && version !== seenVersion) {
+      seenVersion = version;
+      autosave.edited();
+    }
+  };
+
+  const diagramName = (path: string): string => {
+    const base = path.slice(path.lastIndexOf("/") + 1);
+    return base.endsWith(FILE_EXTENSION) ? base.slice(0, -FILE_EXTENSION.length) : base;
+  };
+  let conflict: Promise<void> | null = null;
+  const askConflict = (file: OpenFile, text: string): Promise<void> => {
+    if (conflict) return conflict;
+    const name = file.path.slice(file.path.lastIndexOf("/") + 1);
+    conflict = openNotice(root, {
+      lead: `${name} changed on disk.`,
+      body: "Keep your edits and overwrite it, or reload and lose your edits.",
+      choices: [
+        { label: "Reload" },
+        { label: "Keep my edits", kind: "primary" },
+      ],
+    }).then(async (answer) => {
+      if (session.file !== file) return;
+      if (answer === "Keep my edits") {
+        try {
+          await file.save(storage, "overwrite");
+          showError(null);
+        } catch (e) {
+          showError(`${file.path} was not saved: ${e instanceof Error ? e.message : String(e)}`);
+        }
+        refresh();
+        return;
+      }
+      if (answer !== "Reload") return;
+      const reason = replaceFromDisk(file, text, measurer);
+      if (reason !== null) {
+        showError(`${file.path} was not reloaded: ${reason}`);
+        return;
+      }
+      showError(null);
+      refresh();
+    }).finally(() => {
+      conflict = null;
+    });
+    return conflict;
+  };
+  const confirmLeave = async (): Promise<boolean> => {
+    const file = session.file;
+    if (!file?.dirty) return true;
+    autosave.stop();
+    const answer = await openDialog(root, {
+      title: `Save changes to "${diagramName(file.path)}"?`,
+      body: "Your edits since the last save are lost if you discard them.",
+      aside: { label: "Discard", kind: "danger" },
+      choices: [{ label: "Cancel" }, { label: "Save", kind: "primary" }],
+    });
+    if (answer === "Discard") return true;
+    if (answer !== "Save") {
+      autosave.edited();
+      return false;
+    }
+    try {
+      await file.save(storage);
+    } catch (e) {
+      if (e instanceof FileChanged) void askConflict(file, e.text);
+      else showError(`${file.path} was not saved: ${e instanceof Error ? e.message : String(e)}`);
+      refresh();
+      autosave.edited();
+      return false;
+    }
+    showError(null);
+    refresh();
+    return true;
   };
 
   const placeToolbar = (): void => {
@@ -310,6 +431,77 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
   const saveToolbar = (): void => {
     void storage.patchPreferences({ toolbar: { x: toolbarOffset.x, y: toolbarOffset.y, shown: toolbarShown } });
   };
+
+  let panels: PanelWidths = readPanels(undefined);
+  const placePanels = (): void => {
+    const width = stage.clientWidth;
+    if (width === 0) return;
+    const fitted = fitPanels(panels.library, panels.properties, width);
+    library.element.style.width = `${String(fitted.library)}px`;
+    stylePanel.element.style.width = `${String(fitted.properties)}px`;
+    libraryEdge.style.left = `${String(fitted.library - 3)}px`;
+    propertiesEdge.style.left = `${String(width - fitted.properties - 3)}px`;
+    propertiesEdge.hidden = stylePanel.element.hidden;
+  };
+  const savePanels = (): void => {
+    preferenceFile = {
+      ...preferenceFile,
+      panels: {
+        library: panels.library,
+        properties: panels.properties,
+        libraryShown: panels.libraryShown,
+        propertiesShown: panels.propertiesShown,
+      },
+    };
+    void storage.patchPreferences({
+      panels: {
+        library: panels.library,
+        properties: panels.properties,
+        libraryShown: panels.libraryShown,
+        propertiesShown: panels.propertiesShown,
+      },
+    });
+  };
+  const dragEdge = (edge: HTMLElement, side: "library" | "properties"): void => {
+    edge.addEventListener("pointerdown", (event) => {
+      if (event.button !== 0) return;
+      edge.setPointerCapture(event.pointerId);
+      edge.classList.add("on");
+      const origin = event.clientX;
+      const target = side === "library" ? library.element : stylePanel.element;
+      const fitted = fitPanels(panels.library, panels.properties, stage.clientWidth);
+      const start = side === "library" ? fitted.library : fitted.properties;
+      const other = side === "library" ? fitted.properties : fitted.library;
+      let next = start;
+      const onMove = (ev: PointerEvent): void => {
+        if (ev.pointerId !== event.pointerId) return;
+        const delta = ev.clientX - origin;
+        next = dragPanel(side === "library" ? start + delta : start - delta, other, stage.clientWidth);
+        target.style.width = `${String(next)}px`;
+        if (side === "library") libraryEdge.style.left = `${String(next - 3)}px`;
+        else propertiesEdge.style.left = `${String(stage.clientWidth - next - 3)}px`;
+      };
+      const onUp = (ev: PointerEvent): void => {
+        if (ev.pointerId !== event.pointerId) return;
+        edge.removeEventListener("pointermove", onMove);
+        edge.removeEventListener("pointerup", onUp);
+        edge.classList.remove("on");
+        if (ev.clientX === origin) return;
+        panels = { ...panels, [side]: next };
+        placePanels();
+        savePanels();
+      };
+      edge.addEventListener("pointermove", onMove);
+      edge.addEventListener("pointerup", onUp);
+    });
+    edge.addEventListener("dblclick", () => {
+      panels = { ...panels, [side]: side === "library" ? LIBRARY_WIDTH : PROPERTIES_WIDTH };
+      placePanels();
+      savePanels();
+    });
+  };
+  dragEdge(libraryEdge, "library");
+  dragEdge(propertiesEdge, "properties");
 
   const setTool = (next: Tool): void => {
     const sameShape = (next === "rect" || next === "ellipse") && tool === "shape" && armed?.shape === next;
@@ -367,6 +559,7 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
     status.hidden = false;
     boardNav.hidden = true;
     placeToolbar();
+    placePanels();
   };
   const showBoard = (which: "home" | "landing"): void => {
     listing.hidden = false;
@@ -386,7 +579,8 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
   };
   const readPrefs = async (): Promise<Preferences> => {
     try {
-      return await storage.readPreferences();
+      preferenceFile = await storage.readPreferences();
+      return preferenceFile;
     } catch {
       // A missing preferences file still shows the folder.
       return {};
@@ -400,16 +594,22 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
       onReload: () => {
         refresh();
       },
+      onConflict: (text) => {
+        void askConflict(file, text);
+      },
     });
   };
   const doOpen = async (path: string): Promise<void> => {
-    if (session.file?.dirty && !confirm(`Discard unsaved changes to ${session.file.path}?`)) return;
+    if (!(await confirmLeave())) return;
+    const held = session.file;
+    if (held) autosave.stop();
     textEdit?.close();
     try {
       const result = await openFile(storage, path, measurer);
       if (result.ok) {
         endListing();
         session.file = result.file;
+        seenVersion = result.file.history.version;
         try {
           const patch = recordOpened(await readPrefs(), session.info, path);
           if (Object.keys(patch).length > 0) await storage.patchPreferences(patch);
@@ -424,9 +624,11 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
       } else {
         // Refused: the file stays untouched and the previous file stays open.
         showError(`${path} was not opened: ${result.error.message}`);
+        if (held) autosave.edited();
       }
     } catch (e) {
       showError(`${path} was not opened: ${e instanceof StorageError ? e.message : String(e)}`);
+      if (session.file === held && held) autosave.edited();
     }
     refresh();
   };
@@ -441,14 +643,7 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
       return opening;
     },
     async save() {
-      if (!session.file) return;
-      try {
-        await session.file.save(storage);
-        showError(null);
-      } catch (e) {
-        showError(`${session.file.path} was not saved: ${e instanceof Error ? e.message : String(e)}`);
-      }
-      refresh();
+      await autosave.saveNow();
     },
     get view() {
       return view;
@@ -663,7 +858,7 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
     placeToolbar();
     saveToolbar();
   });
-  addEventListener("resize", () => { placeToolbar(); });
+  addEventListener("resize", () => { placeToolbar(); placePanels(); });
   gridToggle.addEventListener("change", () => { setGrid({ show: gridToggle.checked }); gridToggle.blur(); });
   snapToggle.addEventListener("change", () => { setGrid({ snap: snapToggle.checked }); snapToggle.blur(); });
   gridSize.addEventListener("change", () => { setGrid({ size: Number(gridSize.value) }); gridSize.blur(); });
@@ -688,7 +883,8 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
     dispatchKey(actions, event, isTextEntry(event.target));
   });
   addEventListener("beforeunload", (event) => {
-    if (session.file?.dirty) event.preventDefault();
+    if (!session.file?.dirty) return;
+    event.preventDefault();
   });
 
   const button = (label: string, run: () => Promise<void>): HTMLButtonElement => {
@@ -696,11 +892,23 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
     item.addEventListener("click", () => { void run(); });
     return item;
   };
+  const dropOpenFile = (): void => {
+    autosave.stop();
+    textEdit.close();
+    stopWatch();
+    stopWatch = () => {};
+    session.file = null;
+    seenVersion = -1;
+    preview = null;
+    refresh();
+  };
   const openLibraryFile = async (path: string): Promise<void> => {
     try {
       const slash = path.indexOf("/");
       if (session.info.kind === "library" && slash > 0) {
+        if (!(await confirmLeave())) return;
         await enterWorkspace(session, { project: path.slice(0, slash) });
+        if (session.file) dropOpenFile();
         await shell.open(path.slice(slash + 1));
         return;
       }
@@ -1100,8 +1308,10 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
     followListing(files, generation);
   };
   const leaveToHome = async (): Promise<void> => {
+    if (!(await confirmLeave())) return;
     try {
       await enterWorkspace(session, { library: true });
+      if (session.file) dropOpenFile();
       showError(null);
       await fillListing("home");
     } catch (e) {
@@ -1109,13 +1319,15 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
     }
   };
   const openFolder = async (name: string): Promise<void> => {
+    if (session.info.kind !== "library" && !session.info.path.startsWith("/")) {
+      showError("That folder cannot be opened from here.");
+      return;
+    }
+    if (!(await confirmLeave())) return;
     try {
       if (session.info.kind === "library") await enterWorkspace(session, { project: name });
-      else if (session.info.path.startsWith("/")) await enterWorkspace(session, { folder: `${session.info.path}/${name}` });
-      else {
-        showError("That folder cannot be opened from here.");
-        return;
-      }
+      else await enterWorkspace(session, { folder: `${session.info.path}/${name}` });
+      if (session.file) dropOpenFile();
       showError(null);
       await fillListing("landing");
     } catch (e) {
@@ -1123,13 +1335,8 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
     }
   };
   const closeToLanding = async (): Promise<void> => {
-    if (session.file?.dirty && !confirm(`Discard unsaved changes to ${session.file.path}?`)) return;
-    textEdit.close();
-    stopWatch();
-    stopWatch = () => {};
-    session.file = null;
-    preview = null;
-    refresh();
+    if (!(await confirmLeave())) return;
+    dropOpenFile();
     await fillListing("landing");
   };
   const bringFile = async (): Promise<void> => {
@@ -1153,14 +1360,17 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
         (path, name) => storage.createFolder(path, name),
       );
       if (picked === null) return;
+      if (!(await confirmLeave())) return;
       if (picked.kind === "folder") {
         await enterWorkspace(session, { folder: picked.path });
+        if (session.file) dropOpenFile();
         showError(null);
         await fillListing("landing");
         return;
       }
       const file = picked.path.slice(picked.path.lastIndexOf("/") + 1);
       await enterWorkspace(session, { file: picked.path });
+      if (session.file) dropOpenFile();
       await shell.open(file);
       if (session.file === null) await fillListing("landing");
     } catch (error) {
@@ -1171,10 +1381,13 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
   folderButton.addEventListener("click", () => { void browseFor(); });
   pillHome.addEventListener("click", () => { void closeToLanding(); });
 
-  const storedToolbar = readToolbar((await readPrefs())["toolbar"]);
+  const stored = await readPrefs();
+  const storedToolbar = readToolbar(stored["toolbar"]);
   toolbarOffset = { x: storedToolbar.x, y: storedToolbar.y };
   toolbarShown = storedToolbar.shown;
   placeToolbar();
+  panels = readPanels(stored["panels"]);
+  placePanels();
   session.info = await storage.currentWorkspace();
   if (screen === "file") {
     const paths = await workspaceFiles(storage);

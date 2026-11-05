@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { StorageError, readText } from "../storage/adapter.ts";
+import { StorageError, readText, writeText } from "../storage/adapter.ts";
 import { MemoryStorage } from "../storage/memory.ts";
-import { openFile, workspaceFiles } from "./workspace.ts";
+import { FileChanged, openFile, workspaceFiles } from "./workspace.ts";
 import { monoMeasurer } from "../testing/measurer.ts";
 
 const canonical = `diagram version=1
@@ -48,6 +48,20 @@ describe("open, save and invalid files", () => {
     expect(await readText(storage, "d.drawit.kdl")).toContain("layout {\n  a x=0 y=0\n  b x=240 y=0\n}\n");
   });
 
+  it("keeps the dirty result of a version when the document is swapped underneath it", async () => {
+    const storage = new MemoryStorage({ "d.drawit.kdl": canonical });
+    const result = await openFile(storage, "d.drawit.kdl", monoMeasurer);
+    if (!result.ok) throw new Error("expected the file to open");
+    const { file } = result;
+    const opened = file.document;
+    file.history.execute({ type: "setLayout", changes: [{ id: "a", set: { x: 40 } }] });
+    expect(file.dirty).toBe(true);
+    file.history.document = opened;
+    expect(file.dirty).toBe(true);
+    file.history.undo();
+    expect(file.dirty).toBe(false);
+  });
+
   it("is dirty after a command and clean again once the change is undone", async () => {
     const storage = new MemoryStorage({ "d.drawit.kdl": canonical });
     const result = await openFile(storage, "d.drawit.kdl", monoMeasurer);
@@ -68,6 +82,42 @@ describe("open, save and invalid files", () => {
     await file.save(storage);
     expect(await readText(storage, "d.drawit.kdl")).toBe(canonical.replace("a x=0", "a x=40"));
     expect(file.dirty).toBe(false);
+  });
+
+  it("does not write when the file on disk changed since it was read", async () => {
+    const storage = new MemoryStorage({ "d.drawit.kdl": canonical });
+    const result = await openFile(storage, "d.drawit.kdl", monoMeasurer);
+    if (!result.ok) throw new Error("expected the file to open");
+    const { file } = result;
+    file.history.execute({ type: "setLayout", changes: [{ id: "a", set: { x: 40 } }] });
+    const outside = canonical.replace('node a "A"', 'node a "Z"');
+    await writeText(storage, "d.drawit.kdl", outside);
+    await expect(file.save(storage)).rejects.toBeInstanceOf(FileChanged);
+    expect(await readText(storage, "d.drawit.kdl")).toBe(outside);
+    expect(file.dirty).toBe(true);
+    expect(file.document.layout.find((entry) => entry.id === "a")?.x).toBe(40);
+  });
+
+  it("overwrites a file that changed on disk when asked to keep the edits", async () => {
+    const storage = new MemoryStorage({ "d.drawit.kdl": canonical });
+    const result = await openFile(storage, "d.drawit.kdl", monoMeasurer);
+    if (!result.ok) throw new Error("expected the file to open");
+    const { file } = result;
+    file.history.execute({ type: "setLayout", changes: [{ id: "a", set: { x: 40 } }] });
+    await writeText(storage, "d.drawit.kdl", canonical.replace('node a "A"', 'node a "Z"'));
+    await file.save(storage, "overwrite");
+    const written = await readText(storage, "d.drawit.kdl");
+    expect(written).toContain("a x=40");
+    expect(written).toContain('node a "A"');
+    expect(file.dirty).toBe(false);
+  });
+
+  it("reports a missing file instead of a change on disk", async () => {
+    const storage = new MemoryStorage({ "d.drawit.kdl": canonical });
+    const result = await openFile(storage, "d.drawit.kdl", monoMeasurer);
+    if (!result.ok) throw new Error("expected the file to open");
+    storage.remove("d.drawit.kdl");
+    await expect(result.file.save(storage)).rejects.toMatchObject({ code: "not-found" });
   });
 
   it("stays dirty when the save fails", async () => {

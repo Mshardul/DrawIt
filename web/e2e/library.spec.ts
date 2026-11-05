@@ -56,14 +56,25 @@ test("a preview is drawn for a visible entry", async ({ page }) => {
   await expect(item(page, "Rectangle").locator("svg rect").first()).toBeAttached();
 });
 
-test("previews are large enough to read, and their strokes keep one width however far the shape is scaled down", async ({ page }) => {
-  const preview = item(page, "Rounded rectangle").locator("svg");
+test("shapes are tiles, four to a row, with the name on hover and not written under the drawing", async ({ page }) => {
+  const tile = item(page, "Rounded rectangle");
+  await expect(tile).toHaveAttribute("title", "Rounded rectangle");
+  await expect(tile).toHaveText("");
+  await expect(tile).toHaveCSS("height", "44px");
+  const tiles = library(page).locator("section").first().getByRole("button");
+  const at = async (index: number) => (await tiles.nth(index).boundingBox())?.y ?? 0;
+  const first = await at(0);
+  expect(await at(3)).toBeCloseTo(first, 0);
+  expect(await at(4)).toBeGreaterThan(first + 20);
+  const preview = tile.locator("svg");
   const box = await preview.boundingBox();
-  expect(box?.width).toBeGreaterThanOrEqual(72);
-  expect(box?.height).toBeGreaterThanOrEqual(52);
-  const part = item(page, "Rounded rectangle").locator("svg path").first();
+  expect(box?.width).toBeCloseTo(34, 0);
+  expect(box?.height).toBeCloseTo(26, 0);
+  const part = preview.locator("path").first();
   await expect(part).toBeAttached();
   expect(await part.evaluate((el) => getComputedStyle(el).vectorEffect)).toBe("non-scaling-stroke");
+  await tile.hover();
+  await expect(tile).toHaveCSS("background-color", "rgb(243, 243, 243)");
 });
 
 test("search narrows the list by name and tag, and says when nothing matches", async ({ page }) => {

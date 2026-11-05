@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { writeText } from "../storage/adapter.ts";
+import { readText, writeText } from "../storage/adapter.ts";
 import { MemoryStorage } from "../storage/memory.ts";
 import { monoMeasurer } from "../testing/measurer.ts";
-import { watchChanges } from "./changes.ts";
-import { openFile } from "./workspace.ts";
+import { replaceFromDisk, watchChanges } from "./changes.ts";
+import { FileChanged, openFile } from "./workspace.ts";
 
 const canonical = `diagram version=1
 
@@ -186,6 +186,49 @@ describe("open file polling", () => {
     expect(ctx.reloads()).toBe(0);
     expect(ctx.file.history.undo()).toBe(true);
     expect(label(ctx.file)).toBe("A");
+  });
+
+  it("reports an outside change while there are unsaved edits and still treats those bytes as foreign", async () => {
+    const ctx = await opened();
+    const hash = ctx.file.diskHash();
+    ctx.stop();
+    let reported = "";
+    const clock = manualClock();
+    const stop = watchChanges(ctx.file, ctx.storage, {
+      measurer: monoMeasurer,
+      clock,
+      onConflict: (text) => {
+        reported = text;
+      },
+    });
+    await Promise.resolve();
+    ctx.file.history.execute({ type: "setElement", id: "a", set: { label: "Mine" } });
+    ctx.bump();
+    const outside = canonical.replace('node a "A"', 'node a "Z"');
+    await writeText(ctx.storage, "d.drawit.kdl", outside);
+    await clock.fire();
+    expect(reported).toBe(outside);
+    expect(label(ctx.file)).toBe("Mine");
+    expect(ctx.file.diskHash()).toBe(hash);
+    await expect(ctx.file.save(ctx.storage)).rejects.toBeInstanceOf(FileChanged);
+    expect(await readText(ctx.storage, "d.drawit.kdl")).toBe(outside);
+    stop();
+  });
+
+  it("reloads the given text as one undo step and refuses text that is not a diagram", async () => {
+    const ctx = await opened();
+    ctx.stop();
+    ctx.file.history.execute({ type: "setElement", id: "a", set: { label: "Mine" } });
+    const outside = canonical.replace('node a "A"', 'node a "Z"');
+    expect(replaceFromDisk(ctx.file, "diagram {\n", monoMeasurer)).toMatch(/line \d+, column \d+/);
+    expect(label(ctx.file)).toBe("Mine");
+    expect(ctx.file.history.canUndo).toBe(true);
+    expect(replaceFromDisk(ctx.file, outside, monoMeasurer)).toBeNull();
+    expect(label(ctx.file)).toBe("Z");
+    expect(ctx.file.dirty).toBe(false);
+    expect(ctx.file.history.undo()).toBe(true);
+    expect(label(ctx.file)).toBe("Mine");
+    expect(ctx.file.dirty).toBe(true);
   });
 
   it("does not replace the document when the outside file is invalid", async () => {

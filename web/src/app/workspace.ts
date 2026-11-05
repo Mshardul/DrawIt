@@ -4,7 +4,7 @@ import { KdlSyntaxError, readDiagram } from "../kdl/read.ts";
 import { writeDiagram } from "../kdl/write.ts";
 import type { DiagramDocument } from "../model/index.ts";
 import { placeUnplaced } from "../render/place.ts";
-import { type StorageAdapter, writeText } from "../storage/adapter.ts";
+import { type StorageAdapter, readText, writeText } from "../storage/adapter.ts";
 import { contentHash } from "../storage/poll.ts";
 import type { TextMeasurer } from "../text/measure.ts";
 
@@ -22,13 +22,18 @@ export class OpenFile {
   readonly history: History;
   /** The canonical text of the document as last opened, saved or reloaded. */
   private savedText: string;
+  /** Canonical text of `#textVersion`, so a refresh does not write the document again. */
+  #text: string;
+  #textVersion: number;
   /** Hash of the bytes last read from or written to disk. */
   #hash: string;
 
   constructor(path: string, document: DiagramDocument, source: string) {
     this.path = path;
     this.history = new History(document);
-    this.savedText = writeDiagram(document);
+    this.#text = writeDiagram(document);
+    this.#textVersion = this.history.version;
+    this.savedText = this.#text;
     this.#hash = contentHash(source);
   }
 
@@ -38,7 +43,17 @@ export class OpenFile {
 
   /** True when the document would save as different bytes than were last opened, saved or reloaded. */
   get dirty(): boolean {
-    return writeDiagram(this.history.document) !== this.savedText;
+    return this.#canonical() !== this.savedText;
+  }
+
+  /** Canonical text of the current version. Written once until the version changes. */
+  #canonical(): string {
+    const version = this.history.version;
+    if (version !== this.#textVersion) {
+      this.#text = writeDiagram(this.history.document);
+      this.#textVersion = version;
+    }
+    return this.#text;
   }
 
   /** Hash of the bytes last read from or written to disk. */
@@ -59,16 +74,31 @@ export class OpenFile {
   /** One undo step back to the previous document. The selection is cleared so undo restores it. */
   reloadFromDisk(document: DiagramDocument, source: string): void {
     this.history.execute({ type: "replace-document", document }, { selection: [] });
-    this.savedText = writeDiagram(this.history.document);
+    this.savedText = this.#canonical();
     this.#hash = contentHash(source);
   }
 
-  /** Writes the canonical form. Rejects, and stays dirty, if the storage fails. */
-  async save(storage: StorageAdapter): Promise<void> {
-    const text = writeDiagram(this.history.document);
+  /** Writes the canonical form. Throws FileChanged, writing nothing, when disk bytes differ from the last read, unless mode is overwrite. Stays dirty if storage fails. */
+  async save(storage: StorageAdapter, mode?: "overwrite"): Promise<void> {
+    const text = this.#canonical();
+    if (mode !== "overwrite") {
+      const onDisk = await readText(storage, this.path);
+      if (contentHash(onDisk) !== this.#hash) throw new FileChanged(onDisk);
+    }
     await writeText(storage, this.path, text);
     this.savedText = text;
     this.#hash = contentHash(text);
+  }
+}
+
+/** The file on disk is not the one last read. Nothing was written. */
+export class FileChanged extends Error {
+  readonly text: string;
+
+  constructor(text: string) {
+    super("changed on disk");
+    this.name = "FileChanged";
+    this.text = text;
   }
 }
 
