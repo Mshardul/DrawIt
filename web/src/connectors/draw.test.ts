@@ -4,6 +4,7 @@ import { readDiagram } from "../kdl/read.ts";
 import { writeDiagram } from "../kdl/write.ts";
 import type { DiagramDocument, DiagramElement, EdgeElement, LayoutEntry } from "../model/index.ts";
 import { monoMeasurer } from "../testing/measurer.ts";
+import { styleOf } from "../style/of.ts";
 import { draftPath, drawEndAt, newEdgeCommand } from "./draw.ts";
 
 const doc = (elements: DiagramElement[] = [], extra: LayoutEntry[] = []): DiagramDocument => ({
@@ -30,8 +31,8 @@ const edgeOf = (d: DiagramDocument, id: string): EdgeElement => {
   return found;
 };
 
-const draw = (d: DiagramDocument, from: Parameters<typeof newEdgeCommand>[1], to: Parameters<typeof newEdgeCommand>[2]) => {
-  const made = newEdgeCommand(d, from, to);
+const draw = (d: DiagramDocument, from: Parameters<typeof newEdgeCommand>[1], to: Parameters<typeof newEdgeCommand>[2], heads?: "none" | "arrow") => {
+  const made = newEdgeCommand(d, from, to, heads);
   if (!made) throw new Error("no edge made");
   return { ...made, document: applyCommand(d, made.command).document };
 };
@@ -42,6 +43,14 @@ describe("drawing an edge", () => {
     expect(id).toBe("a->b");
     expect(edgeOf(document, id)).toMatchObject({ from: "a", to: "b" });
     expect(document.layout.some((e) => e.id === id)).toBe(false);
+  });
+
+  it("draws a line with no head and an arrow with the default head", () => {
+    const line = draw(doc(), { id: "a" }, { id: "b" }, "none");
+    expect(styleOf(line.document, edgeOf(line.document, line.id)).headEnd).toBe("none");
+    const arrow = draw(doc(), { id: "a" }, { id: "b" });
+    expect(styleOf(arrow.document, edgeOf(arrow.document, arrow.id)).headEnd).toBe("arrow");
+    expect(arrow.command.type).toBe("add");
   });
 
   it("adds it after everything, so it draws on top", () => {

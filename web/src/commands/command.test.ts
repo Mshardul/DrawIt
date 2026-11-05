@@ -44,6 +44,17 @@ const commands: Record<string, Command> = {
   reorder: { type: "reorder", ids: ["a"], to: "front" },
   rename: { type: "rename", id: "a", newId: "alpha" },
   batch: { type: "batch", commands: [{ type: "setLayout", changes: [{ id: "a", set: { x: 1 } }] }, { type: "delete", ids: ["t"] }] },
+  replaceDocument: {
+    type: "replace-document",
+    document: {
+      version: 1,
+      title: "Next",
+      plugins: [],
+      elements: [{ kind: "node", id: "z", label: "Z", shape: "rect" }],
+      style: { theme: { name: "default", colors: {}, fonts: {}, sizes: {}, spaces: {} }, classes: [], overrides: [] },
+      layout: [{ id: "z", x: 3, y: 4 }],
+    },
+  },
 };
 
 describe("command layer", () => {
@@ -188,6 +199,20 @@ describe("command layer", () => {
   it("batch applies all its commands or none", () => {
     const bad: Command = { type: "batch", commands: [{ type: "delete", ids: ["a"] }, { type: "delete", ids: ["nope"] }] };
     expect(() => applyCommand(sample(), bad)).toThrow(CommandError);
+  });
+
+  it("replace-document drops fields the new document does not have", () => {
+    const before = sample();
+    before.title = "Old";
+    before.comments = ["note"];
+    const next = sample();
+    next.elements = [{ kind: "node", id: "z", label: "Z", shape: "rect" }];
+    next.layout = [{ id: "z", x: 3, y: 4 }];
+    const { document, inverse } = applyCommand(before, { type: "replace-document", document: next });
+    expect(document.title).toBeUndefined();
+    expect(document.comments).toBeUndefined();
+    expect(ids(document)).toEqual(["z"]);
+    expect(applyPatches(document, inverse)).toEqual(before);
   });
 
   it("an unknown command type fails", () => {

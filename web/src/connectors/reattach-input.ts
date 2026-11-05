@@ -5,7 +5,7 @@ import type { OpenFile } from "../app/workspace.ts";
 import type { DiagramDocument, Point } from "../model/index.ts";
 import type { TextMeasurer } from "../text/measure.ts";
 import { screenToWorld, type View } from "../view/view.ts";
-import type { Tool } from "./input.ts";
+import type { Tool } from "../app/tool.ts";
 import { reattachCommand } from "./reattach.ts";
 
 /** Pointer travel (screen px) before a press becomes a drag. */

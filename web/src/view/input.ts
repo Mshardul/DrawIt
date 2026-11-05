@@ -47,7 +47,8 @@ export interface ViewInputHost {
   target: SVGSVGElement;
   getView(): View;
   setView(view: View): void;
-  getBounds(): Box | null;
+  /** When this is the hand tool, the primary button pans. */
+  getTool?(): string;
 }
 
 const isTyping = (event: Event): boolean => {
@@ -55,7 +56,7 @@ const isTyping = (event: Event): boolean => {
   return t instanceof HTMLInputElement || t instanceof HTMLSelectElement || t instanceof HTMLTextAreaElement;
 };
 
-/** Wires wheel, zoom keys, space-drag and middle-drag to `host`. Returns a function that removes them. */
+/** Wires wheel, space-drag and middle-drag to `host`. Returns a function that removes them. */
 export function attachViewInput(host: ViewInputHost): () => void {
   const { target } = host;
   let spaceDown = false;
@@ -64,10 +65,6 @@ export function attachViewInput(host: ViewInputHost): () => void {
   const local = (event: { clientX: number; clientY: number }): Pt => {
     const r = target.getBoundingClientRect();
     return { x: event.clientX - r.left, y: event.clientY - r.top };
-  };
-  const viewport = (): { w: number; h: number } => {
-    const r = target.getBoundingClientRect();
-    return { w: r.width, h: r.height };
   };
 
   const onWheel = (event: WheelEvent): void => {
@@ -84,28 +81,15 @@ export function attachViewInput(host: ViewInputHost): () => void {
     );
   };
   const onKeyDown = (event: KeyboardEvent): void => {
-    if (isTyping(event)) return;
-    if (event.code === "Space") {
-      spaceDown = true;
-      if (event.target === document.body || event.target === target) event.preventDefault();
-      return;
-    }
-    const next = keyView(
-      host.getView(),
-      { key: event.key, code: event.code, mod: event.metaKey || event.ctrlKey, shift: event.shiftKey },
-      viewport(),
-      host.getBounds(),
-    );
-    if (next) {
-      event.preventDefault();
-      host.setView(next);
-    }
+    if (isTyping(event) || event.code !== "Space") return;
+    spaceDown = true;
+    if (event.target === document.body || event.target === target) event.preventDefault();
   };
   const onKeyUp = (event: KeyboardEvent): void => {
     if (event.code === "Space") spaceDown = false;
   };
   const onPointerDown = (event: PointerEvent): void => {
-    if (!(event.button === 1 || (event.button === 0 && spaceDown))) return;
+    if (!(event.button === 1 || (event.button === 0 && (spaceDown || host.getTool?.() === "hand")))) return;
     event.preventDefault();
     // Selection listens on the same element; a pan gesture is not a click on the canvas.
     event.stopImmediatePropagation();

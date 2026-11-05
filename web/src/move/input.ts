@@ -3,7 +3,7 @@
 // screen) and commits one command on release, so it is one undo step.
 import { applyCommand, type Command } from "../commands/command.ts";
 import type { OpenFile } from "../app/workspace.ts";
-import type { Tool } from "../connectors/input.ts";
+import type { Tool } from "../app/tool.ts";
 import type { DiagramDocument } from "../model/index.ts";
 import { EDGE_HANDLE_SELECTOR } from "../render/overlay.ts";
 import { hitTest } from "../select/select.ts";

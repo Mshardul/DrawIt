@@ -1,6 +1,13 @@
 html, body { margin: 0; height: 100%; font: 14px system-ui, sans-serif; color: #1a1a1a; }
-#app { display: flex; flex-direction: column; height: 100%; }
+#app { display: flex; flex-direction: column; height: 100%; position: relative; }
+[hidden] { display: none !important; }
 .bar { display: flex; align-items: center; gap: 12px; padding: 6px 12px; border-bottom: 1px solid #ccc; }
+.bar .nav { margin-left: auto; display: flex; gap: 8px; }
+.listing { flex: 1; overflow: auto; padding: 24px 32px; }
+.listing h2 { margin: 0 0 16px; font-size: 20px; }
+.listing .back { margin-bottom: 16px; }
+.listing ul { list-style: none; margin: 0; padding: 0; }
+.listing li button { display: block; width: 100%; text-align: left; padding: 6px 0; border: 0; background: none; font: inherit; cursor: pointer; }
 .bar h1 { font-size: 16px; margin: 0; }
 .name { font-weight: 600; }
 .unsaved { color: #a35200; }
@@ -17,10 +24,18 @@ html, body { margin: 0; height: 100%; font: 14px system-ui, sans-serif; color: #
 .canvas { touch-action: none; }
 /* Lines are measured with every space they contain, so SVG must not collapse runs of spaces. The CSP rules out a style attribute. */
 .canvas text { white-space: pre; }
+.canvas.hand { cursor: grab; }
 .canvas.panning { cursor: grabbing; }
 .canvas.drawing { cursor: crosshair; }
-.tools { display: flex; gap: 4px; }
-.tools button[aria-pressed="true"] { background: #dbe8f5; border-color: #1a73e8; }
+.stage { position: relative; flex: 1; min-width: 0; min-height: 0; display: flex; }
+.stage > .canvas { width: 100%; height: 100%; }
+.toolbar { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); display: flex; align-items: center; gap: 4px; padding: 4px; background: #fff; border: 1px solid #ccc; border-radius: 8px; z-index: 2; }
+.toolbar .sep { width: 1px; align-self: stretch; background: #ddd; margin: 4px 2px; }
+.toolbar .grip { cursor: grab; }
+.toolbar button[aria-pressed="true"] { background: #dbe8f5; border-color: #1a73e8; }
+.pill { position: absolute; top: 12px; right: 12px; display: flex; align-items: center; gap: 8px; padding: 4px 10px; background: #fff; border: 1px solid #ccc; border-radius: 999px; z-index: 2; }
+.pill .name { font-weight: 600; }
+.pill button.dirty { color: #a35200; }
 .selection { stroke: #1a73e8; stroke-width: 1.5; pointer-events: none; }
 .draft { fill: none; stroke: #1a73e8; stroke-width: 1.5; stroke-dasharray: 4 3; pointer-events: none; }
 .marquee { fill: rgba(26, 115, 232, 0.12); stroke: #1a73e8; stroke-width: 1; stroke-dasharray: 4 3; pointer-events: none; }
@@ -51,3 +66,68 @@ html, body { margin: 0; height: 100%; font: 14px system-ui, sans-serif; color: #
 .library-item svg * { vector-effect: non-scaling-stroke; }
 .arrange-group { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; margin-bottom: 8px; }
 .arrange-group button { font-size: 12px; }
+.scrim { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.28); display: flex; align-items: center; justify-content: center; z-index: 30; }
+.sheet { width: 420px; max-height: 520px; background: #fff; border: 1px solid #ccc; border-radius: 6px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2); display: flex; flex-direction: column; overflow: hidden; }
+.sheet .hd { padding: 12px 16px; border-bottom: 1px solid #ccc; font-weight: 600; }
+.sheet .bd { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.sheet .ft { padding: 10px 16px; border-top: 1px solid #ccc; display: flex; gap: 8px; align-items: center; }
+.sheet .sp, .notice .sp { flex: 1; }
+.btn { font: inherit; padding: 4px 10px; border: 1px solid #ccc; background: #fff; color: #1a1a1a; border-radius: 4px; cursor: pointer; }
+.btn:disabled { opacity: 0.45; cursor: default; }
+.btn.primary { background: #1a73e8; border-color: #1a73e8; color: #fff; }
+.btn.danger { background: #b00020; border-color: #b00020; color: #fff; }
+.sheet input.f { font: inherit; padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box; }
+.sheet input.f.bad { border-color: #b00020; }
+.sheet .err { color: #b00020; font-size: 12px; min-height: 16px; }
+.notice { position: absolute; left: 50%; transform: translateX(-50%); top: 56px; width: 520px; max-width: calc(100% - 32px); background: #fff4e5; border: 1px solid #e8c48b; color: #a35200; border-radius: 8px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15); padding: 10px 12px; display: flex; gap: 8px; align-items: center; z-index: 31; }
+.elsewhere { position: absolute; inset: 0; z-index: 40; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; padding: 24px; }
+.elsewhere h2 { margin: 0; font-size: 20px; font-weight: 600; }
+.elsewhere p { margin: 0; max-width: 360px; color: #555; }
+.listing .first-run { min-height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; }
+.listing .first-run h2 { margin: 0; font-size: 20px; }
+.listing .first-run p { margin: 0; color: #555; }
+.listing .acts { display: flex; gap: 8px; margin-top: 8px; }
+.listing .head { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+.listing .head h2 { margin: 0 auto 0 0; font-size: 18px; }
+.listing .head.folder h2 { margin-right: 0; }
+.listing .head.folder .btn { margin-left: auto; }
+.listing .tag { font-size: 11px; border: 1px solid #ccc; border-radius: 99px; padding: 1px 8px; color: #555; }
+.listing .path { color: #555; font-size: 12px; }
+.listing .sec { font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: #555; margin: 22px 0 8px; font-weight: 600; }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+button.card { display: block; width: 100%; box-sizing: border-box; text-align: left; font: inherit; color: inherit; cursor: pointer; border: 1px solid #ccc; border-radius: 6px; padding: 8px; background: #fff; }
+button.card:hover { border-color: #1a73e8; }
+button.card .th { height: 92px; margin-bottom: 6px; border-radius: 4px; background: #f3f3f3; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+button.card .th svg.thumb { width: 100%; height: 100%; }
+button.card .th.load, button.card .th.bad, button.card .th.big { flex-direction: column; gap: 4px; padding: 8px; color: #666; font-size: 11px; text-align: center; }
+button.card .name { display: block; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+button.card .meta { display: block; margin-top: 2px; color: #555; font-size: 12px; font-weight: 400; }
+button.card.add { display: flex; align-items: center; justify-content: center; min-height: 148px; border-style: dashed; color: #1a73e8; font-weight: 600; }
+.card-wrap { position: relative; min-width: 0; }
+.card-wrap > .card { height: 100%; }
+.card-wrap .mnu { position: absolute; top: 106px; right: 8px; border: 0; background: transparent; color: #555; font: inherit; line-height: 22px; padding: 0 6px; border-radius: 4px; cursor: pointer; opacity: 0; }
+.card-wrap:hover .mnu, .card-wrap:focus-within .mnu, .card-wrap .mnu[aria-expanded="true"] { opacity: 1; }
+.card-wrap .mnu[aria-expanded="true"] { background: #e8f0fe; color: inherit; }
+.menu { position: absolute; right: 8px; top: 132px; width: 168px; background: #fff; border: 1px solid #ccc; border-radius: 6px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12); padding: 4px; z-index: 5; }
+.menu button { display: block; width: 100%; text-align: left; font: inherit; border: 0; background: transparent; padding: 6px 8px; border-radius: 4px; cursor: pointer; }
+.menu button:hover { background: #f3f3f3; }
+.menu button.danger { color: #b00020; }
+.sheet .hint { color: #555; font-size: 12px; }
+.sheet .opt { display: block; width: 100%; text-align: left; font: inherit; border: 0; background: transparent; padding: 6px 8px; border-radius: 4px; cursor: pointer; }
+.sheet .opt.on { background: #e8f0fe; }
+.sheet .add-row { align-self: flex-start; border: 0; background: transparent; color: #1a73e8; font: inherit; cursor: pointer; padding: 4px 0; }
+.sheet .drop { position: relative; border: 2px dashed #ccc; border-radius: 6px; padding: 16px; text-align: center; color: #555; }
+.sheet .drop.bad { border-color: #b00020; }
+.sheet select.f { font: inherit; padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box; }
+.sheet input.file { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0; }
+.sheet .crumbs { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin: -14px -16px 0; padding: 8px 16px; border-bottom: 1px solid #ccc; font-size: 12px; color: #555; }
+.sheet .crumbs button { border: 0; background: none; font: inherit; color: #555; cursor: pointer; padding: 0; }
+.sheet .crumbs .sp { flex: 1; }
+.sheet .crumbs .add-row { margin-left: 8px; }
+.sheet .browser-list { min-height: 180px; }
+.sheet .row { display: flex; align-items: center; border-radius: 4px; }
+.sheet .row.on { background: #e8f0fe; }
+.sheet .row .hit { flex: 1; text-align: left; font: inherit; border: 0; background: transparent; padding: 6px 8px; cursor: pointer; }
+.sheet .row .go { border: 0; background: transparent; color: #555; cursor: pointer; padding: 6px 8px; }
+.sheet .picked { color: #555; font-size: 12px; }
+.file-icon { width: 28px; height: 28px; fill: none; stroke: #555; stroke-width: 1.5; stroke-linejoin: round; stroke-linecap: round; }

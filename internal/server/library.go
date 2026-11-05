@@ -32,6 +32,8 @@ type libraryRequest struct {
 	To      *string `json:"to"`
 	Delete  *string `json:"delete"`
 	NoTrash *bool   `json:"noTrash"`
+	Copy    *string `json:"copy"`
+	Into    *string `json:"into"`
 }
 
 func (q libraryRequest) action() string {
@@ -41,17 +43,21 @@ func (q libraryRequest) action() string {
 	from := q.From != nil
 	to := q.To != nil
 	del := q.Delete != nil
+	copy := q.Copy != nil
+	into := q.Into != nil
 	switch {
-	case draft && !project && !diagram && !from && !to && !del:
+	case draft && !project && !diagram && !from && !to && !del && !copy && !into:
 		return "draft"
-	case project && !draft && !diagram && !from && !to && !del:
+	case project && !draft && !diagram && !from && !to && !del && !copy && !into:
 		return "project"
-	case project && diagram && !draft && !from && !to && !del:
+	case project && diagram && !draft && !from && !to && !del && !copy && !into:
 		return "diagram"
-	case from && to && !draft && !project && !diagram && !del:
+	case from && to && !draft && !project && !diagram && !del && !copy && !into:
 		return "rename"
-	case del && !draft && !project && !diagram && !from && !to:
+	case del && !draft && !project && !diagram && !from && !to && !copy && !into:
 		return "delete"
+	case copy && into && !draft && !project && !diagram && !from && !to && !del:
+		return "copy"
 	default:
 		return ""
 	}
@@ -117,9 +123,101 @@ func (s *server) changeLibrary(root *os.Root, req libraryRequest) (string, error
 			move = trash.Move
 		}
 		return deleteLibrary(root, s.ws.library, *req.Delete, permanent, move)
+	case "copy":
+		return copyLibrary(root, *req.Copy, *req.Into)
 	default:
 		return renameLibrary(root, *req.From, *req.To)
 	}
+}
+
+func copyLibrary(root *os.Root, from, dir string) (string, error) {
+	rel, err := cleanLibraryPath(from)
+	if err != nil {
+		return "", err
+	}
+	info, err := root.Stat(rel)
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return "", openError(http.StatusNotFound, "not found")
+		}
+		return "", openError(http.StatusForbidden, "access refused")
+	}
+	if !info.Mode().IsRegular() {
+		return "", openError(http.StatusBadRequest, "not a file")
+	}
+	project, intoAssets, err := copyDir(dir)
+	if err != nil {
+		return "", err
+	}
+	folder, err := projectFolder(root, project)
+	if err != nil {
+		return "", err
+	}
+	destDir := folder
+	if intoAssets {
+		destDir = path.Join(folder, "assets")
+		if err := root.Mkdir(destDir, 0o755); err != nil && !errors.Is(err, fs.ErrExist) {
+			return "", err
+		}
+	}
+	entries, err := fs.ReadDir(root.FS(), destDir)
+	if err != nil {
+		return "", err
+	}
+	free, err := freeBase(entries, path.Base(rel))
+	if err != nil {
+		return "", err
+	}
+	data, err := fs.ReadFile(root.FS(), rel)
+	if err != nil {
+		return "", err
+	}
+	if int64(len(data)) > MaxFileBytes {
+		return "", openError(http.StatusRequestEntityTooLarge, "file is over the limit")
+	}
+	dest := path.Join(destDir, free)
+	if err := createExclusive(root, dest, data); err != nil {
+		return "", err
+	}
+	return dest, nil
+}
+
+func copyDir(dir string) (string, bool, error) {
+	if strings.HasSuffix(dir, "/assets") {
+		project := strings.TrimSuffix(dir, "/assets")
+		if project == "" || strings.Contains(project, "/") {
+			return "", false, openError(http.StatusBadRequest, "name is not allowed")
+		}
+		return project, true, nil
+	}
+	if dir == "" || strings.Contains(dir, "/") {
+		return "", false, openError(http.StatusBadRequest, "name is not allowed")
+	}
+	return dir, false, nil
+}
+
+func freeBase(entries []fs.DirEntry, base string) (string, error) {
+	if !nameTaken(entries, base, "") {
+		return base, nil
+	}
+	stem, ext := splitExt(base)
+	for n := 2; n <= 10000; n++ {
+		candidate := fmt.Sprintf("%s %d%s", stem, n, ext)
+		if !nameTaken(entries, candidate, "") {
+			return candidate, nil
+		}
+	}
+	return "", openError(http.StatusConflict, "name exists")
+}
+
+func splitExt(base string) (string, string) {
+	if strings.HasSuffix(base, diagramExt) {
+		return strings.TrimSuffix(base, diagramExt), diagramExt
+	}
+	if dot := strings.LastIndex(base, "."); dot > 0 {
+		return base[:dot], base[dot:]
+	}
+	return base, ""
 }
 
 func deleteLibrary(root *os.Root, library, rel string, permanent bool, move func(string) error) (string, error) {

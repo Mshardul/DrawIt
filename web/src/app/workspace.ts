@@ -5,6 +5,7 @@ import { writeDiagram } from "../kdl/write.ts";
 import type { DiagramDocument } from "../model/index.ts";
 import { placeUnplaced } from "../render/place.ts";
 import { type StorageAdapter, writeText } from "../storage/adapter.ts";
+import { contentHash } from "../storage/poll.ts";
 import type { TextMeasurer } from "../text/measure.ts";
 
 /** DrawIt's own files. */
@@ -19,22 +20,47 @@ export async function workspaceFiles(storage: StorageAdapter): Promise<string[]>
 export class OpenFile {
   readonly path: string;
   readonly history: History;
-  /** The canonical text of the document as last opened or saved. */
+  /** The canonical text of the document as last opened, saved or reloaded. */
   private savedText: string;
+  /** Hash of the bytes last read from or written to disk. */
+  #hash: string;
 
-  constructor(path: string, document: DiagramDocument) {
+  constructor(path: string, document: DiagramDocument, source: string) {
     this.path = path;
     this.history = new History(document);
     this.savedText = writeDiagram(document);
+    this.#hash = contentHash(source);
   }
 
   get document(): DiagramDocument {
     return this.history.document;
   }
 
-  /** True when the document would save as different bytes than were last opened or saved. */
+  /** True when the document would save as different bytes than were last opened, saved or reloaded. */
   get dirty(): boolean {
     return writeDiagram(this.history.document) !== this.savedText;
+  }
+
+  /** Hash of the bytes last read from or written to disk. */
+  diskHash(): string {
+    return this.#hash;
+  }
+
+  /** True when `text` is the canonical form last opened, saved or reloaded. */
+  matchesSaved(text: string): boolean {
+    return text === this.savedText;
+  }
+
+  /** Remembers bytes seen on disk without changing the document. */
+  noteDisk(text: string): void {
+    this.#hash = contentHash(text);
+  }
+
+  /** One undo step back to the previous document. The selection is cleared so undo restores it. */
+  reloadFromDisk(document: DiagramDocument, source: string): void {
+    this.history.execute({ type: "replace-document", document }, { selection: [] });
+    this.savedText = writeDiagram(this.history.document);
+    this.#hash = contentHash(source);
   }
 
   /** Writes the canonical form. Rejects, and stays dirty, if the storage fails. */
@@ -42,6 +68,7 @@ export class OpenFile {
     const text = writeDiagram(this.history.document);
     await writeText(storage, this.path, text);
     this.savedText = text;
+    this.#hash = contentHash(text);
   }
 }
 
@@ -66,7 +93,7 @@ export async function openFile(storage: StorageAdapter, path: string, measurer: 
   const text = new TextDecoder().decode(await storage.read(path));
   try {
     const { document, warnings } = readDiagram(text);
-    return { ok: true, file: new OpenFile(path, placeUnplaced(document, measurer)), warnings };
+    return { ok: true, file: new OpenFile(path, placeUnplaced(document, measurer), text), warnings };
   } catch (error) {
     if (error instanceof KdlSyntaxError) {
       return { ok: false, path, error: { path, message: error.message, line: error.line, column: error.column } };

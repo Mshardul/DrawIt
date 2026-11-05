@@ -20,55 +20,64 @@ interface Files {
 interface Hooks {
   read(path: string): Promise<string>;
   edit(): void;
+  open(path: string): Promise<void>;
+  prefs(): Promise<{ workspace?: { folder?: string } }>;
 }
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
 });
 
-async function boot(page: import("@playwright/test").Page, files: Files): Promise<void> {
-  await page.evaluate(async (initial) => {
+async function boot(page: import("@playwright/test").Page, files: Files, show: "file" | "landing" | "home" = "file"): Promise<void> {
+  await page.evaluate(async ({ initial, show: screen }) => {
     const load = <T>(path: string) => import(path) as Promise<T>;
     const { mountShell } = await load<typeof import("../src/testing/mount-shell.ts")>("/src/testing/mount-shell.ts");
-    const { shell, storage } = await mountShell(initial);
+    const { shell, storage } = await mountShell(initial, { show: screen });
     (window as unknown as { hooks: Hooks }).hooks = {
       read: async (path) => new TextDecoder().decode(await storage.read(path)),
       edit: () => {
         shell.file?.history.execute({ type: "setLayout", changes: [{ id: "a", set: { x: 40 } }] });
         shell.refresh();
       },
+      open: (path) => shell.open(path),
+      prefs: () => storage.readPreferences() as Promise<{ workspace?: { folder?: string } }>,
     };
-  }, files);
+  }, { initial: files, show });
 }
 
-test("opens the first diagram of the folder and draws it", async ({ page }) => {
-  await boot(page, { "a.drawit.kdl": good, "notes.txt": "x" });
-  await expect(page.getByLabel("File").locator("option")).toHaveText(["a.drawit.kdl"]);
+test("a landing page lists diagrams and opens the one you choose", async ({ page }) => {
+  await boot(page, { "a.drawit.kdl": good, "notes.txt": "x" }, "landing");
+  await expect(page.getByRole("heading", { name: "Files" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "a", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "notes.txt" })).toHaveCount(0);
+  await expect(page.locator('g[data-id="a"]')).toHaveCount(0);
+  await page.getByRole("button", { name: "a", exact: true }).click();
   await expect(page.locator('g[data-id="a"] text')).toHaveText("Alpha");
   await expect(page.locator('g[data-id="b"] ellipse')).toHaveCount(1);
-  await expect(page.getByText("Unsaved changes")).toBeHidden();
+  await expect(page.getByText("Not saved")).toBeHidden();
 });
 
 test("shows the unsaved indicator after an edit and Cmd/Ctrl+S saves and clears it", async ({ page }) => {
   await boot(page, { "a.drawit.kdl": good });
   await page.evaluate(() => { (window as unknown as { hooks: Hooks }).hooks.edit(); });
-  await expect(page.getByText("Unsaved changes")).toBeVisible();
+  await expect(page.getByText("Not saved")).toBeVisible();
   await expect(page.locator('g[data-id="a"]')).toHaveAttribute("transform", "translate(40 20)");
   await page.keyboard.press("ControlOrMeta+s");
-  await expect(page.getByText("Unsaved changes")).toBeHidden();
+  await expect(page.getByText("Not saved")).toBeHidden();
   const saved = await page.evaluate(() => (window as unknown as { hooks: Hooks }).hooks.read("a.drawit.kdl"));
   expect(saved).toBe(good.replace("a x=10", "a x=40"));
 });
 
 test("opens another file from the list", async ({ page }) => {
   await boot(page, { "a.drawit.kdl": good, "b.drawit.kdl": good.replace("Alpha", "Other") });
-  await page.getByLabel("File").selectOption("b.drawit.kdl");
+  await page.getByRole("button", { name: "Home" }).click();
+  await page.getByRole("button", { name: "b", exact: true }).click();
   await expect(page.locator('g[data-id="a"] text')).toHaveText("Other");
 });
 
 test("refuses a file that is not valid KDL with its line and column, and never overwrites it", async ({ page }) => {
   await boot(page, { "a.drawit.kdl": good, "bad.drawit.kdl": bad });
-  await page.getByLabel("File").selectOption("bad.drawit.kdl");
+  await page.evaluate(() => (window as unknown as { hooks: Hooks }).hooks.open("bad.drawit.kdl"));
   await expect(page.getByRole("alert")).toContainText(/line \d+, column \d+/);
   await expect(page.getByRole("alert")).toContainText("bad.drawit.kdl");
   await page.keyboard.press("ControlOrMeta+s");
@@ -78,8 +87,23 @@ test("refuses a file that is not valid KDL with its line and column, and never o
 });
 
 test("a folder with no diagram files says so", async ({ page }) => {
-  await boot(page, { "notes.txt": "x" });
+  await boot(page, { "notes.txt": "x" }, "landing");
   await expect(page.getByRole("alert")).toContainText("No .drawit.kdl files");
+});
+
+test("closing a diagram with unsaved changes asks before discarding it", async ({ page }) => {
+  await boot(page, { "a.drawit.kdl": good });
+  await page.evaluate(() => { (window as unknown as { hooks: Hooks }).hooks.edit(); });
+  page.once("dialog", (dialog) => {
+    expect(dialog.message()).toContain("Discard unsaved changes to a.drawit.kdl");
+    return dialog.dismiss();
+  });
+  await page.getByRole("button", { name: "Home" }).click();
+  await expect(page.locator('g[data-id="a"] text')).toHaveText("Alpha");
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.getByRole("button", { name: "Home" }).click();
+  await expect(page.getByRole("heading", { name: "Files" })).toBeVisible();
+  await expect(page.locator('g[data-id="a"]')).toHaveCount(0);
 });
 
 test("a home or landing start leaves the diagram unopened", async ({ page }) => {
@@ -95,6 +119,38 @@ test("a home or landing start leaves the diagram unopened", async ({ page }) => 
     await expect(page.locator('g[data-id="a"]')).toHaveCount(0);
     await expect(page.getByRole("alert")).toBeHidden();
   }
+});
+
+test("opening a project lists its diagrams and remembers the folder", async ({ page }) => {
+  await page.evaluate(async (text) => {
+    const load = <T>(path: string) => import(path) as Promise<T>;
+    const { MemoryStorage, MemoryVolume } = await load<typeof import("../src/storage/memory.ts")>("/src/storage/memory.ts");
+    const { startShell } = await load<typeof import("../src/app/shell.ts")>("/src/app/shell.ts");
+    const root = document.getElementById("app");
+    if (!root) throw new Error("missing app root");
+    const volume = new MemoryVolume({
+      path: "/lib",
+      library: "/lib",
+      folders: ["Demo"],
+      places: { "/lib/Demo": { files: { "a.drawit.kdl": text } } },
+    });
+    const storage = new MemoryStorage({}, { volume });
+    await storage.claimSession();
+    await startShell(root, storage, { show: "home" });
+    (window as unknown as { hooks: Hooks }).hooks = {
+      read: async () => "",
+      edit: () => {},
+      open: async () => {},
+      prefs: () => storage.readPreferences() as Promise<{ workspace?: { folder?: string } }>,
+    };
+  }, good);
+  await page.getByRole("button", { name: "Demo" }).click();
+  await expect(page.getByRole("heading", { name: "Demo" })).toBeVisible();
+  await expect(page.locator('g[data-id="a"]')).toHaveCount(0);
+  expect(await page.evaluate(() => (window as unknown as { hooks: Hooks }).hooks.prefs())).toMatchObject({ workspace: { folder: "/lib/Demo" } });
+  await page.getByRole("button", { name: "Home" }).click();
+  await expect(page.getByRole("heading", { name: "Projects" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Demo" })).toBeVisible();
 });
 
 test("the app reads the session token from the URL fragment and talks to the server with it", async ({ page }) => {
@@ -122,9 +178,11 @@ test("the app reads the session token from the URL fragment and talks to the ser
   // The page is already at "/", so a fragment-only change would not reload it.
   await page.goto("about:blank");
   await page.goto("/#secret-token");
+  await page.getByRole("button", { name: "s", exact: true }).click();
   await expect(page.locator('g[data-id="a"] text')).toHaveText("Alpha");
-  expect(seen).toEqual(["Bearer secret-token", "Bearer secret-token"]);
-  expect(sessions).toEqual(["tab-1", "tab-1"]);
-  expect(workspaces).toEqual(["ws-1", "ws-1"]);
+  expect(seen.length).toBeGreaterThanOrEqual(2);
+  expect(new Set(seen)).toEqual(new Set(["Bearer secret-token"]));
+  expect(new Set(sessions)).toEqual(new Set(["tab-1"]));
+  expect(new Set(workspaces)).toEqual(new Set(["ws-1"]));
   expect(page.url()).not.toContain("secret-token");
 });

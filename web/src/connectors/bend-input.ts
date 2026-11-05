@@ -9,7 +9,7 @@ import type { TextMeasurer } from "../text/measure.ts";
 import { screenToWorld, type View } from "../view/view.ts";
 import { addBendCommand, moveBendCommand, removeBendCommand } from "./bend.ts";
 import { routedEdges } from "./edges.ts";
-import type { Tool } from "./input.ts";
+import type { Tool } from "../app/tool.ts";
 import { nearestOnPath } from "./path.ts";
 
 /** Pointer travel (screen px) before a press becomes a drag. */

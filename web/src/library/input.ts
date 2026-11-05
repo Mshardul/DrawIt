@@ -2,7 +2,7 @@
 // default size, a drag sizes it. The element is added as one command on release. A tool lasts for
 // one element.
 import type { OpenFile } from "../app/workspace.ts";
-import type { Tool } from "../connectors/input.ts";
+import type { Tool } from "../app/tool.ts";
 import type { Point } from "../model/index.ts";
 import type { Box } from "../render/boxes.ts";
 import { screenToWorld, type View } from "../view/view.ts";

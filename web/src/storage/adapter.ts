@@ -1,4 +1,4 @@
-// The one interface the app uses to reach the local server. Files are bytes; text and images use the same calls.
+// The one interface the app uses to reach the local server. File calls use the open workspace; library calls read and write the library folder. Files are bytes.
 
 /** A file in the workspace, as `GET /api/files` reports it. */
 export interface FileInfo {
@@ -67,6 +67,22 @@ export interface TopListing {
 
 export type Preferences = Record<string, unknown>;
 
+export interface BrowseEntry {
+  name: string;
+  type: "folder" | "file";
+}
+
+export interface BrowseListing {
+  path: string;
+  entries: BrowseEntry[];
+  truncated?: boolean;
+}
+
+export interface ImportedFile {
+  path: string;
+  data: Uint8Array;
+}
+
 /** Throws `too-large` if `data` cannot be written as the file at `path`. */
 export function assertFitsLimit(path: string, data: Uint8Array): void {
   if (data.length > MAX_FILE_BYTES) {
@@ -95,12 +111,8 @@ export interface StorageAdapter {
    * `too-large` for more than `MAX_FILE_BYTES`, changing nothing.
    */
   write(path: string, data: Uint8Array): Promise<void>;
-  /**
-   * Calls `listener` when a file changes in the workspace, including changes this adapter's
-   * own `write` makes: the app tells its own saves apart by content hash.
-   * Returns the function that stops listening.
-   */
-  watch(listener: (event: WatchEvent) => void): Unsubscribe;
+  /** Calls `listener` for changes, including this adapter's own writes, which the app tells apart by content hash. `path` is polled about once a second while visible; content is read only when the time or size changed, and a matching hash is not reported. */
+  watch(listener: (event: WatchEvent) => void, path?: string): Unsubscribe;
   /** The workspace the server is serving now. */
   currentWorkspace(): Promise<WorkspaceInfo>;
   /** Switches the served folder. A failed open leaves the current workspace in place. */
@@ -116,6 +128,28 @@ export interface StorageAdapter {
   readPreferences(): Promise<Preferences>;
   /** Merges each namespace's keys. A bad patch changes nothing. */
   patchPreferences(patch: Record<string, Record<string, unknown>>): Promise<Preferences>;
+  /** Creates a project folder. The name is the path. */
+  createProject(name: string): Promise<string>;
+  /** Creates the next empty draft, `Untitled` then `Untitled 2`, in `Drafts`. */
+  createDraft(): Promise<string>;
+  /** Creates an empty diagram in a project. `name` has no extension. */
+  createDiagram(project: string, name: string): Promise<string>;
+  /** Renames a project, or a diagram when `from` is `project/file.drawit.kdl`. `to` has no extension. */
+  renameItem(from: string, to: string): Promise<string>;
+  /** Deletes a project or a diagram. With no trash this refuses unless `noTrash` is set. */
+  deleteItem(path: string, noTrash?: boolean): Promise<string>;
+  /** Copies a library file into `dir` (`project` or `project/assets`) under a name that is free. */
+  copyFile(from: string, dir: string): Promise<string>;
+  /** Writes files into a project. A relative path that exists becomes `name 2`, then `name 3`. */
+  importFiles(project: string, files: readonly ImportedFile[]): Promise<string[]>;
+  /** Bytes of one library file, whichever folder is open. */
+  readLibrary(path: string): Promise<Uint8Array>;
+  /** Replaces a library file that already exists. */
+  replaceLibrary(path: string, data: Uint8Array): Promise<void>;
+  /** Folders and `.drawit.kdl` files under the home directory. No path lists the home directory. */
+  browse(path?: string): Promise<BrowseListing>;
+  /** Creates a folder in a directory the browser can list. Returns its absolute path. */
+  createFolder(path: string, name: string): Promise<string>;
 }
 
 export async function readText(storage: StorageAdapter, path: string): Promise<string> {

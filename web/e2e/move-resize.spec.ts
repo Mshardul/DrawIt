@@ -71,10 +71,10 @@ test("dragging an element moves it, and the whole drag is one undo step", async 
   await drag(page, [90, 65], [150, 95]);
   expect(await layout(page, "a")).toEqual({ id: "a", x: 100, y: 70, w: 100, h: 50 });
   await expect(page.locator('g[data-id="a"]')).toHaveAttribute("transform", "translate(100 70)");
-  await expect(page.getByText("Unsaved changes")).toBeVisible();
+  await expect(page.getByText("Not saved")).toBeVisible();
   await page.keyboard.press("ControlOrMeta+z");
   expect(await layout(page, "a")).toMatchObject({ x: 40, y: 40 });
-  await expect(page.getByText("Unsaved changes")).toBeHidden();
+  await expect(page.getByText("Not saved")).toBeHidden();
 });
 
 test("the file and history are untouched until release; the screen follows the pointer", async ({ page }) => {
@@ -85,7 +85,7 @@ test("the file and history are untouched until release; the screen follows the p
   await page.mouse.move(end.x, end.y, { steps: 5 });
   expect(await layout(page, "a")).toMatchObject({ x: 40, y: 40 });
   await expect(page.locator('g[data-id="a"]')).toHaveAttribute("transform", "translate(140 40)");
-  await expect(page.getByText("Unsaved changes")).toBeHidden();
+  await expect(page.getByText("Not saved")).toBeHidden();
   await page.mouse.up();
   expect(await layout(page, "a")).toMatchObject({ x: 140, y: 40 });
 });
@@ -100,13 +100,13 @@ test("Escape during a drag cancels it", async ({ page }) => {
   await page.mouse.up();
   expect(await layout(page, "a")).toMatchObject({ x: 40, y: 40 });
   await expect(page.locator('g[data-id="a"]')).toHaveAttribute("transform", "translate(40 40)");
-  await expect(page.getByText("Unsaved changes")).toBeHidden();
+  await expect(page.getByText("Not saved")).toBeHidden();
 });
 
 test("a click without dragging changes nothing", async ({ page }) => {
   const p = await at(page, 90, 65);
   await page.mouse.click(p.x, p.y);
-  await expect(page.getByText("Unsaved changes")).toBeHidden();
+  await expect(page.getByText("Not saved")).toBeHidden();
 });
 
 test("a multi-selection moves together, keeps the selection, and skips locked elements", async ({ page }) => {
@@ -173,7 +173,7 @@ test("nudging does nothing without a selection and skips locked elements", async
   await select(page, ["c"]);
   await page.keyboard.press("ArrowRight");
   expect(await layout(page, "c")).toMatchObject({ x: 440 });
-  await expect(page.getByText("Unsaved changes")).toBeHidden();
+  await expect(page.getByText("Not saved")).toBeHidden();
 });
 
 test("dragging 100 selected elements of a 500-element file stays inside the frame budget @budget", async ({ page }) => {

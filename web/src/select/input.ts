@@ -3,7 +3,7 @@
 import type { Box } from "../render/boxes.ts";
 import { EDGE_HANDLE_SELECTOR } from "../render/overlay.ts";
 import type { TextMeasurer } from "../text/measure.ts";
-import type { Tool } from "../connectors/input.ts";
+import type { Tool } from "../app/tool.ts";
 import { screenToWorld, type View } from "../view/view.ts";
 import type { OpenFile } from "../app/workspace.ts";
 import { clickSelection, hitTest, idsInRect, selectAll } from "./select.ts";

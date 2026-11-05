@@ -1,8 +1,20 @@
 import { describe, expect, it } from "vitest";
 import type { StorageAdapter } from "./adapter.ts";
-import { StorageError } from "./adapter.ts";
+import { MAX_FILE_BYTES, StorageError } from "./adapter.ts";
 import { HttpStorage } from "./http.ts";
 import { MemoryVolume, type MemoryVolumeOptions } from "./memory.ts";
+
+interface LibraryBody {
+  project?: string;
+  diagram?: string;
+  draft?: boolean;
+  from?: string;
+  to?: string;
+  delete?: string;
+  noTrash?: boolean;
+  copy?: string;
+  into?: string;
+}
 
 function fixture(): MemoryVolumeOptions {
   let time = Date.parse("2026-11-05T00:00:00.000Z");
@@ -26,15 +38,30 @@ function fixture(): MemoryVolumeOptions {
   };
 }
 
-function memoryTabs(): { holder: StorageAdapter; other: StorageAdapter } {
-  const volume = new MemoryVolume(fixture());
-  return { holder: volume.tab(), other: volume.tab() };
+function memoryTabs(options?: MemoryVolumeOptions): { holder: StorageAdapter; other: StorageAdapter; volume: MemoryVolume } {
+  const volume = new MemoryVolume(options ?? fixture());
+  return { holder: volume.tab(), other: volume.tab(), volume };
 }
 
-function httpTabs(): { holder: StorageAdapter; other: StorageAdapter } {
-  const fetch = serve(new MemoryVolume(fixture()));
+function httpTabs(options?: MemoryVolumeOptions): { holder: StorageAdapter; other: StorageAdapter; volume: MemoryVolume } {
+  const volume = new MemoryVolume(options ?? fixture());
+  const fetch = serve(volume);
   const tab = () => new HttpStorage({ token: "tok", session: "", fetch });
-  return { holder: tab(), other: tab() };
+  return { holder: tab(), other: tab(), volume };
+}
+
+function homeFixture(): MemoryVolumeOptions {
+  const folders = Array.from({ length: 501 }, (_, index) => `f${String(index).padStart(3, "0")}`);
+  return {
+    path: "/work",
+    library: "/home/DrawIt",
+    places: { "/home/DrawIt": { files: { "Demo/a.drawit.kdl": "a" } } },
+    catalog: {
+      "/home": { folders: ["DrawIt", "docs", ".git", ...folders], files: ["readme.txt", "loose.drawit.kdl"] },
+      "/home/docs": { folders: ["Sub"], files: ["pitch.drawit.kdl", "pic.png", ".hidden.drawit.kdl"] },
+      "/etc": { folders: ["passwd"], files: [] },
+    },
+  };
 }
 
 async function codeOf(promise: Promise<unknown>): Promise<string | undefined> {
@@ -143,6 +170,133 @@ describe.each([
     await expect(holder.list()).rejects.toMatchObject({ code: "session-lost" });
     expect(await codeOf(holder.claimSession())).toBe("open-elsewhere");
   });
+
+  it("creates a project, the next draft and a named diagram in the library", async () => {
+    const { holder } = open();
+    await holder.claimSession();
+
+    expect(await holder.createProject("Home network")).toBe("Home network");
+    expect(await holder.createDraft()).toBe("Drafts/Untitled.drawit.kdl");
+    expect(await holder.createDraft()).toBe("Drafts/Untitled 2.drawit.kdl");
+    expect(new TextDecoder().decode(await holder.readLibrary("Drafts/Untitled.drawit.kdl"))).toBe("diagram version=1\n");
+    expect(await holder.createDiagram("Home network", "Notes")).toBe("Home network/Notes.drawit.kdl");
+
+    const library = await holder.openWorkspace({ library: true });
+    expect(library).toMatchObject({ kind: "library", path: "/DrawIt" });
+    const names = (await holder.listTop()).entries.map((entry) => entry.path);
+    expect(names).toContain("Home network");
+    expect(names).toContain("Drafts");
+
+    const project = await holder.openWorkspace({ project: "Home network" });
+    expect(project).toMatchObject({ kind: "project", path: "/DrawIt/Home network" });
+    expect((await holder.list()).map((file) => file.path)).toEqual(["Notes.drawit.kdl"]);
+  });
+
+  it("refuses a project name that exists ignoring case, and a name the library does not allow", async () => {
+    const { holder } = open();
+    await holder.claimSession();
+    expect(await codeOf(holder.createProject("demo"))).toBe("conflict");
+    expect(await codeOf(holder.createProject("CON"))).toBe("invalid-path");
+    expect(await codeOf(holder.createDiagram("Demo", "a"))).toBe("conflict");
+    expect(new TextDecoder().decode(await holder.readLibrary("Demo/a.drawit.kdl"))).toBe("a");
+  });
+
+  it("renames a project or a diagram, and a change of case alone is not a clash", async () => {
+    const { holder } = open();
+    await holder.claimSession();
+    expect(await holder.renameItem("Demo", "demo")).toBe("demo");
+    expect(await holder.renameItem("demo/a.drawit.kdl", "A")).toBe("demo/A.drawit.kdl");
+    await holder.createDiagram("demo", "Notes");
+    expect(await codeOf(holder.renameItem("demo/A.drawit.kdl", "Notes"))).toBe("conflict");
+    expect(new TextDecoder().decode(await holder.readLibrary("demo/A.drawit.kdl"))).toBe("a");
+    const project = await holder.openWorkspace({ project: "demo" });
+    expect(project.path).toBe("/DrawIt/demo");
+    expect((await holder.list()).map((file) => file.path).sort()).toEqual(["A.drawit.kdl", "Notes.drawit.kdl"]);
+  });
+
+  it("keeps a delete when there is no trash, and removes it once that is confirmed", async () => {
+    const { holder, volume } = open();
+    await holder.claimSession();
+    volume.useTrash("missing");
+    expect(await codeOf(holder.deleteItem("Demo"))).toBe("conflict");
+    expect(new TextDecoder().decode(await holder.readLibrary("Demo/a.drawit.kdl"))).toBe("a");
+    expect(await holder.deleteItem("Demo", true)).toBe("Demo");
+    expect(await codeOf(holder.readLibrary("Demo/a.drawit.kdl"))).toBe("not-found");
+    expect(await codeOf(holder.openWorkspace({ project: "Demo" }))).toBe("not-found");
+  });
+
+  it("removes one diagram and leaves the rest of its project", async () => {
+    const { holder } = open();
+    await holder.claimSession();
+    await holder.createDiagram("Demo", "Notes");
+    expect(await holder.deleteItem("Demo/a.drawit.kdl")).toBe("Demo/a.drawit.kdl");
+    expect(await codeOf(holder.readLibrary("Demo/a.drawit.kdl"))).toBe("not-found");
+    expect(new TextDecoder().decode(await holder.readLibrary("Demo/Notes.drawit.kdl"))).toBe("diagram version=1\n");
+  });
+
+  it("copies a library file under a free name, creating assets when the copy goes there", async () => {
+    const { holder } = open();
+    await holder.claimSession();
+    await holder.importFiles("Demo", [{ path: "assets/logo.png", data: Uint8Array.of(1, 2, 3) }]);
+    await holder.createProject("Other");
+    expect(await holder.copyFile("Demo/a.drawit.kdl", "Other")).toBe("Other/a.drawit.kdl");
+    expect(await holder.copyFile("Demo/a.drawit.kdl", "Other")).toBe("Other/a 2.drawit.kdl");
+    expect(new TextDecoder().decode(await holder.readLibrary("Other/a.drawit.kdl"))).toBe("a");
+    expect(await holder.copyFile("Demo/assets/logo.png", "Other/assets")).toBe("Other/assets/logo.png");
+    expect(await holder.readLibrary("Other/assets/logo.png")).toEqual(Uint8Array.of(1, 2, 3));
+    expect(await holder.copyFile("Demo/assets/logo.png", "Other/assets")).toBe("Other/assets/logo 2.png");
+  });
+
+  it("imports a list of files into a project and renames a clash by adding 2, then 3", async () => {
+    const { holder } = open();
+    await holder.claimSession();
+    const first = new TextEncoder().encode("one");
+    const second = new TextEncoder().encode("two");
+    expect(
+      await holder.importFiles("Demo", [
+        { path: "a.drawit.kdl", data: first },
+        { path: "a.drawit.kdl", data: second },
+        { path: "assets/logo.png", data: Uint8Array.of(4) },
+      ]),
+    ).toEqual(["Demo/a 2.drawit.kdl", "Demo/a 3.drawit.kdl", "Demo/assets/logo.png"]);
+    expect(new TextDecoder().decode(await holder.readLibrary("Demo/a.drawit.kdl"))).toBe("a");
+    expect(new TextDecoder().decode(await holder.readLibrary("Demo/a 2.drawit.kdl"))).toBe("one");
+    expect(new TextDecoder().decode(await holder.readLibrary("Demo/a 3.drawit.kdl"))).toBe("two");
+    expect(await codeOf(holder.importFiles("Demo", [{ path: "../out.drawit.kdl", data: first }]))).toBe("invalid-path");
+    expect(await codeOf(holder.importFiles("Demo", [{ path: "assets/nested/logo.png", data: first }]))).toBe("invalid-path");
+    expect(new TextDecoder().decode(await holder.readLibrary("Demo/a.drawit.kdl"))).toBe("a");
+    const big = new Uint8Array(MAX_FILE_BYTES + 1);
+    expect(await codeOf(holder.importFiles("Demo", [{ path: "big.bin", data: big }]))).toBe("too-large");
+    expect(await codeOf(holder.readLibrary("Demo/big.bin"))).toBe("not-found");
+  });
+
+  it("lists the home directory for the folder browser and creates a folder there", async () => {
+    const { holder } = open(homeFixture());
+    await holder.claimSession();
+    const home = await holder.browse();
+    expect(home.path).toBe("/home");
+    expect(home.truncated).toBe(true);
+    expect(home.entries).toHaveLength(500);
+    expect(home.entries[0]).toEqual({ name: "DrawIt", type: "folder" });
+    expect(home.entries[1]).toEqual({ name: "docs", type: "folder" });
+    expect(home.entries.every((entry) => entry.type === "folder")).toBe(true);
+    expect(home.entries.some((entry) => entry.name.startsWith("."))).toBe(false);
+    expect(home.entries.some((entry) => entry.name === "readme.txt")).toBe(false);
+
+    const docs = await holder.browse("/home/docs");
+    expect(docs.truncated).toBeUndefined();
+    expect(docs.entries).toEqual([
+      { name: "Sub", type: "folder" },
+      { name: "pitch.drawit.kdl", type: "file" },
+    ]);
+    expect(await codeOf(holder.browse("/etc"))).toBe("refused");
+    expect(await codeOf(holder.browse("/home/docs/pitch.drawit.kdl"))).toBe("invalid-path");
+    expect(await holder.createFolder("/home/docs", "Notes")).toBe("/home/docs/Notes");
+    expect((await holder.browse("/home/docs")).entries.map((entry) => entry.name)).toContain("Notes");
+    expect(await codeOf(holder.createFolder("/home/docs", "notes"))).toBe("conflict");
+    expect(await codeOf(holder.createFolder("/etc", "Notes"))).toBe("refused");
+    expect(await codeOf(holder.createFolder("/home/docs", "bad/name"))).toBe("invalid-path");
+  });
 });
 
 function serve(volume: MemoryVolume): typeof fetch {
@@ -186,12 +340,42 @@ function serve(volume: MemoryVolume): typeof fetch {
         volume.write(url.searchParams.get("path") ?? "", data);
         return Promise.resolve(Response.json(volume.stat(url.searchParams.get("path") ?? "")));
       }
+      if (method === "POST" && url.pathname === "/api/library") {
+        return Promise.resolve(Response.json({ path: volume.changeLibrary(JSON.parse(text(init)) as LibraryBody) }));
+      }
+      if (method === "POST" && url.pathname === "/api/library/import") {
+        const body = JSON.parse(text(init)) as { project: string; files: { path: string; data: string }[] };
+        const files = body.files.map((file) => ({ path: file.path, data: bytesFromBase64(file.data) }));
+        return Promise.resolve(Response.json({ paths: volume.importFiles(body.project, files) }));
+      }
+      if (method === "GET" && url.pathname === "/api/library/file") {
+        return Promise.resolve(new Response(buffer(volume.readLibrary(url.searchParams.get("path") ?? ""))));
+      }
+      if (method === "PUT" && url.pathname === "/api/library/file") {
+        const data = init?.body instanceof Uint8Array ? init.body : new Uint8Array();
+        volume.replaceLibrary(url.searchParams.get("path") ?? "", data);
+        return Promise.resolve(Response.json({ path: url.searchParams.get("path") ?? "" }));
+      }
+      if (method === "GET" && url.pathname === "/api/browse") {
+        return Promise.resolve(Response.json(volume.browse(url.searchParams.get("path") ?? "")));
+      }
+      if (method === "POST" && url.pathname === "/api/browse") {
+        const body = JSON.parse(text(init)) as { path: string; name: string };
+        return Promise.resolve(Response.json({ path: volume.createFolder(body.path, body.name) }));
+      }
       return Promise.resolve(plain(404, "not found"));
     } catch (error) {
       if (error instanceof StorageError) return Promise.resolve(plain(statusOf(error.code), error.message));
       return Promise.resolve(plain(500, error instanceof Error ? error.message : "error"));
     }
   };
+}
+
+function bytesFromBase64(data: string): Uint8Array {
+  const binary = atob(data);
+  const out = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) out[i] = binary.charCodeAt(i);
+  return out;
 }
 
 function buffer(data: Uint8Array): ArrayBuffer {

@@ -24,6 +24,17 @@ function setup(files: Record<string, string | Uint8Array> = { "assets/logo.png":
     takeoverSession: () => storage.takeoverSession(),
     readPreferences: () => storage.readPreferences(),
     patchPreferences: (patch) => storage.patchPreferences(patch),
+    createProject: (name) => storage.createProject(name),
+    createDraft: () => storage.createDraft(),
+    createDiagram: (project, name) => storage.createDiagram(project, name),
+    renameItem: (from, to) => storage.renameItem(from, to),
+    deleteItem: (path, noTrash) => storage.deleteItem(path, noTrash),
+    copyFile: (from, dir) => storage.copyFile(from, dir),
+    importFiles: (project, files) => storage.importFiles(project, files),
+    readLibrary: (path) => storage.readLibrary(path),
+    replaceLibrary: (path, data) => storage.replaceLibrary(path, data),
+    browse: (path) => storage.browse(path),
+    createFolder: (path, name) => storage.createFolder(path, name),
   };
   const changes: number[] = [];
   const made: { blob: Blob; url: string }[] = [];

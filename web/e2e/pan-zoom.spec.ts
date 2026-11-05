@@ -51,10 +51,8 @@ const wheel = (page: import("@playwright/test").Page, init: { deltaX?: number; d
 
 test("opening a file fits it in the canvas", async ({ page }) => {
   // Reopen to see the fit: boot already reset the view for the other tests.
-  await page.evaluate(() => {
-    const select = document.querySelector(".bar select");
-    select?.dispatchEvent(new Event("change"));
-  });
+  await page.getByRole("button", { name: "Home" }).click();
+  await page.getByRole("button", { name: "a", exact: true }).click();
   await expect.poll(async () => (await view(page)).scale).toBeLessThan(0.5);
   const box = await page.locator('g[data-id="b"] ellipse').boundingBox();
   expect(box?.x).toBeGreaterThan(0);
@@ -65,7 +63,7 @@ test("wheel scrolling pans the canvas and never changes the document", async ({ 
   await wheel(page, { deltaX: 20, deltaY: 40 });
   expect(await view(page)).toEqual({ x: -20, y: -40, scale: 1 });
   expect(await page.evaluate(() => (window as unknown as { hooks: Hooks }).hooks.history())).toBe(0);
-  await expect(page.getByText("Unsaved changes")).toBeHidden();
+  await expect(page.getByText("Not saved")).toBeHidden();
   await expect(page.locator(".world")).toHaveAttribute("transform", "translate(-20 -40) scale(1)");
 });
 

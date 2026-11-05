@@ -151,7 +151,20 @@ test("while the tool is on, dragging a shape draws a line and does not move the 
 
 test("the L and V keys switch tools", async ({ page }) => {
   await page.keyboard.press("l");
+  await expect(page.getByRole("button", { name: "Line", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(arrowTool(page)).toHaveAttribute("aria-pressed", "false");
+  await page.keyboard.press("a");
   await expect(arrowTool(page)).toHaveAttribute("aria-pressed", "true");
   await page.keyboard.press("v");
-  await expect(arrowTool(page)).toHaveAttribute("aria-pressed", "false");
+  await expect(page.getByRole("button", { name: "Select", exact: true })).toHaveAttribute("aria-pressed", "true");
+});
+
+test("a line has no head and an arrow keeps the default head", async ({ page }) => {
+  await page.getByRole("button", { name: "Line", exact: true }).click();
+  await drag(page, [90, 65], [390, 90]);
+  expect(await text(page)).toContain("head-end=none");
+  await page.keyboard.press("ControlOrMeta+z");
+  await arrowTool(page).click();
+  await drag(page, [90, 65], [390, 90]);
+  expect(await text(page)).not.toContain("head-end");
 });

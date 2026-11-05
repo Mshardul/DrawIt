@@ -44,15 +44,21 @@ export async function resumeSession(
 }
 
 /** Contacts the server before a quiet tab loses the session. Returns the function that stops it. */
-export function holdSession(token: string, id: string, fetchFn: typeof fetch = fetch): () => void {
+export function holdSession(token: string, id: string, fetchFn: typeof fetch = fetch, onLost?: () => void): () => void {
   const timer = setInterval(() => {
-    void claimSession(token, fetchFn, id).catch(() => {
+    void claimSession(token, fetchFn, id).catch((error: unknown) => {
       clearInterval(timer);
+      if (error instanceof SessionElsewhere) onLost?.();
     });
   }, HOLD_MS);
   return () => {
     clearInterval(timer);
   };
+}
+
+/** Keeps the id this tab holds, so a later load can claim the same session. */
+export function rememberSession(storage: Pick<Storage, "setItem">, id: string): void {
+  storage.setItem(SESSION_KEY, id);
 }
 
 /**

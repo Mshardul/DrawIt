@@ -35,7 +35,7 @@ const sameEnd = (a: DrawEnd, b: DrawEnd): boolean =>
  * ends are the same, which would draw nothing. Both ends on elements make the default ID
  * (`from->to`) when it is free; every other edge needs an explicit one.
  */
-export function newEdgeCommand(doc: DiagramDocument, from: DrawEnd, to: DrawEnd): { command: Command; id: string } | null {
+export function newEdgeCommand(doc: DiagramDocument, from: DrawEnd, to: DrawEnd, heads: "none" | "arrow" = "arrow"): { command: Command; id: string } | null {
   const a = "id" in from ? from : { point: roundPoint(from.point) };
   const b = "id" in to ? to : { point: roundPoint(to.point) };
   if (sameEnd(a, b)) return null;
@@ -46,7 +46,9 @@ export function newEdgeCommand(doc: DiagramDocument, from: DrawEnd, to: DrawEnd)
   if (!("id" in a)) layout.fromPoint = a.point;
   if (!("id" in b)) layout.toPoint = b.point;
   const placed = layout.fromPoint !== undefined || layout.toPoint !== undefined;
-  return { command: { type: "add", items: [placed ? { element, layout } : { element }] }, id };
+  const add: Command = { type: "add", items: [placed ? { element, layout } : { element }] };
+  if (heads === "arrow") return { command: add, id };
+  return { command: { type: "batch", commands: [add, { type: "setStyle", target: { kind: "el", id }, set: { headEnd: "none" } }] }, id };
 }
 
 /** The straight line shown while dragging; empty while both ends are still the same element. */

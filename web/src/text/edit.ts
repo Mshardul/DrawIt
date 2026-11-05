@@ -2,7 +2,7 @@
 // draws (see display.ts), so the caret and selection are where the drawn text will be. Every change
 // goes through the command layer, grouped so a burst of typing is one undo step.
 import type { OpenFile } from "../app/workspace.ts";
-import type { Tool } from "../connectors/input.ts";
+import type { Tool } from "../app/tool.ts";
 import type { DiagramDocument } from "../model/index.ts";
 import type { ShapeLookup } from "../shapes/pack-loader.ts";
 import { hitTest } from "../select/select.ts";

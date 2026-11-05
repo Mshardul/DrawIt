@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { MAX_FILE_BYTES, type StorageAdapter, StorageError } from "./adapter.ts";
+import { MAX_FILE_BYTES, StorageError } from "./adapter.ts";
 import { HttpStorage } from "./http.ts";
 import { claimSession, holdSession, resumeSession, type SessionEnv, startSession } from "./session.ts";
 
@@ -85,6 +85,37 @@ describe("HTTP storage adapter", () => {
     }
   });
 
+  it("reports a lost session from a request", async () => {
+    const { fetchFn } = fakeFetch(() => new Response("session lost\n", { status: 401 }));
+    let lost = 0;
+    const storage = new HttpStorage({
+      token: "tok",
+      session: "old",
+      fetch: fetchFn,
+      onLost: () => {
+        lost += 1;
+      },
+    });
+    await expect(storage.list()).rejects.toMatchObject({ code: "session-lost" });
+    await expect(storage.read("a.drawit.kdl")).rejects.toMatchObject({ code: "session-lost" });
+    expect(lost).toBe(2);
+  });
+
+  it("reports a session that is open elsewhere", async () => {
+    const { fetchFn } = fakeFetch(() => new Response("DrawIt is open elsewhere\n", { status: 409 }));
+    let lost = 0;
+    const storage = new HttpStorage({
+      token: "tok",
+      session: "",
+      fetch: fetchFn,
+      onLost: () => {
+        lost += 1;
+      },
+    });
+    await expect(storage.claimSession()).rejects.toMatchObject({ code: "open-elsewhere" });
+    expect(lost).toBe(1);
+  });
+
   it("rejects with a plain Error for any other failure status", async () => {
     const { fetchFn } = fakeFetch(() => new Response("boom", { status: 500 }));
     const storage = new HttpStorage({ token: "tok", session: "tab-1", fetch: fetchFn });
@@ -94,19 +125,40 @@ describe("HTTP storage adapter", () => {
     expect((err as Error).message).toContain("500");
   });
 
-  it("watch is a no-op that never calls the listener and returns an unsubscribe function", () => {
-    const { fetchFn, seen } = fakeFetch(() => new Response(null, { status: 204 }));
-    const storage: StorageAdapter = new HttpStorage({ token: "tok", session: "tab-1", fetch: fetchFn });
-    let calls = 0;
-    const unsubscribe = storage.watch(() => {
-      calls++;
-    });
-    expect(typeof unsubscribe).toBe("function");
-    expect(() => {
-      unsubscribe();
-    }).not.toThrow();
-    expect(calls).toBe(0);
-    expect(seen).toEqual([]);
+  it("polls the open file about once a second and reports a content change", async () => {
+    vi.useFakeTimers();
+    try {
+      let modified = "2026-11-05T00:00:00.000Z";
+      let body = "one";
+      const { fetchFn, seen } = fakeFetch((entry) => {
+        if (entry.url.includes("stat=1")) return Response.json({ path: "a.drawit.kdl", size: body.length, modified });
+        return new Response(body);
+      });
+      const storage = new HttpStorage({ token: "tok", session: "tab-1", fetch: fetchFn });
+      let calls = 0;
+      const stop = storage.watch(() => {
+        calls += 1;
+      }, "a.drawit.kdl");
+      for (let i = 0; i < 20; i++) await Promise.resolve();
+      expect(calls).toBe(0);
+      expect(seen.some((entry) => entry.url.includes("stat=1"))).toBe(true);
+      const afterBaseline = seen.length;
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(calls).toBe(0);
+      expect(seen.slice(afterBaseline).every((entry) => entry.url.includes("stat=1"))).toBe(true);
+      modified = "2026-11-05T00:00:01.000Z";
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(calls).toBe(0);
+      body = "two";
+      modified = "2026-11-05T00:00:02.000Z";
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(calls).toBe(1);
+      stop();
+      await vi.advanceTimersByTimeAsync(5000);
+      expect(calls).toBe(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 
@@ -176,6 +228,18 @@ describe("browser session", () => {
     await vi.advanceTimersByTimeAsync(2000);
     stop();
     expect(seen).toMatchObject([{ url: "/api/session", method: "POST", authorization: "Bearer tok", session: "tab-1" }]);
+  });
+
+  it("reports when the held session is taken by another tab", async () => {
+    vi.useFakeTimers();
+    const { fetchFn } = fakeFetch(() => new Response("DrawIt is open elsewhere\n", { status: 409 }));
+    let lost = 0;
+    const stop = holdSession("tok", "tab-1", fetchFn, () => {
+      lost += 1;
+    });
+    await vi.advanceTimersByTimeAsync(2000);
+    stop();
+    expect(lost).toBe(1);
   });
 });
 

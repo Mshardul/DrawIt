@@ -140,5 +140,5 @@ test("undo restores the selection from before the command, and redo the one afte
 test("selecting does not make the file unsaved", async ({ page }) => {
   const a = await centre(page, "a");
   await page.mouse.click(a.x, a.y);
-  await expect(page.getByText("Unsaved changes")).toBeHidden();
+  await expect(page.getByText("Not saved")).toBeHidden();
 });

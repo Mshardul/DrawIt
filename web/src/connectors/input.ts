@@ -4,10 +4,10 @@ import type { OpenFile } from "../app/workspace.ts";
 import type { Point } from "../model/index.ts";
 import type { TextMeasurer } from "../text/measure.ts";
 import { screenToWorld, type View } from "../view/view.ts";
+import type { Tool } from "../app/tool.ts";
 import { draftPath, type DrawEnd, drawEndAt, newEdgeCommand } from "./draw.ts";
 
-/** What a press on the canvas does. */
-export type Tool = "select" | "edge" | "shape" | "frame";
+const drawingEdge = (tool: Tool): boolean => tool === "line" || tool === "arrow";
 
 /** Pointer travel (screen px) before a press becomes a drag. */
 const DRAG_THRESHOLD = 3;
@@ -51,7 +51,7 @@ export function attachEdgeInput(host: EdgeInputHost): () => void {
 
   const onPointerDown = (event: PointerEvent): void => {
     const file = host.getFile();
-    if (host.getTool() !== "edge" || event.button !== 0 || !file) return;
+    if (!drawingEdge(host.getTool()) || event.button !== 0 || !file) return;
     box = target.getBoundingClientRect();
     target.setPointerCapture(event.pointerId);
     press = { pointer: event.pointerId, from: drawEndAt(file.document, host.measurer, world(event)), screen: { x: event.clientX, y: event.clientY }, active: false };
@@ -69,7 +69,7 @@ export function attachEdgeInput(host: EdgeInputHost): () => void {
     if (!press || press.pointer !== event.pointerId) return;
     const { from, active } = press;
     end();
-    const made = file && active ? newEdgeCommand(file.document, from, drawEndAt(file.document, host.measurer, world(event))) : null;
+    const made = file && active ? newEdgeCommand(file.document, from, drawEndAt(file.document, host.measurer, world(event)), host.getTool() === "line" ? "none" : "arrow") : null;
     if (!file || !made) return;
     file.history.execute(made.command, { selection: [made.id] });
     host.setTool("select");
@@ -80,12 +80,8 @@ export function attachEdgeInput(host: EdgeInputHost): () => void {
     if (t instanceof HTMLInputElement || t instanceof HTMLSelectElement || t instanceof HTMLTextAreaElement) return;
     if (event.key === "Escape") {
       if (press) end();
-      else if (host.getTool() === "edge") host.setTool("select");
-      return;
+      else if (drawingEdge(host.getTool())) host.setTool("select");
     }
-    if (event.metaKey || event.ctrlKey || event.altKey || press) return;
-    if (event.key === "l") host.setTool("edge");
-    else if (event.key === "v") host.setTool("select");
   };
 
   target.addEventListener("pointerdown", onPointerDown);

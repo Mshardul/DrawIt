@@ -76,6 +76,12 @@ export interface BatchCommand {
   commands: Command[];
 }
 
+/** Swaps the whole document for another, so undo returns to the previous one. */
+export interface ReplaceDocumentCommand {
+  type: "replace-document";
+  document: DiagramDocument;
+}
+
 export type Command =
   | AddCommand
   | DeleteCommand
@@ -84,7 +90,8 @@ export type Command =
   | SetStyleCommand
   | ReorderCommand
   | RenameCommand
-  | BatchCommand;
+  | BatchCommand
+  | ReplaceDocumentCommand;
 
 export interface Applied {
   document: DiagramDocument;
@@ -237,6 +244,19 @@ function rename(doc: Doc, command: RenameCommand): void {
   for (const override of doc.style.overrides) override.id = swap(override.id);
 }
 
+function replaceDocument(doc: Doc, next: DiagramDocument): void {
+  const copy = structuredClone(next);
+  doc.version = copy.version;
+  doc.plugins = copy.plugins;
+  doc.elements = copy.elements;
+  doc.style = copy.style;
+  doc.layout = copy.layout;
+  if (copy.title === undefined) delete doc.title;
+  else doc.title = copy.title;
+  if (copy.comments === undefined) delete doc.comments;
+  else doc.comments = copy.comments;
+}
+
 function mutate(doc: Doc, command: Command): void {
   switch (command.type) {
     case "add":
@@ -262,6 +282,9 @@ function mutate(doc: Doc, command: Command): void {
       break;
     case "batch":
       for (const inner of command.commands) mutate(doc, inner);
+      break;
+    case "replace-document":
+      replaceDocument(doc, command.document);
       break;
     default:
       throw new CommandError(`Unknown command "${String((command as { type: unknown }).type)}"`);

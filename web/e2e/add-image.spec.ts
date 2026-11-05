@@ -64,6 +64,20 @@ async function drop(page: Page, at: { x: number; y: number }, what: { name: stri
   );
 }
 
+test("the image tool places a chosen file at the centre of the view", async ({ page }) => {
+  const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64");
+  const canvas = await page.locator(".canvas").boundingBox();
+  if (!canvas) throw new Error("no canvas");
+  const chooser = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "Image", exact: true }).click();
+  await (await chooser).setFiles({ name: "dot.png", mimeType: "image/png", buffer: png });
+  await expect.poll(() => hooks(page, (h) => h.images().length)).toBe(1);
+  const placed = await hooks(page, (h) => h.layout(h.images()[0]?.id ?? ""));
+  if (!placed?.w || !placed.h) throw new Error("no image");
+  expect(Math.abs(placed.x + placed.w / 2 - canvas.width / 2)).toBeLessThanOrEqual(0.5);
+  expect(Math.abs(placed.y + placed.h / 2 - canvas.height / 2)).toBeLessThanOrEqual(0.5);
+});
+
 test("dropping an image saves it in assets and adds it at its size, centred on the drop, selected", async ({ page }) => {
   await drop(page, { x: 500, y: 300 }, { name: "Logo.png" });
   await expect.poll(() => hooks(page, (h) => h.images())).toEqual([{ id: "logo", src: "assets/logo.png" }]);
@@ -116,8 +130,8 @@ test("pasting an image places it at the centre of the canvas", async ({ page }) 
   });
   await expect.poll(() => hooks(page, (h) => h.images())).toEqual([{ id: "image", src: "assets/image.png" }]);
   const at = await hooks(page, (h) => h.layout("image"));
-  expect((at?.x ?? 0) + 30).toBeCloseTo((canvas?.width ?? 0) / 2, 0);
-  expect((at?.y ?? 0) + 15).toBeCloseTo((canvas?.height ?? 0) / 2, 0);
+  expect(Math.abs((at?.x ?? 0) + 30 - (canvas?.width ?? 0) / 2)).toBeLessThanOrEqual(0.5);
+  expect(Math.abs((at?.y ?? 0) + 15 - (canvas?.height ?? 0) / 2)).toBeLessThanOrEqual(0.5);
 });
 
 test("a file that is not an image is refused with a message and adds nothing", async ({ page }) => {
