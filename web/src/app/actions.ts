@@ -39,6 +39,7 @@ export interface ActionHost {
   zoomOut(): void;
   resetZoom(): void;
   zoomToFit(): void;
+  zoomToSelection(): void;
   setTool(tool: Tool): void;
   canEdit(): boolean;
 }
@@ -91,6 +92,7 @@ export function editorActions(host: ActionHost): Action[] {
     { id: "zoom-out", title: "Zoom out", key: { key: "-", mod: true, alt: false }, enabled: always, run: () => { host.zoomOut(); } },
     { id: "zoom-reset", title: "Reset zoom", key: { key: "0", mod: true, alt: false }, enabled: always, run: () => { host.resetZoom(); } },
     { id: "zoom-fit", title: "Zoom to fit", key: { key: "1", code: "Digit1", shift: true, alt: false }, enabled: always, run: () => { host.zoomToFit(); } },
+    { id: "zoom-selection", title: "Zoom to selection", key: { key: "2", code: "Digit2", shift: true, alt: false }, enabled: always, run: () => { host.zoomToSelection(); } },
     tool("tool-select", "Select", "v", "select"),
     tool("tool-hand", "Hand", "h", "hand"),
     tool("tool-line", "Line", "l", "line"),

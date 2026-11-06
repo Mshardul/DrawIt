@@ -50,14 +50,24 @@ export function documentBounds(doc: DiagramDocument, measurer: TextMeasurer): Bo
   return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
 }
 
-/** Fits `bounds` in the viewport with `margin` px around it, centred, never zooming in past 100%. */
-export function zoomToFit(bounds: Box | null, viewport: { w: number; h: number }, margin: number): View {
-  if (!bounds) return IDENTITY;
-  const fit = Math.min((viewport.w - 2 * margin) / bounds.w, (viewport.h - 2 * margin) / bounds.h);
-  const scale = clampScale(Math.min(1, fit));
+function centred(bounds: Box, viewport: { w: number; h: number }, scale: number): View {
   return {
     scale,
     x: viewport.w / 2 - (bounds.x + bounds.w / 2) * scale,
     y: viewport.h / 2 - (bounds.y + bounds.h / 2) * scale,
   };
+}
+
+/** Fits `bounds` in the viewport with `margin` px around it, centred, never zooming in past 100%. */
+export function zoomToFit(bounds: Box | null, viewport: { w: number; h: number }, margin: number): View {
+  if (!bounds) return IDENTITY;
+  const fit = Math.min((viewport.w - 2 * margin) / bounds.w, (viewport.h - 2 * margin) / bounds.h);
+  return centred(bounds, viewport, clampScale(Math.min(1, fit)));
+}
+
+/** Centres `bounds` in the viewport with `margin` px around it, zooming in or out. Null when there is nothing to show. */
+export function zoomToBounds(bounds: Box | null, viewport: { w: number; h: number }, margin: number): View | null {
+  if (!bounds || bounds.w <= 0 || bounds.h <= 0) return null;
+  const fit = Math.min((viewport.w - 2 * margin) / bounds.w, (viewport.h - 2 * margin) / bounds.h);
+  return centred(bounds, viewport, clampScale(fit));
 }

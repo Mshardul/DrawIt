@@ -15,6 +15,7 @@ function host(over: Partial<ActionHost> = {}): ActionHost & { ran: string[] } {
     zoomOut: call("zoom-out"),
     resetZoom: call("zoom-reset"),
     zoomToFit: call("zoom-fit"),
+    zoomToSelection: call("zoom-selection"),
     setTool: (tool: string) => { ran.push(tool); },
     canEdit: () => true,
     ...over,
@@ -24,11 +25,11 @@ function host(over: Partial<ActionHost> = {}): ActionHost & { ran: string[] } {
 describe("editor actions", () => {
   it("names save, undo, redo, grid, snap and zoom", () => {
     expect(editorActions(host()).map((action) => action.id)).toEqual([
-      "save", "undo", "redo", "grid", "snap", "zoom-in", "zoom-out", "zoom-reset", "zoom-fit",
+      "save", "undo", "redo", "grid", "snap", "zoom-in", "zoom-out", "zoom-reset", "zoom-fit", "zoom-selection",
       "tool-select", "tool-hand", "tool-line", "tool-arrow", "tool-frame", "tool-rect", "tool-ellipse", "tool-text", "tool-image",
     ]);
     expect(editorActions(host()).map((action) => action.title)).toEqual([
-      "Save", "Undo", "Redo", "Grid", "Snap", "Zoom in", "Zoom out", "Reset zoom", "Zoom to fit",
+      "Save", "Undo", "Redo", "Grid", "Snap", "Zoom in", "Zoom out", "Reset zoom", "Zoom to fit", "Zoom to selection",
       "Select", "Hand", "Line", "Arrow", "Frame", "Rectangle", "Ellipse", "Text", "Image",
     ]);
   });
@@ -51,6 +52,7 @@ describe("editor actions", () => {
     expect(run({ key: "-", metaKey: true })).toEqual(["zoom-out"]);
     expect(run({ key: "0", ctrlKey: true })).toEqual(["zoom-reset"]);
     expect(run({ key: "!", code: "Digit1", shiftKey: true })).toEqual(["zoom-fit"]);
+    expect(run({ key: "@", code: "Digit2", shiftKey: true })).toEqual(["zoom-selection"]);
     expect(run({ key: "v" })).toEqual(["select"]);
     expect(run({ key: "h" })).toEqual(["hand"]);
     expect(run({ key: "l" })).toEqual(["line"]);

@@ -10,6 +10,7 @@ import {
   viewTransform,
   worldToScreen,
   zoomAt,
+  zoomToBounds,
   zoomToFit,
 } from "./view.ts";
 import { monoMeasurer } from "../testing/measurer.ts";
@@ -89,5 +90,13 @@ describe("view transform", () => {
   it("zoom to fit never zooms past 100% for small content, and resets with no bounds", () => {
     expect(zoomToFit({ x: 0, y: 0, w: 10, h: 10 }, { w: 1000, h: 600 }, 50).scale).toBe(1);
     expect(zoomToFit(null, { w: 1000, h: 600 }, 50)).toEqual(IDENTITY);
+  });
+
+  it("zoom to bounds zooms in on a small box and does nothing without one", () => {
+    const view = zoomToBounds({ x: 100, y: 40, w: 50, h: 20 }, { w: 1000, h: 600 }, 50);
+    expect(view?.scale).toBe(8);
+    expect(view && worldToScreen(view, { x: 125, y: 50 }).x).toBeCloseTo(500);
+    expect(view && worldToScreen(view, { x: 125, y: 50 }).y).toBeCloseTo(300);
+    expect(zoomToBounds(null, { w: 1000, h: 600 }, 50)).toBeNull();
   });
 });

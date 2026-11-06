@@ -17,6 +17,7 @@ import type { DiagramDocument, Point } from "../model/index.ts";
 import type { Box } from "../render/boxes.ts";
 import { countShadowed, describeDefs, SHADOW_DRAG_LIMIT } from "../render/defs.ts";
 import { SHAPE_H, SHAPE_W } from "../render/size.ts";
+import { diagramBounds } from "../render/bounds.ts";
 import { describeDiagram, type SvgNode } from "../render/describe.ts";
 import { describeGrid } from "../render/grid.ts";
 import { addImage, measureInBrowser } from "../images/add.ts";
@@ -36,7 +37,8 @@ import { attachTextEdit, type TextEdit } from "../text/edit.ts";
 import { createTextMeasurer } from "../text/measure.ts";
 import { createTextCommand, newTextId } from "../text/target.ts";
 import { attachViewInput, ZOOM_STEP } from "../view/input.ts";
-import { documentBounds, IDENTITY, screenToWorld, type View, viewTransform, zoomAt, zoomToFit } from "../view/view.ts";
+import { documentBounds, IDENTITY, screenToWorld, type View, viewTransform, zoomAt, zoomToBounds, zoomToFit } from "../view/view.ts";
+import { GRID_SIZES, readGrid, statusFit, type GridSettings } from "./status.ts";
 import { autosaveOn, createAutosave } from "./autosave.ts";
 import { replaceFromDisk, watchChanges } from "./changes.ts";
 import { cardFace, ThumbnailCache, type CardFace } from "./thumbnail.ts";
@@ -65,16 +67,7 @@ function el<K extends keyof HTMLElementTagNameMap>(
   return element;
 }
 
-/** Grid display and snap. View settings like pan and zoom: not in history or the file. */
-export interface GridSettings {
-  show: boolean;
-  snap: boolean;
-  /** Cell size in world px. */
-  size: number;
-}
-
-/** Cell sizes offered in the status bar. */
-const GRID_SIZES = [4, 8, 16, 32, 64];
+export type { GridSettings } from "./status.ts";
 
 /** What the shell shows before a diagram is opened. */
 export type FirstScreen = "file" | "landing" | "home";
@@ -180,13 +173,19 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
   let toolbarOffset = { x: 0, y: 0 };
   let toolbarShown = true;
   const zoom = el("span", { className: "zoom" });
+  const zoomOut = el("button", { type: "button", textContent: "−", ariaLabel: "Zoom out" });
+  const zoomIn = el("button", { type: "button", textContent: "+", ariaLabel: "Zoom in" });
+  const cursor = el("span", { className: "cursor" });
   const gridToggle = el("input", { type: "checkbox" });
   const snapToggle = el("input", { type: "checkbox" });
   const gridSize = el("select", { ariaLabel: "Grid size" }, ...GRID_SIZES.map((n) => el("option", { value: String(n), textContent: String(n) })));
   const status = el(
-    "footer",
-    { className: "status", hidden: screen !== "file" },
+    "div",
+    { className: "pill status", hidden: screen !== "file" },
+    zoomOut,
     zoom,
+    zoomIn,
+    cursor,
     el("label", {}, gridToggle, "Grid"),
     el("label", {}, snapToggle, "Snap"),
     el("label", {}, "Grid size", gridSize),
@@ -242,7 +241,7 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
   const boardNav = el("div", { className: "nav", hidden: screen !== "home" }, importButton, folderButton);
   const listing = el("nav", { className: "listing", hidden: screen === "file" });
   listing.setAttribute("aria-label", screen === "home" ? "Home" : "Files");
-  const canvasWrap = el("div", { className: "stage" }, canvas, filePill, toolbar, imageInput);
+  const canvasWrap = el("div", { className: "stage" }, canvas, filePill, status, toolbar, imageInput);
   const libraryEdge = el("div", { className: "resizer", role: "separator", ariaLabel: "Library width" });
   const propertiesEdge = el("div", { className: "resizer", role: "separator", ariaLabel: "Properties width" });
   const stage = el("div", { className: "workspace", hidden: screen !== "file" }, library.element, canvasWrap, stylePanel.element, libraryEdge, propertiesEdge);
@@ -251,7 +250,6 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
     error,
     listing,
     stage,
-    status,
   );
 
   let view: View = IDENTITY;
@@ -531,12 +529,28 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
   const drawGrid = (): void => {
     mount(gridLayer, grid.show ? describeGrid(grid.size, view.scale) : []);
   };
+  const placeStatus = (): void => {
+    if (stage.hidden) {
+      status.hidden = true;
+      return;
+    }
+    cursor.hidden = false;
+    status.hidden = false;
+    const full = status.offsetWidth;
+    cursor.hidden = true;
+    const fit = statusFit(canvasWrap.clientWidth, full, status.offsetWidth, filePill.offsetWidth);
+    status.hidden = fit === "hidden";
+    cursor.hidden = fit !== "full";
+  };
+  let gridReady = false;
   const setGrid = (change: Partial<GridSettings>): void => {
     grid = { ...grid, ...change };
     gridToggle.checked = grid.show;
     snapToggle.checked = grid.snap;
     gridSize.value = String(grid.size);
     drawGrid();
+    if (gridReady) void storage.patchPreferences({ grid: { show: grid.show, snap: grid.snap, size: grid.size } });
+    placeStatus();
   };
 
   const setView = (next: View): void => {
@@ -544,6 +558,7 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
     world.setAttribute("transform", viewTransform(view));
     zoom.textContent = `${String(Math.round(view.scale * 100))}%`;
     drawGrid();
+    placeStatus();
     // Handles keep their screen size, so they depend on the scale.
     drawOverlay();
     textEdit?.reposition();
@@ -560,6 +575,7 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
     boardNav.hidden = true;
     placeToolbar();
     placePanels();
+    placeStatus();
   };
   const showBoard = (which: "home" | "landing"): void => {
     listing.hidden = false;
@@ -858,7 +874,14 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
     placeToolbar();
     saveToolbar();
   });
-  addEventListener("resize", () => { placeToolbar(); placePanels(); });
+  addEventListener("resize", () => { placeToolbar(); placePanels(); placeStatus(); });
+  canvas.addEventListener("pointermove", (event) => {
+    const rect = canvas.getBoundingClientRect();
+    const world = screenToWorld(view, { x: event.clientX - rect.left, y: event.clientY - rect.top });
+    cursor.textContent = `${String(Math.round(world.x))}, ${String(Math.round(world.y))}`;
+  });
+  zoomOut.addEventListener("click", () => { zoomBy(1 / ZOOM_STEP); });
+  zoomIn.addEventListener("click", () => { zoomBy(ZOOM_STEP); });
   gridToggle.addEventListener("change", () => { setGrid({ show: gridToggle.checked }); gridToggle.blur(); });
   snapToggle.addEventListener("change", () => { setGrid({ snap: snapToggle.checked }); snapToggle.blur(); });
   gridSize.addEventListener("change", () => { setGrid({ size: Number(gridSize.value) }); gridSize.blur(); });
@@ -876,6 +899,17 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
     zoomOut: () => { zoomBy(1 / ZOOM_STEP); },
     resetZoom: () => { zoomBy(1 / view.scale); },
     zoomToFit: () => { fit(); },
+    zoomToSelection: () => {
+      const file = session.file;
+      if (!file || file.history.selection.length === 0) return;
+      const box = canvas.getBoundingClientRect();
+      const next = zoomToBounds(
+        diagramBounds(file.document, measurer, images.lookup, new Set(file.history.selection)),
+        { w: box.width, h: box.height },
+        48,
+      );
+      if (next) setView(next);
+    },
     setTool,
     canEdit: () => session.file !== null,
   });
@@ -1388,6 +1422,9 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
   placeToolbar();
   panels = readPanels(stored["panels"]);
   placePanels();
+  setGrid(readGrid(stored["grid"]));
+  gridReady = true;
+  placeStatus();
   session.info = await storage.currentWorkspace();
   if (screen === "file") {
     const paths = await workspaceFiles(storage);

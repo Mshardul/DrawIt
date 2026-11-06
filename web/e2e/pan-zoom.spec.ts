@@ -22,6 +22,7 @@ interface Hooks {
   setView(view: View): void;
   history(): number;
   saved(): Promise<string>;
+  select(ids: string[]): void;
 }
 
 test.beforeEach(async ({ page }) => {
@@ -37,6 +38,10 @@ test.beforeEach(async ({ page }) => {
       setView: (v) => { shell.setView(v); },
       history: () => (shell.file?.history.canUndo ? 1 : 0),
       saved: async () => new TextDecoder().decode(await storage.read("a.drawit.kdl")),
+      select: (ids) => {
+        if (shell.file) shell.file.history.selection = ids;
+        shell.refresh();
+      },
     };
   }, file);
 });
@@ -120,6 +125,15 @@ test("Shift+1 zooms to fit all drawn elements", async ({ page }) => {
     expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(1000);
     expect((box?.y ?? 0) + (box?.height ?? 0)).toBeLessThanOrEqual(700);
   }
+});
+
+test("Shift+2 zooms to the selection", async ({ page }) => {
+  await page.evaluate(() => { (window as unknown as { hooks: Hooks }).hooks.select(["a"]); });
+  await page.keyboard.press("Shift+2");
+  expect((await view(page)).scale).toBeGreaterThan(1);
+  const box = await page.locator('g[data-id="a"] rect').boundingBox();
+  const canvas = await page.locator(".canvas").boundingBox();
+  expect(box && canvas && box.x > canvas.x && box.x + box.width < canvas.x + canvas.width).toBe(true);
 });
 
 test("the view is not saved: a pan and zoom leave the file as it was", async ({ page }) => {
