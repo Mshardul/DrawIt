@@ -4,6 +4,7 @@ import { attachEdgeInput } from "../connectors/input.ts";
 import { attachBendInput } from "../connectors/bend-input.ts";
 import { attachLabelInput } from "../connectors/label-input.ts";
 import { attachReattachInput } from "../connectors/reattach-input.ts";
+import { openExportDialog } from "../export/dialog.ts";
 import { attachEditInput } from "../edit/input.ts";
 import { dispatchKey, editorActions } from "./actions.ts";
 import { installKeyGuard, openDialog, openNotice } from "./dialog.ts";
@@ -134,9 +135,10 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
   const fileName = el("span", { className: "name" });
   const undoButton = el("button", { type: "button", textContent: "Undo", disabled: true });
   const redoButton = el("button", { type: "button", textContent: "Redo", disabled: true });
-  const saveState = el("button", { type: "button", textContent: "Saved", disabled: true });
+  const saveState = el("button", { type: "button", className: "save", textContent: "Saved", disabled: true });
+  const exportButton = el("button", { type: "button", className: "export", textContent: "Export", disabled: true });
   const pillHome = el("button", { type: "button", textContent: "Home" });
-  const filePill = el("div", { className: "pill" }, pillHome, fileName, undoButton, redoButton, saveState);
+  const filePill = el("div", { className: "pill" }, pillHome, fileName, undoButton, redoButton, saveState, exportButton);
   const toolButtons = {
     select: el("button", { type: "button", textContent: "Select", title: "Select (V)", ariaPressed: "true" }),
     hand: el("button", { type: "button", textContent: "Hand", title: "Hand (H)" }),
@@ -330,6 +332,7 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
     saveState.textContent = writing ? "Saving" : dirty ? "Not saved" : "Saved";
     saveState.classList.toggle("dirty", !writing && dirty);
     saveState.disabled = session.file === null;
+    exportButton.disabled = session.file === null;
     undoButton.disabled = session.file?.history.canUndo !== true;
     redoButton.disabled = session.file?.history.canRedo !== true;
     stylePanel.update();
@@ -1434,6 +1437,18 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
   importButton.addEventListener("click", () => { void bringFile(); });
   folderButton.addEventListener("click", () => { void browseFor(); });
   pillHome.addEventListener("click", () => { void closeToLanding(); });
+  exportButton.addEventListener("click", () => {
+    const file = session.file;
+    if (!file) return;
+    void openExportDialog(root, {
+      doc: file.document,
+      measurer,
+      diagramPath: file.path,
+      images: images.lookup,
+      storage,
+      selection: [...file.history.selection],
+    });
+  });
 
   const stored = await readPrefs();
   const storedToolbar = readToolbar(stored["toolbar"]);

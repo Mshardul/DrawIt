@@ -44,10 +44,10 @@ async function bootProject(page: import("@playwright/test").Page): Promise<void>
         write(path, data).then(resolve, reject);
       }, 400);
     });
-    const saveButton = document.querySelector(".pill button:last-child");
+    const saveButton = document.querySelector(".pill button.save");
     const labels: string[] = [saveButton?.textContent ?? ""];
     if (saveButton) {
-      new MutationObserver(() => { labels.push(saveButton.textContent ?? ""); }).observe(saveButton, { childList: true, characterData: true, subtree: true });
+      new MutationObserver(() => { labels.push(saveButton.textContent || ""); }).observe(saveButton, { childList: true, characterData: true, subtree: true });
     }
     (window as unknown as { hooks: Hooks; trace: { labels: string[]; writes: () => number } }).hooks = {
       edit: () => {
