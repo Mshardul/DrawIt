@@ -41,6 +41,7 @@ const commands: Record<string, Command> = {
   setElement: { type: "setElement", id: "a", set: { label: "Alpha", class: "c" }, unset: [] },
   setLayout: { type: "setLayout", changes: [{ id: "a", set: { x: 40, y: 50 } }, { id: "b", set: { locked: true }, unset: ["w"] }] },
   setStyle: { type: "setStyle", target: { kind: "class", name: "c" }, set: { fill: "blue" }, unset: ["weight"] },
+  setTheme: { type: "setTheme", colors: { brand: "#112233" }, sizes: { room: 4 } },
   reorder: { type: "reorder", ids: ["a"], to: "front" },
   rename: { type: "rename", id: "a", newId: "alpha" },
   batch: { type: "batch", commands: [{ type: "setLayout", changes: [{ id: "a", set: { x: 1 } }] }, { type: "delete", ids: ["t"] }] },

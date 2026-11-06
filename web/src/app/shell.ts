@@ -7,6 +7,7 @@ import { attachReattachInput } from "../connectors/reattach-input.ts";
 import { attachEditInput } from "../edit/input.ts";
 import { dispatchKey, editorActions } from "./actions.ts";
 import { installKeyGuard, openDialog, openNotice } from "./dialog.ts";
+import { CanvasPointer } from "./pointer.ts";
 import { isTextEntry } from "./text-entry.ts";
 import { defaultSize } from "../library/preview.ts";
 import { attachPlaceInput } from "../library/input.ts";
@@ -20,8 +21,10 @@ import { SHAPE_H, SHAPE_W } from "../render/size.ts";
 import { diagramBounds } from "../render/bounds.ts";
 import { describeDiagram, type SvgNode } from "../render/describe.ts";
 import { describeGrid } from "../render/grid.ts";
+import { attachClipboard } from "../clipboard/events.ts";
+import { ClipboardImages } from "../clipboard/images.ts";
 import { addImage, measureInBrowser } from "../images/add.ts";
-import { attachImageInput } from "../images/input.ts";
+import { attachImageInput, placeImageFiles } from "../images/input.ts";
 import { decodeInBrowser, ImageStore } from "../images/store.ts";
 import { useImages } from "../render/images.ts";
 import { mount, patch } from "../render/mount.ts";
@@ -797,12 +800,27 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
     place: (doc, from) => ({ command: createTextCommand(doc, from), id: newTextId(doc) }),
     placed: (id) => { textEdit.edit(id); },
   });
-  attachImageInput({
+  const imageHost = {
     target: canvas,
     getView: () => view,
     getFile: () => session.file,
     storage,
     showError,
+    refresh,
+  };
+  attachImageInput(imageHost);
+  const pointer = new CanvasPointer();
+  attachClipboard({
+    getFile: () => session.file,
+    storage,
+    measurer,
+    images: new ClipboardImages(),
+    pointer: () => pointer.at,
+    imageFallback: () => {
+      const box = canvas.getBoundingClientRect();
+      return screenToWorld(view, { x: box.width / 2, y: box.height / 2 });
+    },
+    placeImages: (files, at) => placeImageFiles(imageHost, files, at),
     refresh,
   });
   attachViewInput({
@@ -877,9 +895,11 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
   addEventListener("resize", () => { placeToolbar(); placePanels(); placeStatus(); });
   canvas.addEventListener("pointermove", (event) => {
     const rect = canvas.getBoundingClientRect();
-    const world = screenToWorld(view, { x: event.clientX - rect.left, y: event.clientY - rect.top });
-    cursor.textContent = `${String(Math.round(world.x))}, ${String(Math.round(world.y))}`;
+    pointer.move(screenToWorld(view, { x: event.clientX - rect.left, y: event.clientY - rect.top }));
+    const at = pointer.at;
+    if (at) cursor.textContent = `${String(Math.round(at.x))}, ${String(Math.round(at.y))}`;
   });
+  canvas.addEventListener("pointerleave", () => { pointer.leave(); });
   zoomOut.addEventListener("click", () => { zoomBy(1 / ZOOM_STEP); });
   zoomIn.addEventListener("click", () => { zoomBy(ZOOM_STEP); });
   gridToggle.addEventListener("change", () => { setGrid({ show: gridToggle.checked }); gridToggle.blur(); });

@@ -1,7 +1,5 @@
-// Dropping image files on the canvas and pasting them. Each file is saved in `assets/` and added as
-// its own undoable command; a message is shown for a file that cannot be added.
+// Dropping image files on the canvas. Each file is saved in `assets/` and added as its own undoable command.
 import type { OpenFile } from "../app/workspace.ts";
-import { isTextEntry } from "../app/text-entry.ts";
 import type { Point } from "../model/index.ts";
 import type { StorageAdapter } from "../storage/adapter.ts";
 import { screenToWorld, type View } from "../view/view.ts";
@@ -22,38 +20,39 @@ export interface ImageInputHost {
 
 const hasFiles = (transfer: DataTransfer | null): transfer is DataTransfer => transfer?.types.includes("Files") === true;
 
-/** Wires dropping and pasting of image files to `host`. Returns a function that removes it. */
+/** Saves image files and adds an element for each, starting at `at`. */
+export async function placeImageFiles(host: ImageInputHost, files: File[], at: Point): Promise<void> {
+  const { target } = host;
+  const open = host.getFile();
+  if (!open) return;
+  const canvas = target.getBoundingClientRect();
+  const { scale } = host.getView();
+  const cap = { w: canvas.width / scale, h: canvas.height / scale };
+  for (const [i, source] of files.entries()) {
+    const file: ImageFile = { name: source.name, type: source.type, bytes: new Uint8Array(await source.arrayBuffer()) };
+    try {
+      const made = await addImage({
+        storage: host.storage,
+        diagramPath: open.path,
+        doc: open.document,
+        file,
+        at: { x: at.x + i * STEP, y: at.y + i * STEP },
+        cap,
+        measure: measureInBrowser,
+      });
+      if (host.getFile() !== open) return;
+      open.history.execute(made.command, { selection: [made.id] });
+      host.showError(null);
+    } catch (e) {
+      host.showError(e instanceof Error ? e.message : String(e));
+    }
+    host.refresh();
+  }
+}
+
+/** Wires dropping image files to `host`. Pasting them is handled with the other clipboard events. */
 export function attachImageInput(host: ImageInputHost): () => void {
   const { target } = host;
-
-  const add = async (files: File[], at: Point): Promise<void> => {
-    const open = host.getFile();
-    if (!open) return;
-    const canvas = target.getBoundingClientRect();
-    const { scale } = host.getView();
-    const cap = { w: canvas.width / scale, h: canvas.height / scale };
-    for (const [i, source] of files.entries()) {
-      const file: ImageFile = { name: source.name, type: source.type, bytes: new Uint8Array(await source.arrayBuffer()) };
-      try {
-        const made = await addImage({
-          storage: host.storage,
-          diagramPath: open.path,
-          doc: open.document,
-          file,
-          at: { x: at.x + i * STEP, y: at.y + i * STEP },
-          cap,
-          measure: measureInBrowser,
-        });
-        // The user may have opened another file while this one was read.
-        if (host.getFile() !== open) return;
-        open.history.execute(made.command, { selection: [made.id] });
-        host.showError(null);
-      } catch (e) {
-        host.showError(e instanceof Error ? e.message : String(e));
-      }
-      host.refresh();
-    }
-  };
 
   const onDragOver = (event: DragEvent): void => {
     if (!hasFiles(event.dataTransfer)) return;
@@ -65,23 +64,13 @@ export function attachImageInput(host: ImageInputHost): () => void {
     event.preventDefault();
     const canvas = target.getBoundingClientRect();
     const at = screenToWorld(host.getView(), { x: event.clientX - canvas.left, y: event.clientY - canvas.top });
-    void add([...event.dataTransfer.files], at);
-  };
-  const onPaste = (event: ClipboardEvent): void => {
-    if (isTextEntry(event.target)) return;
-    const files = [...(event.clipboardData?.files ?? [])].filter((f) => f.type.startsWith("image/"));
-    if (files.length === 0) return;
-    event.preventDefault();
-    const canvas = target.getBoundingClientRect();
-    void add(files, screenToWorld(host.getView(), { x: canvas.width / 2, y: canvas.height / 2 }));
+    void placeImageFiles(host, [...event.dataTransfer.files], at);
   };
 
   target.addEventListener("dragover", onDragOver);
   target.addEventListener("drop", onDrop);
-  addEventListener("paste", onPaste);
   return () => {
     target.removeEventListener("dragover", onDragOver);
     target.removeEventListener("drop", onDrop);
-    removeEventListener("paste", onPaste);
   };
 }

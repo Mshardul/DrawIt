@@ -63,6 +63,15 @@ export interface ReorderCommand {
   to: "front" | "back";
 }
 
+/** Writes theme tokens. A key that is present replaces that token; other tokens stay. */
+export interface SetThemeCommand {
+  type: "setTheme";
+  colors?: Record<string, string>;
+  fonts?: Record<string, string>;
+  sizes?: Record<string, number>;
+  spaces?: Record<string, number>;
+}
+
 /** Renames an ID in structure, style and layout. */
 export interface RenameCommand {
   type: "rename";
@@ -88,6 +97,7 @@ export type Command =
   | SetElementCommand
   | SetLayoutCommand
   | SetStyleCommand
+  | SetThemeCommand
   | ReorderCommand
   | RenameCommand
   | BatchCommand
@@ -210,6 +220,13 @@ function setStyle(doc: Doc, command: SetStyleCommand): void {
   }
 }
 
+function setTheme(doc: Doc, command: SetThemeCommand): void {
+  Object.assign(doc.style.theme.colors, command.colors);
+  Object.assign(doc.style.theme.fonts, command.fonts);
+  Object.assign(doc.style.theme.sizes, command.sizes);
+  Object.assign(doc.style.theme.spaces, command.spaces);
+}
+
 function reorder(doc: Doc, command: ReorderCommand): void {
   const moving = new Set(command.ids);
   for (const id of moving) element(doc, id);
@@ -273,6 +290,9 @@ function mutate(doc: Doc, command: Command): void {
       break;
     case "setStyle":
       setStyle(doc, command);
+      break;
+    case "setTheme":
+      setTheme(doc, command);
       break;
     case "reorder":
       reorder(doc, command);
