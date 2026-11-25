@@ -18,6 +18,7 @@ function host(over: Partial<ActionHost> = {}): ActionHost & { ran: string[] } {
     zoomToSelection: call("zoom-selection"),
     setTool: (tool: string) => { ran.push(tool); },
     canEdit: () => true,
+    openPreferences: call("preferences"),
     ...over,
   };
 }
@@ -26,12 +27,21 @@ describe("editor actions", () => {
   it("names save, undo, redo, grid, snap and zoom", () => {
     expect(editorActions(host()).map((action) => action.id)).toEqual([
       "save", "undo", "redo", "grid", "snap", "zoom-in", "zoom-out", "zoom-reset", "zoom-fit", "zoom-selection",
-      "tool-select", "tool-hand", "tool-line", "tool-arrow", "tool-frame", "tool-rect", "tool-ellipse", "tool-text", "tool-image",
+      "tool-select", "tool-hand", "tool-line", "tool-arrow", "tool-frame", "tool-rect", "tool-ellipse", "tool-text", "tool-image", "preferences",
     ]);
     expect(editorActions(host()).map((action) => action.title)).toEqual([
       "Save", "Undo", "Redo", "Grid", "Snap", "Zoom in", "Zoom out", "Reset zoom", "Zoom to fit", "Zoom to selection",
-      "Select", "Hand", "Line", "Arrow", "Frame", "Rectangle", "Ellipse", "Text", "Image",
+      "Select", "Hand", "Line", "Arrow", "Frame", "Rectangle", "Ellipse", "Text", "Image", "Preferences…",
     ]);
+  });
+
+  it("opens Preferences from a key-less action that runs with no file open", () => {
+    const target = host({ canEdit: () => false });
+    const preferences = editorActions(target).find((action) => action.id === "preferences");
+    expect(preferences?.key).toBeUndefined();
+    expect(preferences?.enabled()).toBe(true);
+    preferences?.run();
+    expect(target.ran).toEqual(["preferences"]);
   });
 
   it("runs the action whose key matches", () => {

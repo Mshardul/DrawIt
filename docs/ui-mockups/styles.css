@@ -15,6 +15,7 @@ body { margin: 0; font-family: var(--font-body); font-size: var(--font-size-base
 .win { width: var(--win-width); max-width: calc(100% - 2 * var(--viewer-gutter)); height: var(--win-height); margin: 0 var(--viewer-gutter) var(--viewer-bottom-gap); background: var(--win-bg); border: var(--border-width) solid var(--win-border); border-radius: var(--win-radius); overflow: hidden; position: relative; display: flex; flex-direction: column; }
 .win.ed { flex-direction: row; }
 .win.win-narrow { width: var(--win-width-narrow); }
+.win.win-tall { height: var(--win-height-tall); }
 .win.win-narrower { width: var(--win-width-narrower); }
 
 /* header */
@@ -84,6 +85,7 @@ h3.sec { font-size: var(--font-size-small); text-transform: uppercase; letter-sp
 .scrim { position: absolute; inset: 0; background: var(--color-scrim); display: flex; align-items: center; justify-content: center; z-index: var(--z-scrim); }
 .scrim.scrim-top { align-items: flex-start; padding-top: var(--palette-top); }
 .sheet { background: var(--sheet-bg); border: var(--border-width) solid var(--sheet-border); border-radius: var(--sheet-radius); box-shadow: var(--shadow-sheet); display: flex; flex-direction: column; overflow: hidden; max-height: var(--sheet-max-height); }
+.sheet.sheet-tall { max-height: var(--sheet-max-height-tall); }
 .sheet-sm { width: var(--sheet-width-sm); }
 .sheet-md { width: var(--sheet-width-md); }
 .sheet-lg { width: var(--sheet-width-lg); }
@@ -93,6 +95,7 @@ h3.sec { font-size: var(--font-size-small); text-transform: uppercase; letter-sp
 .sheet .bd { padding: var(--sheet-pad-y) var(--sheet-pad-x); display: flex; flex-direction: column; gap: var(--sheet-gap); }
 .sheet .ft { padding: var(--sheet-foot-pad-y) var(--sheet-pad-x); border-top: var(--border-width) solid var(--sheet-border); display: flex; gap: var(--space-4); align-items: center; }
 .bleed { margin: calc(-1 * var(--sheet-pad-y)) calc(-1 * var(--sheet-pad-x)) 0; }
+input.f.num { width: var(--field-num-width); }
 input.f, select.f { font: inherit; padding: var(--field-pad-y) var(--field-pad-x); border: var(--border-width) solid var(--field-border); border-radius: var(--radius-md); width: 100%; background: var(--color-surface); }
 input.f.bad { border-color: var(--color-danger); outline: var(--outline-width) solid var(--color-danger); }
 .err { color: var(--color-danger); font-size: var(--font-size-small); }

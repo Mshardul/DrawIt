@@ -1,6 +1,6 @@
 import "./app/app.css";
 import { showElsewhere } from "./app/elsewhere.ts";
-import { firstScreen } from "./app/session.ts";
+import { firstScreen, startingWorkspace } from "./app/session.ts";
 import { startShell } from "./app/shell.ts";
 import { StorageError } from "./storage/adapter.ts";
 import { HttpStorage } from "./storage/http.ts";
@@ -33,7 +33,7 @@ async function openApp(root: HTMLElement, token: string): Promise<void> {
   });
   const beginEditing = (): Promise<void> => {
     editing ??= (async () => {
-      const info = await storage.currentWorkspace();
+      const info = await startingWorkspace(storage);
       await startShell(root, storage, { show: firstScreen(info.kind) });
     })().catch((error: unknown) => {
       editing = null;

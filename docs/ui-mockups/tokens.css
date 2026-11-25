@@ -118,6 +118,7 @@
   --win-width-narrow: 1000px;
   --win-width-narrower: 780px;
   --win-height: 600px;
+  --win-height-tall: 760px;
   --win-bg: var(--color-surface);
   --win-border: var(--color-frame);
   --win-radius: var(--radius-lg);
@@ -196,12 +197,14 @@
   --sheet-width-xl: 700px;
   --sheet-width-palette: 520px;
   --sheet-max-height: 520px;
+  --sheet-max-height-tall: 720px;
   --palette-top: 70px;
 
   /* form fields, lists, breadcrumbs */
   --field-pad-y: var(--space-3);
   --field-pad-x: var(--space-4);
   --field-border: var(--color-line);
+  --field-num-width: 64px;
   --drop-pad: 26px;
   --row-pad-y: var(--space-3);
   --row-pad-x: var(--space-5);
@@ -287,7 +290,7 @@
   --shortcut-reset-width: 44px;
   --prefs-nav-width: 150px;
   --prefs-min-height: 300px;
-  --prefs-body-max-height: 360px;
+  --prefs-body-max-height: 560px;
   --prefs-body-pad-y: var(--space-7);
   --prefs-body-pad-x: 18px;
   --export-gap: var(--space-9);

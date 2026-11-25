@@ -6,3 +6,5 @@ web/playwright-report/
 web/blob-report/
 /web/contact-sheet/
 .DS_Store
+/site/dist/
+/bin/

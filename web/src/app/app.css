@@ -3,6 +3,7 @@ html, body { margin: 0; height: 100%; font: 14px system-ui, sans-serif; color: #
 [hidden] { display: none !important; }
 .bar { display: flex; align-items: center; gap: 12px; padding: 6px 12px; border-bottom: 1px solid #ccc; }
 .bar .nav { margin-left: auto; display: flex; gap: 8px; }
+.bar .nav .group { display: flex; gap: 8px; }
 .listing { flex: 1; overflow: auto; padding: 24px 32px; }
 .listing h2 { margin: 0 0 16px; font-size: 20px; }
 .listing .back { margin-bottom: 16px; }
@@ -149,3 +150,9 @@ button.card.add { display: flex; align-items: center; justify-content: center; m
 .sheet .row .go { border: 0; background: transparent; color: #555; cursor: pointer; padding: 6px 8px; }
 .sheet .picked { color: #555; font-size: 12px; }
 .file-icon { width: 28px; height: 28px; fill: none; stroke: #555; stroke-width: 1.5; stroke-linejoin: round; stroke-linecap: round; }
+.sheet.prefs-sheet { width: 640px; height: 520px; }
+.sheet.prefs-sheet .bd { flex: 1; overflow: auto; }
+.prefs .tabs { display: flex; gap: 4px; border-bottom: 1px solid #ccc; margin: -14px -16px 12px; padding: 0 16px; }
+.prefs .tab { font: inherit; border: 0; border-bottom: 2px solid transparent; background: transparent; padding: 8px 12px; cursor: pointer; color: #555; }
+.prefs .tab[aria-selected="true"] { color: #1a1a1a; border-bottom-color: #1a73e8; }
+.prefs .tab-panel { min-height: 320px; }

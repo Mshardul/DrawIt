@@ -42,6 +42,7 @@ export interface ActionHost {
   zoomToSelection(): void;
   setTool(tool: Tool): void;
   canEdit(): boolean;
+  openPreferences(): void;
 }
 
 function chordsOf(action: Action): readonly ActionKey[] {
@@ -102,5 +103,6 @@ export function editorActions(host: ActionHost): Action[] {
     tool("tool-ellipse", "Ellipse", "o", "ellipse"),
     tool("tool-text", "Text", "t", "text"),
     tool("tool-image", "Image", "i", "image"),
+    { id: "preferences", title: "Preferences…", enabled: always, run: () => { host.openPreferences(); } },
   ];
 }

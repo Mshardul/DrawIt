@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ImageStore } from "../images/store.ts";
 import { MemoryStorage, MemoryVolume } from "../storage/memory.ts";
-import { enterWorkspace, firstScreen, type EditorSession } from "./session.ts";
+import { enterWorkspace, firstScreen, startingWorkspace, type EditorSession } from "./session.ts";
 
 function session(storage: MemoryStorage): EditorSession {
   return {
@@ -50,6 +50,25 @@ describe("opening a workspace", () => {
   it("does not write a preference when the place cannot be opened", async () => {
     const storage = new MemoryStorage();
     await expect(enterWorkspace(session(storage), { library: true })).rejects.toThrow();
+    expect(await storage.readPreferences()).toEqual({ version: 1 });
+  });
+});
+
+describe("starting workspace", () => {
+  it("opens the library when the server has no folder", async () => {
+    const volume = new MemoryVolume({ path: "", library: "/DrawIt", places: { "/DrawIt": {} } });
+    const storage = new MemoryStorage({}, { volume });
+    await storage.claimSession();
+    const info = await startingWorkspace(storage);
+    expect(info).toMatchObject({ kind: "library", path: "/DrawIt" });
+    expect(await storage.currentWorkspace()).toMatchObject({ kind: "library", path: "/DrawIt" });
+  });
+
+  it("keeps the folder the server already has", async () => {
+    const volume = new MemoryVolume({ path: "/DrawIt/Demo", library: "/DrawIt" });
+    const storage = new MemoryStorage({}, { volume });
+    await storage.claimSession();
+    expect(await startingWorkspace(storage)).toMatchObject({ kind: "project", path: "/DrawIt/Demo" });
     expect(await storage.readPreferences()).toEqual({ version: 1 });
   });
 });

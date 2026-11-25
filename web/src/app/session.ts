@@ -23,3 +23,9 @@ export async function enterWorkspace(session: EditorSession, target: WorkspaceTa
   if (info.path === "") return;
   await session.storage.patchPreferences({ workspace: { folder: info.path } });
 }
+
+/** The server holds no folder when the command line and the preferences file name none, so the library stands in. */
+export async function startingWorkspace(storage: StorageAdapter): Promise<WorkspaceInfo> {
+  const info = await storage.currentWorkspace();
+  return info.path === "" ? storage.openWorkspace({ library: true }) : info;
+}

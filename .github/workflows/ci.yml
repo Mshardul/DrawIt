@@ -11,9 +11,6 @@ permissions:
 jobs:
   web:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: web
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -24,19 +21,14 @@ jobs:
           node-version: 24
           cache: pnpm
           cache-dependency-path: web/pnpm-lock.yaml
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm lint
-      - run: pnpm typecheck
-      - run: pnpm validate:packs
-      - run: pnpm contact-sheet
+      - run: make setup-web
+      - run: pnpm --dir web exec playwright install --with-deps chromium firefox webkit
+      - run: make check-web
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: contact-sheet
           path: web/contact-sheet
-      - run: pnpm test
-      - run: pnpm build
-      - run: pnpm exec playwright install --with-deps chromium firefox webkit
-      - run: pnpm test:e2e
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -53,4 +45,5 @@ jobs:
       - uses: golangci/golangci-lint-action@v8
         with:
           version: latest
-      - run: go test ./...
+          install-only: true
+      - run: make check-go

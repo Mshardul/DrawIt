@@ -10,7 +10,7 @@ Build order and scope for the workspace, the editor frame and the action table. 
 - Clipboard and export: phase 7.
 - The command palette, rebinding, the Preferences dialog and hiding the panels, toolbar and status pill: phase 9. Phase 6 keeps a visibility flag for each and nothing that hides them.
 - Several open diagrams in tabs or windows, visual diff and bundles (v1.1).
-- Renaming an ID from the app, version migration and the accessibility sweep: phase 10.
+- Version migration and the accessibility sweep: phase 10.
 
 **Build order**
 1. Server core: preferences, the workspace holder, switching with a workspace id, the library listing, the one-session rule and the folder browser (T-084 to T-087, T-090, T-091). The library writes and trash follow (T-088, T-089).

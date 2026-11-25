@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{NAME}}: draw diagrams on a canvas, keep them as text</title>
+  <meta name="description" content="{{NAME}} is a local-only, canvas-first diagram and infographic tool. Diagrams are saved as readable text files that diff cleanly. Nothing leaves your machine.">
+  <meta name="color-scheme" content="light dark">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="top">
+    <div class="wrap bar">
+      <a class="brand" href="#top">{{NAME}}</a>
+      <nav aria-label="Primary">
+        <a href="#why">Why</a>
+        <a href="#features">Features</a>
+        <a href="#file">The file</a>
+        <a href="#install">Install</a>
+        <a href="https://github.com/Mshardul/DrawIt">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero wrap" id="top">
+      <p class="eyebrow">Free and open source · macOS · AGPL-3.0</p>
+      <h1>Draw on a canvas.<br>Keep it as text.</h1>
+      <p class="lead">{{NAME}} is a local-only diagram and infographic tool. You draw with the mouse, and every diagram is saved as a readable file that diffs cleanly in git. Nothing leaves your machine.</p>
+      <p class="cta">
+        <a class="button primary" href="https://github.com/Mshardul/DrawIt/releases/latest">Download for macOS</a>
+        <a class="button" href="#install">How to install</a>
+      </p>
+      <div class="shot shot-hero" role="img" aria-label="Screenshot of the {{NAME}} canvas with a diagram open"><span>Screenshot: canvas with a diagram open</span></div>
+    </section>
+
+    <section class="wrap" id="why" aria-labelledby="why-h">
+      <h2 id="why-h">Built around three ideas</h2>
+      <div class="pillars">
+        <article>
+          <h3>Canvas first</h3>
+          <p>Place things where you want them, to the pixel. The file stores the positions, so the diagram looks the same tomorrow as it does today.</p>
+        </article>
+        <article>
+          <h3>Diagram as code</h3>
+          <p>Files are plain text. Review them in a pull request, hand-edit them, or have a script or an LLM generate them.</p>
+        </article>
+        <article>
+          <h3>Local only</h3>
+          <p>{{NAME}} is one small program on your computer. It makes no network requests at runtime, and your diagrams belong to you.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="wrap" id="features" aria-labelledby="features-h">
+      <h2 id="features-h">What you can do</h2>
+
+      <div class="feature">
+        <div>
+          <h3>An infinite canvas</h3>
+          <p>Pan with the hand tool, space-drag or trackpad. Zoom with a pinch or the keyboard, to fit or to a selection. Turn the grid and snapping on or off.</p>
+        </div>
+        <div class="shot" role="img" aria-label="Screenshot of panning and zooming the canvas"><span>Screenshot: canvas navigation</span></div>
+      </div>
+
+      <div class="feature flip">
+        <div>
+          <h3>Connectors that stay attached</h3>
+          <p>Arrows follow the shapes they join. Route them straight or with elbows, add bend points, label them, and re-attach an end by dragging it.</p>
+        </div>
+        <div class="shot" role="img" aria-label="Screenshot of connectors between shapes"><span>Screenshot: connectors</span></div>
+      </div>
+
+      <div class="feature">
+        <div>
+          <h3>A shape library</h3>
+          <p>Start with a core set and add data-only shape packs. Type a label straight into a shape and drop in images by pasting or dragging.</p>
+        </div>
+        <div class="shot" role="img" aria-label="Screenshot of the shape library"><span>Screenshot: shape library</span></div>
+      </div>
+
+      <div class="feature flip">
+        <div>
+          <h3>Style it your way</h3>
+          <p>Fonts, sizes and colours for text. Fill, stroke, dash, corner radius and opacity for shapes. A colour picker remembers your recent colours.</p>
+        </div>
+        <div class="shot" role="img" aria-label="Screenshot of the style panel"><span>Screenshot: style panel</span></div>
+      </div>
+
+      <div class="feature">
+        <div>
+          <h3>Projects and files</h3>
+          <p>Keep diagrams in project folders, or open any folder or file from the command line. Autosave, undo and redo, and copy and paste between files are built in.</p>
+        </div>
+        <div class="shot" role="img" aria-label="Screenshot of the project library"><span>Screenshot: projects</span></div>
+      </div>
+    </section>
+
+    <section class="wrap" id="file" aria-labelledby="file-h">
+      <h2 id="file-h">The file is the diagram</h2>
+      <p class="sub">Every save writes the same canonical text, so a one-box change is a one-line diff.</p>
+      <div class="split">
+        <pre class="code" tabindex="0" aria-label="Example diagram file"><code>diagram version=1 title="Order flow" {
+  plugins core@1 arch@1
+}
+
+node api "API Gateway" shape=arch.gateway
+node orders "Order Service" shape=arch.server
+node db "Orders DB" shape=arch.database
+
+edge api orders label="POST /orders"
+edge orders db
+
+layout {
+  api    x=40  y=150 w=160 h=60
+  orders x=280 y=150 w=180 h=60
+  db     x=260 y=320
+}</code></pre>
+        <div class="shot" role="img" aria-label="The diagram this file draws"><span>Screenshot: the diagram this file draws</span></div>
+      </div>
+    </section>
+
+    <section class="wrap" id="install" aria-labelledby="install-h">
+      <h2 id="install-h">Install</h2>
+      <ol class="steps">
+        <li>
+          <h3>Download</h3>
+          <p>Get the latest macOS build from the <a href="https://github.com/Mshardul/DrawIt/releases/latest">releases page</a>. Linux and Windows builds follow.</p>
+        </li>
+        <li>
+          <h3>Allow it to run</h3>
+          <p>The binary is not signed yet, so macOS will block the first launch. Clear the quarantine flag once:</p>
+          <pre class="code" tabindex="0" aria-label="Terminal command"><code>xattr -d com.apple.quarantine ./drawit
+chmod +x ./drawit</code></pre>
+        </li>
+        <li>
+          <h3>Run it</h3>
+          <p>Start it with a folder, or with nothing to open the start screen. Your browser opens on the canvas.</p>
+          <pre class="code" tabindex="0" aria-label="Terminal command"><code>./drawit ~/diagrams</code></pre>
+        </li>
+      </ol>
+    </section>
+
+    <section class="wrap closing" aria-labelledby="closing-h">
+      <h2 id="closing-h">Open source, from day one</h2>
+      <p>{{NAME}} is licensed under AGPL-3.0. Contributions are welcome, and diagrams you make belong to you.</p>
+      <p class="cta">
+        <a class="button primary" href="https://github.com/Mshardul/DrawIt/releases/latest">Download for macOS</a>
+        <a class="button" href="https://github.com/Mshardul/DrawIt">View on GitHub</a>
+      </p>
+    </section>
+  </main>
+
+  <footer class="wrap foot">
+    <span>{{NAME}} · AGPL-3.0</span>
+    <span>
+      <a href="https://github.com/Mshardul/DrawIt">Source</a> ·
+      <a href="https://github.com/Mshardul/DrawIt/issues">Issues</a> ·
+      <a href="https://github.com/Mshardul/DrawIt/blob/main/LICENSE">Licence</a>
+    </span>
+  </footer>
+</body>
+</html>

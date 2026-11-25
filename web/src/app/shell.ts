@@ -51,6 +51,7 @@ import { dragPanel, fitPanels, LIBRARY_WIDTH, PROPERTIES_WIDTH, readPanels, type
 import { clampToolbar, readToolbar, TOOLBAR_BOTTOM } from "./toolbar.ts";
 import { askMove, askName } from "./create.ts";
 import { askBrowse, askImport } from "./pick.ts";
+import { openPreferences } from "./preferences.ts";
 import { homeModel, type ProjectCard, type RecentCard } from "./home.ts";
 import { landingModel, listingSignature, recordOpened, reviseRecent, watchListing, type LandingCard, type RecentEdit } from "./landing.ts";
 import { moveToProject } from "./move.ts";
@@ -138,7 +139,8 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
   const saveState = el("button", { type: "button", className: "save", textContent: "Saved", disabled: true });
   const exportButton = el("button", { type: "button", className: "export", textContent: "Export", disabled: true });
   const pillHome = el("button", { type: "button", textContent: "Home" });
-  const filePill = el("div", { className: "pill" }, pillHome, fileName, undoButton, redoButton, saveState, exportButton);
+  const pillPreferences = el("button", { type: "button", textContent: "Preferences" });
+  const filePill = el("div", { className: "pill" }, pillHome, fileName, undoButton, redoButton, saveState, exportButton, pillPreferences);
   const toolButtons = {
     select: el("button", { type: "button", textContent: "Select", title: "Select (V)", ariaPressed: "true" }),
     hand: el("button", { type: "button", textContent: "Hand", title: "Hand (H)" }),
@@ -243,7 +245,9 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
 
   const importButton = el("button", { type: "button", className: "btn", textContent: "Import" });
   const folderButton = el("button", { type: "button", className: "btn", textContent: "Open folder…" });
-  const boardNav = el("div", { className: "nav", hidden: screen !== "home" }, importButton, folderButton);
+  const barPreferences = el("button", { type: "button", className: "btn", textContent: "Preferences" });
+  const boardActions = el("span", { className: "group", hidden: screen !== "home" }, importButton, folderButton);
+  const boardNav = el("div", { className: "nav", hidden: screen === "file" }, boardActions, barPreferences);
   const listing = el("nav", { className: "listing", hidden: screen === "file" });
   listing.setAttribute("aria-label", screen === "home" ? "Home" : "Files");
   const canvasWrap = el("div", { className: "stage" }, canvas, filePill, status, toolbar, imageInput);
@@ -588,7 +592,8 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
     listing.setAttribute("aria-label", which === "home" ? "Home" : "Files");
     stage.hidden = true;
     status.hidden = true;
-    boardNav.hidden = which !== "home";
+    boardNav.hidden = false;
+    boardActions.hidden = which !== "home";
   };
 
   let stopWatch = (): void => {};
@@ -935,6 +940,7 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
     },
     setTool,
     canEdit: () => session.file !== null,
+    openPreferences: () => { showPreferences(); },
   });
   addEventListener("keydown", (event) => {
     dispatchKey(actions, event, isTextEntry(event.target));
@@ -1436,6 +1442,9 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
   };
   importButton.addEventListener("click", () => { void bringFile(); });
   folderButton.addEventListener("click", () => { void browseFor(); });
+  const showPreferences = (): void => { void openPreferences(root); };
+  pillPreferences.addEventListener("click", showPreferences);
+  barPreferences.addEventListener("click", showPreferences);
   pillHome.addEventListener("click", () => { void closeToLanding(); });
   exportButton.addEventListener("click", () => {
     const file = session.file;
