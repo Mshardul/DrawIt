@@ -112,7 +112,7 @@ test("grid and snap are kept in preferences and restored", async ({ page }) => {
 });
 
 test("a narrow canvas drops the cursor and a narrower one hides the pill", async ({ page }) => {
-  await page.setViewportSize({ width: 1100, height: 700 });
+  await page.setViewportSize({ width: 1300, height: 700 });
   await expect(page.locator(".status .zoom")).toBeVisible();
   await expect(page.locator(".status .cursor")).toBeHidden();
   await page.setViewportSize({ width: 780, height: 700 });
@@ -182,4 +182,15 @@ test("arrow-key nudge ignores snap", async ({ page }) => {
   await page.getByLabel("Snap", { exact: true }).check();
   await page.keyboard.press("ArrowRight");
   expect(await layout(page, "a")).toMatchObject({ x: 41, y: 40 });
+});
+
+test("the status pill is fitted to the canvas as it is once the file has opened", async ({ page }) => {
+  await page.setViewportSize({ width: 1120, height: 700 });
+  await page.goto("/");
+  await page.evaluate(async () => {
+    const load = <T>(path: string) => import(path) as Promise<T>;
+    const { mountShell } = await load<typeof import("../src/testing/mount-shell.ts")>("/src/testing/mount-shell.ts");
+    await mountShell({ "empty.drawit.kdl": "diagram version=1\n" });
+  });
+  await expect(page.locator(".status .zoom")).toBeVisible();
 });

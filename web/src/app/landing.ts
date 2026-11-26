@@ -1,4 +1,4 @@
-import type { FileInfo, Preferences, Unsubscribe } from "../storage/adapter.ts";
+import { StorageError, type FileInfo, type Preferences, type Unsubscribe } from "../storage/adapter.ts";
 import type { PollClock } from "../storage/poll.ts";
 import { editedWhen } from "./home.ts";
 
@@ -128,6 +128,54 @@ export function reviseRecent(preferences: Preferences, edit: RecentEdit): Recent
     }
   }
   return changed(lists, touched);
+}
+
+type Stat = (path: string) => Promise<unknown>;
+
+/** The preferences without recent entries whose file is gone. Only files under `root`, the open folder, can be checked. */
+export async function liveRecent(preferences: Preferences, root: string, stat: Stat, keys?: readonly string[]): Promise<Preferences> {
+  const lists = listsOf(preferences);
+  return { ...preferences, recent: { ...lists, ...(await liveLists(lists, root, stat, keys)) } };
+}
+
+/** `patch` extended so that this write also drops every recent entry whose file is gone. */
+export async function prunedPatch(preferences: Preferences, patch: RecentPatch, root: string, stat: Stat): Promise<RecentPatch> {
+  const before = listsOf(preferences);
+  const after = { ...before, ...listsOf(patch) };
+  return changed(before, { ...after, ...(await liveLists(after, root, stat)) });
+}
+
+async function liveLists(lists: Record<string, string[]>, root: string, stat: Stat, keys: readonly string[] = Object.keys(lists)): Promise<Record<string, string[]>> {
+  const prefix = `${root}/`;
+  const inRoot = (key: string, item: string): string | null => {
+    const full = `${key}/${item}`;
+    return item.endsWith(DIAGRAM) && full.startsWith(prefix) ? full.slice(prefix.length) : null;
+  };
+  const checks = new Map<string, Promise<boolean>>();
+  const gone = (path: string): Promise<boolean> => {
+    const check = checks.get(path) ?? isGone(path, stat);
+    checks.set(path, check);
+    return check;
+  };
+  const entries = await Promise.all(keys.map(async (key) => {
+    const items = lists[key] ?? [];
+    const dead = await Promise.all(items.map(async (item) => {
+      const path = inRoot(key, item);
+      return path !== null && (await gone(path));
+    }));
+    return [key, items.filter((_, index) => !dead[index])] as const;
+  }));
+  return Object.fromEntries(entries);
+}
+
+async function isGone(path: string, stat: Stat): Promise<boolean> {
+  try {
+    await stat(path);
+    return false;
+  } catch (error) {
+    // Any other failure says nothing about the file, so the entry stays.
+    return error instanceof StorageError && (error.code === "not-found" || error.code === "invalid-path");
+  }
 }
 
 /** A hash of the top-level diagrams, so a listing refresh can ignore everything else. */

@@ -92,8 +92,9 @@ test("the frame and the edge are not selectable", async ({ page }) => {
 });
 
 test("drag-box selects what it overlaps, shows the box while dragging and skips locked elements", async ({ page }) => {
-  const from = await at(page, 100, 20);
-  const to = await at(page, 560, 70);
+  // The drag starts below the pills, which float over the top of the canvas.
+  const from = await at(page, 560, 70);
+  const to = await at(page, 100, 20);
   await page.mouse.move(from.x, from.y);
   await page.mouse.down();
   await page.mouse.move(to.x, to.y, { steps: 5 });

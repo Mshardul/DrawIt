@@ -168,3 +168,33 @@ test("an open dialog keeps Delete, undo and the tool keys off the canvas", async
   await page.keyboard.press("Delete");
   await expect(page.locator('g[data-id="a"]')).toHaveCount(0);
 });
+
+test("Tab skips hidden and removed-from-order controls and stops once in a radio group", async ({ page }) => {
+  await page.evaluate(async () => {
+    const load = <T>(path: string) => import(path) as Promise<T>;
+    const { openDialog } = await load<typeof import("../src/app/dialog.ts")>("/src/app/dialog.ts");
+    const root = document.getElementById("app");
+    if (!root) throw new Error("missing app root");
+    const body = document.createElement("div");
+    body.innerHTML = `
+      <button type="button">On</button>
+      <button type="button" tabindex="-1">Off</button>
+      <div hidden><button type="button">Hidden</button></div>
+      <label><input type="radio" name="size"> Small</label>
+      <label><input type="radio" name="size" checked> Medium</label>
+      <label><input type="radio" name="size"> Large</label>`;
+    void openDialog(root, { title: "Choose", body, choices: [{ label: "Done", kind: "primary" }] });
+  });
+  const dialog = page.getByRole("dialog", { name: "Choose" });
+  await expect(dialog.getByRole("button", { name: "On", exact: true })).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(dialog.getByRole("radio", { name: "Medium" })).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(dialog.getByRole("button", { name: "Done" })).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(dialog.getByRole("button", { name: "On", exact: true })).toBeFocused();
+  await page.keyboard.press("Shift+Tab");
+  await expect(dialog.getByRole("button", { name: "Done" })).toBeFocused();
+  await page.keyboard.press("Shift+Tab");
+  await expect(dialog.getByRole("radio", { name: "Medium" })).toBeFocused();
+});

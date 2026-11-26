@@ -3,10 +3,11 @@ import { readDiagram } from "../kdl/read.ts";
 import { writeDiagram } from "../kdl/write.ts";
 import { StorageError, type StorageAdapter } from "../storage/adapter.ts";
 import { reviseRecent } from "./landing.ts";
+import type { PreferenceStore } from "./preference-store.ts";
 
 const DIAGRAM_EXT = ".drawit.kdl";
 
-export async function moveToProject(storage: StorageAdapter, from: string, project: string): Promise<string> {
+export async function moveToProject(storage: StorageAdapter, preferences: PreferenceStore, from: string, project: string): Promise<string> {
   const diagram = readDiagram(new TextDecoder().decode(await storage.readLibrary(from))).document;
   const fileName = from.slice(from.lastIndexOf("/") + 1);
   if (!fileName.endsWith(DIAGRAM_EXT)) throw new StorageError("invalid-path", "not a diagram");
@@ -43,7 +44,7 @@ export async function moveToProject(storage: StorageAdapter, from: string, proje
   const created = await storage.createDiagram(project, stem);
   await storage.replaceLibrary(created, new TextEncoder().encode(writeDiagram(diagram)));
   await storage.deleteItem(from, true);
-  const patch = reviseRecent(await storage.readPreferences(), { type: "move", from, to: created });
-  if (Object.keys(patch).length > 0) await storage.patchPreferences(patch);
+  const patch = reviseRecent(await preferences.read(), { type: "move", from, to: created });
+  if (Object.keys(patch).length > 0) await preferences.patch(patch);
   return created;
 }

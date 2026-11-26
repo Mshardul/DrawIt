@@ -198,7 +198,7 @@ export function openExportDialog(parent: HTMLElement, input: ExportDialogInput):
   side.className = "side";
   side.append(picture, summary, error);
   const body = document.createElement("div");
-  body.className = "export";
+  body.className = "export-form";
   body.append(options, side);
   show();
 

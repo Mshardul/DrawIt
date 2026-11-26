@@ -63,3 +63,16 @@ test("export downloads a frame as a file named after the diagram and the frame",
   expect(svg).not.toContain('data-id="away"');
   expect(svg).toContain("font-family:'Inter'");
 });
+
+test("the Export button in the file pill is only as wide as its label", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/");
+  await page.evaluate(async () => {
+    const load = <T>(path: string) => import(path) as Promise<T>;
+    const { mountShell } = await load<typeof import("../src/testing/mount-shell.ts")>("/src/testing/mount-shell.ts");
+    await mountShell({ "a.drawit.kdl": "diagram version=1\n" });
+  });
+  const button = page.locator(".stage > .pill").getByRole("button", { name: "Export" });
+  await expect(button).toBeVisible();
+  expect((await button.boundingBox())?.width).toBeLessThan(100);
+});

@@ -52,8 +52,9 @@ import { clampToolbar, readToolbar, TOOLBAR_BOTTOM } from "./toolbar.ts";
 import { askMove, askName } from "./create.ts";
 import { askBrowse, askImport } from "./pick.ts";
 import { openPreferences } from "./preferences.ts";
+import { preferenceStore } from "./preference-store.ts";
 import { homeModel, type ProjectCard, type RecentCard } from "./home.ts";
-import { landingModel, listingSignature, recordOpened, reviseRecent, watchListing, type LandingCard, type RecentEdit } from "./landing.ts";
+import { landingModel, listingSignature, liveRecent, prunedPatch, recordOpened, reviseRecent, watchListing, type LandingCard, type RecentEdit } from "./landing.ts";
 import { moveToProject } from "./move.ts";
 import { diagramNameCheck, projectNameCheck } from "./names.ts";
 import { deleteWording } from "./remove.ts";
@@ -127,8 +128,10 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
     revokeUrl: (url) => { URL.revokeObjectURL(url); },
   });
   useImages(images.lookup);
+  const preferences = preferenceStore(storage);
   const session: EditorSession = {
     storage,
+    preferences,
     images,
     file: null,
     info: { id: "", kind: "", path: "" },
@@ -208,7 +211,7 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
       const stored = preferenceFile["colours"];
       const base = typeof stored === "object" && stored !== null ? stored as Record<string, unknown> : {};
       preferenceFile = { ...preferenceFile, colours: { ...base, recent: [...list] } };
-      void storage.patchPreferences({ colours: { recent: [...list] } });
+      void preferences.patch({ colours: { recent: [...list] } });
     },
   };
   const stylePanel = createStylePanel({ getFile: () => session.file, measurer, refresh: () => { refresh(); }, colours });
@@ -437,7 +440,7 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
     toolbar.style.transform = "none";
   };
   const saveToolbar = (): void => {
-    void storage.patchPreferences({ toolbar: { x: toolbarOffset.x, y: toolbarOffset.y, shown: toolbarShown } });
+    void preferences.patch({ toolbar: { x: toolbarOffset.x, y: toolbarOffset.y, shown: toolbarShown } });
   };
 
   let panels: PanelWidths = readPanels(undefined);
@@ -461,7 +464,7 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
         propertiesShown: panels.propertiesShown,
       },
     };
-    void storage.patchPreferences({
+    void preferences.patch({
       panels: {
         library: panels.library,
         properties: panels.properties,
@@ -559,7 +562,7 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
     snapToggle.checked = grid.snap;
     gridSize.value = String(grid.size);
     drawGrid();
-    if (gridReady) void storage.patchPreferences({ grid: { show: grid.show, snap: grid.snap, size: grid.size } });
+    if (gridReady) void preferences.patch({ grid: { show: grid.show, snap: grid.snap, size: grid.size } });
     placeStatus();
   };
 
@@ -606,12 +609,17 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
   };
   const readPrefs = async (): Promise<Preferences> => {
     try {
-      preferenceFile = await storage.readPreferences();
+      preferenceFile = await preferences.read();
       return preferenceFile;
     } catch {
       // A missing preferences file still shows the folder.
       return {};
     }
+  };
+  const statFile = (path: string): Promise<unknown> => storage.stat(path);
+  const writeRecent = async (current: Preferences, patch: Parameters<typeof prunedPatch>[1]): Promise<void> => {
+    const pruned = await prunedPatch(current, patch, session.info.path, statFile);
+    if (Object.keys(pruned).length > 0) await preferences.patch(pruned);
   };
   const follow = (file: OpenFile): void => {
     stopWatch();
@@ -638,8 +646,8 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
         session.file = result.file;
         seenVersion = result.file.history.version;
         try {
-          const patch = recordOpened(await readPrefs(), session.info, path);
-          if (Object.keys(patch).length > 0) await storage.patchPreferences(patch);
+          const current = await readPrefs();
+          await writeRecent(current, recordOpened(current, session.info, path));
         } catch {
           // The diagram opens even when the recent list cannot be saved.
         }
@@ -901,6 +909,10 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
     saveToolbar();
   });
   addEventListener("resize", () => { placeToolbar(); placePanels(); placeStatus(); });
+  // The properties panel and the file name change these widths without a window resize.
+  const fitStatus = new ResizeObserver(() => { placeStatus(); });
+  fitStatus.observe(canvasWrap);
+  fitStatus.observe(filePill);
   canvas.addEventListener("pointermove", (event) => {
     const rect = canvas.getBoundingClientRect();
     pointer.move(screenToWorld(view, { x: event.clientX - rect.left, y: event.clientY - rect.top }));
@@ -1029,8 +1041,8 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
     return Number.isFinite(count) && count > 0 ? count : 0;
   };
   const applyRecent = async (edit: RecentEdit): Promise<void> => {
-    const patch = reviseRecent(await readPrefs(), edit);
-    if (Object.keys(patch).length > 0) await storage.patchPreferences(patch);
+    const current = await readPrefs();
+    await writeRecent(current, reviseRecent(current, edit));
   };
   const confirmDelete = async (item: { kind: "project" | "diagram"; name: string; diagrams: number }, permanent: boolean): Promise<boolean> => {
     const text = deleteWording({ ...item, permanent });
@@ -1134,7 +1146,7 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
         destinations,
         [project, ...destinations],
         async (name) => { await storage.createProject(name); },
-        async (dest) => { await moveToProject(storage, `${project}/${card.path}`, dest); },
+        async (dest) => { await moveToProject(storage, preferences, `${project}/${card.path}`, dest); },
       );
     } catch (error) {
       showError(error instanceof Error ? error.message : String(error));
@@ -1298,9 +1310,9 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
     ]);
   };
   const emptyFolder = "No .drawit.kdl files in this folder.";
-  const paintLanding = (files: readonly FileInfo[], preferences: Preferences): void => {
+  const paintLanding = (files: readonly FileInfo[], current: Preferences): void => {
     closeMenu();
-    const model = landingModel(files, preferences, session.info, new Date());
+    const model = landingModel(files, current, session.info, new Date());
     listing.setAttribute("aria-label", model.title);
     if (model.diagrams.length === 0) showError(emptyFolder);
     else if (error.textContent === emptyFolder) showError(null);
@@ -1325,9 +1337,9 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
       () => storage.list(),
       async (next) => {
         if (generation !== listingGeneration || fileOpen()) return;
-        const preferences = await readPrefs();
+        const current = await readPrefs();
         if (generation !== listingGeneration || fileOpen()) return;
-        paintLanding(next, preferences);
+        paintLanding(next, current);
       },
       { signature: listingSignature(files), visible: () => document.visibilityState !== "hidden" },
     );
@@ -1339,7 +1351,9 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
     showBoard(which);
     if (which === "home") {
       const top = await session.storage.listTop();
-      const model = homeModel(top.entries, await readPrefs(), session.info.path, new Date());
+      const library = session.info.path;
+      const current = await liveRecent(await readPrefs(), library, statFile, [library]);
+      const model = homeModel(top.entries, current, library, new Date());
       if (generation !== listingGeneration) return;
       showError(null);
       if (model.kind === "first-run") {
@@ -1442,7 +1456,7 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
   };
   importButton.addEventListener("click", () => { void bringFile(); });
   folderButton.addEventListener("click", () => { void browseFor(); });
-  const showPreferences = (): void => { void openPreferences(root); };
+  const showPreferences = (): void => { void openPreferences(root, preferences); };
   pillPreferences.addEventListener("click", showPreferences);
   barPreferences.addEventListener("click", showPreferences);
   pillHome.addEventListener("click", () => { void closeToLanding(); });

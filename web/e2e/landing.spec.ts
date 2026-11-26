@@ -120,3 +120,57 @@ test("a diagram added while the page is open shows up", async ({ page }) => {
   await page.evaluate(() => (window as unknown as { hooks: { add(): Promise<void> } }).hooks.add());
   await expect(page.getByRole("button", { name: "extra" })).toBeVisible();
 });
+
+test("recent files removed from disk leave the listing and the next preferences write", async ({ page }) => {
+  await page.evaluate(async (text) => {
+    const load = <T>(path: string) => import(path) as Promise<T>;
+    const { MemoryStorage, MemoryVolume } = await load<typeof import("../src/storage/memory.ts")>("/src/storage/memory.ts");
+    const { startShell } = await load<typeof import("../src/app/shell.ts")>("/src/app/shell.ts");
+    const root = document.getElementById("app");
+    if (!root) throw new Error("missing app root");
+    const volume = new MemoryVolume({
+      path: "/DrawIt/Demo",
+      library: "/DrawIt",
+      files: { "network.drawit.kdl": text, "gone.drawit.kdl": text },
+      places: { "/DrawIt": { files: { "Demo/network.drawit.kdl": text, "Demo/gone.drawit.kdl": text } } },
+    });
+    const storage = new MemoryStorage({}, { volume });
+    await storage.claimSession();
+    await storage.patchPreferences({ recent: { "/DrawIt/Demo": ["gone.drawit.kdl", "network.drawit.kdl"], "/DrawIt": ["Demo/gone.drawit.kdl", "Demo/network.drawit.kdl"] } });
+    await startShell(root, storage, { show: "landing" });
+    (window as unknown as { hooks: { prefs(): Promise<unknown>; remove(path: string): void } }).hooks = {
+      prefs: () => storage.readPreferences(),
+      remove: (path) => { storage.remove(path); },
+    };
+  }, good);
+  const gone = page.getByRole("button", { name: "gone" });
+  const network = page.getByRole("button", { name: "network" });
+  await expect(gone).toHaveCount(2);
+  await page.evaluate(() => { (window as unknown as { hooks: { remove(path: string): void } }).hooks.remove("gone.drawit.kdl"); });
+  await expect(gone).toHaveCount(0);
+  await expect(network).toHaveCount(2);
+  await network.first().click();
+  await expect(page.locator('g[data-id="a"] text')).toHaveText("Alpha");
+  await expect.poll(() => page.evaluate(async () => (await (window as unknown as { hooks: { prefs(): Promise<{ recent?: Record<string, string[]> }> } }).hooks.prefs()).recent)).toEqual({
+    "/DrawIt/Demo": ["network.drawit.kdl"],
+    "/DrawIt": ["Demo/network.drawit.kdl"],
+  });
+});
+
+test("the start screen does not list a recent file that is gone", async ({ page }) => {
+  await page.evaluate(async (text) => {
+    const load = <T>(path: string) => import(path) as Promise<T>;
+    const { MemoryStorage, MemoryVolume } = await load<typeof import("../src/storage/memory.ts")>("/src/storage/memory.ts");
+    const { startShell } = await load<typeof import("../src/app/shell.ts")>("/src/app/shell.ts");
+    const root = document.getElementById("app");
+    if (!root) throw new Error("missing app root");
+    const volume = new MemoryVolume({ path: "/DrawIt", library: "/DrawIt", files: { "Demo/network.drawit.kdl": text } });
+    const storage = new MemoryStorage({}, { volume });
+    await storage.claimSession();
+    await storage.patchPreferences({ recent: { "/DrawIt": ["Demo/gone.drawit.kdl", "Demo/network.drawit.kdl"] } });
+    await startShell(root, storage, { show: "home" });
+  }, good);
+  await expect(page.getByRole("heading", { name: "Recent" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "network" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "gone" })).toHaveCount(0);
+});

@@ -1,4 +1,5 @@
 import type { ImageStore } from "../images/store.ts";
+import type { PreferenceStore } from "./preference-store.ts";
 import type { StorageAdapter, WorkspaceInfo, WorkspaceKind, WorkspaceTarget } from "../storage/adapter.ts";
 import type { OpenFile } from "./workspace.ts";
 
@@ -11,6 +12,7 @@ export function firstScreen(kind: WorkspaceKind): OpeningScreen {
 
 export interface EditorSession {
   readonly storage: StorageAdapter;
+  readonly preferences: PreferenceStore;
   readonly images: ImageStore;
   file: OpenFile | null;
   info: WorkspaceInfo;
@@ -21,7 +23,7 @@ export async function enterWorkspace(session: EditorSession, target: WorkspaceTa
   const info = await session.storage.openWorkspace(target);
   session.info = info;
   if (info.path === "") return;
-  await session.storage.patchPreferences({ workspace: { folder: info.path } });
+  await session.preferences.patch({ workspace: { folder: info.path } });
 }
 
 /** The server holds no folder when the command line and the preferences file name none, so the library stands in. */

@@ -1,4 +1,7 @@
 import { openDialog } from "./dialog.ts";
+import type { PreferenceStore } from "./preference-store.ts";
+
+const UNSAVED = "Preferences can't be saved. Changes last until DrawIt closes.";
 
 const TABS = ["General", "Shortcuts"] as const;
 
@@ -6,7 +9,7 @@ type Tab = (typeof TABS)[number];
 
 let opened = 0;
 
-function build(): HTMLElement {
+function build(): { element: HTMLElement; panels: HTMLElement } {
   opened += 1;
   const prefix = `prefs-${String(opened)}`;
   const list = document.createElement("div");
@@ -61,15 +64,32 @@ function build(): HTMLElement {
   const wrap = document.createElement("div");
   wrap.className = "prefs";
   wrap.append(list, body);
-  return wrap;
+  return { element: wrap, panels: body };
+}
+
+/** Shows the warning at the top of the panels while the store has changes it cannot write. */
+function warnWhileUnsaved(panels: HTMLElement, store: PreferenceStore): () => void {
+  const warning = document.createElement("div");
+  warning.className = "err";
+  warning.setAttribute("role", "alert");
+  warning.textContent = UNSAVED;
+  const show = (): void => {
+    if (store.unsaved) panels.prepend(warning);
+    else warning.remove();
+  };
+  show();
+  return store.watch(show);
 }
 
 /** The Preferences dialog, over whatever screen is showing. Resolves when it is closed. */
-export async function openPreferences(parent: HTMLElement): Promise<void> {
+export async function openPreferences(parent: HTMLElement, store: PreferenceStore): Promise<void> {
+  const { element, panels } = build();
+  const stop = warnWhileUnsaved(panels, store);
   await openDialog(parent, {
     title: "Preferences",
-    body: build(),
+    body: element,
     choices: [{ label: "Done", kind: "primary" }],
     prepare: (sheet) => { sheet.classList.add("prefs-sheet"); },
   });
+  stop();
 }

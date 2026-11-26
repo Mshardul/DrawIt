@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { ImageStore } from "../images/store.ts";
 import { MemoryStorage, MemoryVolume } from "../storage/memory.ts";
+import { preferenceStore } from "./preference-store.ts";
 import { enterWorkspace, firstScreen, startingWorkspace, type EditorSession } from "./session.ts";
 
 function session(storage: MemoryStorage): EditorSession {
   return {
     storage,
+    preferences: preferenceStore(storage),
     images: new ImageStore({
       storage,
       onChange: () => {},
@@ -45,6 +47,17 @@ describe("opening a workspace", () => {
     await enterWorkspace(open, { project: "Demo" });
     expect(open.info).toMatchObject({ kind: "project", path: "/lib/Demo" });
     expect(await storage.readPreferences()).toMatchObject({ workspace: { folder: "/lib/Demo" } });
+  });
+
+  it("opens the folder when preferences cannot be written", async () => {
+    const volume = new MemoryVolume({ path: "/lib", library: "/lib", folders: ["Demo"], places: { "/lib/Demo": {} } });
+    const storage = new MemoryStorage({}, { volume });
+    await storage.claimSession();
+    storage.patchPreferences = () => Promise.reject(new Error("HTTP 500"));
+    const open = session(storage);
+    await enterWorkspace(open, { project: "Demo" });
+    expect(open.info).toMatchObject({ kind: "project", path: "/lib/Demo" });
+    expect(await open.preferences.read()).toMatchObject({ workspace: { folder: "/lib/Demo" } });
   });
 
   it("does not write a preference when the place cannot be opened", async () => {

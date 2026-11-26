@@ -572,6 +572,19 @@ func TestUnreadablePreferencesAreDefaultsAndPatchIsRefused(t *testing.T) {
 	}
 }
 
+func TestPreferencesThatCannotBeWrittenAnswerAnError(t *testing.T) {
+	file := filepath.Join(t.TempDir(), "taken")
+	if err := os.WriteFile(file, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	h := New(nil, "", "", nil, prefs.Open(filepath.Join(file, "config")), testConfig)
+
+	rec := do(h, http.MethodPatch, "/api/preferences", strings.NewReader(`{"editor":{"grid":true}}`))
+	if rec.Code < http.StatusBadRequest {
+		t.Fatalf("patch status = %d, want an error", rec.Code)
+	}
+}
+
 func TestPreferencesPatchMustBeJSONObjects(t *testing.T) {
 	h := New(nil, "", "", nil, prefs.Open(t.TempDir()), testConfig)
 	rec := do(h, http.MethodPatch, "/api/preferences", strings.NewReader(`{"editor":1}`))

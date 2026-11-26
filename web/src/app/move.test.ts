@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { KdlSyntaxError, readDiagram } from "../kdl/read.ts";
 import { MemoryVolume } from "../storage/memory.ts";
 import { moveToProject } from "./move.ts";
+import { preferenceStore } from "./preference-store.ts";
 
 const diagram = `diagram version=1
 
@@ -39,11 +40,23 @@ function open() {
 }
 
 describe("move to a project", () => {
+  it("moves the diagram when preferences cannot be written", async () => {
+    const storage = open();
+    await storage.claimSession();
+    storage.patchPreferences = () => Promise.reject(new Error("HTTP 500"));
+    await storage.readPreferences();
+    const preferences = preferenceStore(storage);
+    await preferences.patch({ recent: { "/DrawIt": ["Drafts/Untitled.drawit.kdl"] } });
+
+    expect(await moveToProject(storage, preferences, "Drafts/Untitled.drawit.kdl", "Demo")).toBe("Demo/Untitled.drawit.kdl");
+    expect(await preferences.read()).toMatchObject({ recent: { "/DrawIt": ["Demo/Untitled.drawit.kdl"] } });
+  });
+
   it("copies the images the diagram uses, rewrites their src, and removes the source file", async () => {
     const storage = open();
     await storage.claimSession();
 
-    expect(await moveToProject(storage, "Drafts/Untitled.drawit.kdl", "Demo")).toBe("Demo/Untitled.drawit.kdl");
+    expect(await moveToProject(storage, preferenceStore(storage), "Drafts/Untitled.drawit.kdl", "Demo")).toBe("Demo/Untitled.drawit.kdl");
 
     const moved = readDiagram(new TextDecoder().decode(await storage.readLibrary("Demo/Untitled.drawit.kdl"))).document;
     const images = moved.elements.filter((element) => element.kind === "image");
@@ -71,7 +84,7 @@ describe("move to a project", () => {
         "/DrawIt/Demo": ["a.drawit.kdl"],
       },
     });
-    await moveToProject(storage, "Drafts/Untitled.drawit.kdl", "Demo");
+    await moveToProject(storage, preferenceStore(storage), "Drafts/Untitled.drawit.kdl", "Demo");
     expect(await storage.readPreferences()).toMatchObject({
       recent: {
         "/DrawIt": ["Notes/b.drawit.kdl", "Demo/Untitled.drawit.kdl"],
@@ -84,7 +97,7 @@ describe("move to a project", () => {
   it("leaves the library unchanged when the diagram does not parse", async () => {
     const storage = open();
     await storage.claimSession();
-    await expect(moveToProject(storage, "Drafts/Bad.drawit.kdl", "Demo")).rejects.toBeInstanceOf(KdlSyntaxError);
+    await expect(moveToProject(storage, preferenceStore(storage), "Drafts/Bad.drawit.kdl", "Demo")).rejects.toBeInstanceOf(KdlSyntaxError);
     expect(new TextDecoder().decode(await storage.readLibrary("Drafts/Bad.drawit.kdl"))).toBe("diagram {\n");
     await expect(storage.readLibrary("Demo/Bad.drawit.kdl")).rejects.toMatchObject({ code: "not-found" });
     expect(await storage.readLibrary("Demo/assets/logo.png")).toEqual(Uint8Array.of(9));

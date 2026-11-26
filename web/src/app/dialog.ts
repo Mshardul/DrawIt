@@ -57,8 +57,18 @@ export function holdCanvasKeys(): () => void {
   };
 }
 
+/** The controls Tab stops at, in order. A radio group is one stop: its checked button, else its first. */
 function focusables(root: HTMLElement): HTMLElement[] {
-  return [...root.querySelectorAll<HTMLElement>(FOCUSABLE)].filter((el) => !el.hasAttribute("disabled"));
+  const shown = [...root.querySelectorAll<HTMLElement>(FOCUSABLE)].filter((el) => !el.hasAttribute("disabled") && el.tabIndex >= 0 && el.checkVisibility());
+  const groups = new Map<string, HTMLInputElement>();
+  for (const el of shown) {
+    if (isRadio(el) && (el.checked || !groups.has(el.name))) groups.set(el.name, el);
+  }
+  return shown.filter((el) => !isRadio(el) || groups.get(el.name) === el);
+}
+
+function isRadio(el: HTMLElement): el is HTMLInputElement {
+  return el instanceof HTMLInputElement && el.type === "radio";
 }
 
 function button(choice: DialogChoice, onChoose: (label: string) => void): HTMLButtonElement {
@@ -91,18 +101,13 @@ function trap(surface: HTMLElement, dismiss: () => void): void {
       return;
     }
     if (event.key !== "Tab") return;
+    // Safari's own Tab order leaves out buttons, so every step is made here.
+    event.preventDefault();
     const items = focusables(surface);
-    const first = items[0];
-    const last = items.at(-1);
-    if (!first || !last) return;
-    const active = document.activeElement;
-    if (event.shiftKey && (active === first || !surface.contains(active))) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && active === last) {
-      event.preventDefault();
-      first.focus();
-    }
+    const at = items.findIndex((item) => item === document.activeElement);
+    const step = event.shiftKey ? -1 : 1;
+    const from = at === -1 && event.shiftKey ? 0 : at;
+    items[(from + step + items.length) % items.length]?.focus();
   });
 }
 

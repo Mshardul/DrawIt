@@ -114,7 +114,7 @@ test("clicking a few pixels off an edge still selects it, and further off clears
   const p = await middleOf(page, "a->b");
   await page.mouse.click(p.x, p.y - 3);
   expect(await selection(page)).toEqual(["a->b"]);
-  await page.mouse.click(p.x, p.y - 30);
+  await page.mouse.click(p.x, p.y + 30);
   expect(await selection(page)).toEqual([]);
 });
 

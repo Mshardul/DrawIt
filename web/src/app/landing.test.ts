@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import type { FileInfo, Preferences } from "../storage/adapter.ts";
+import { StorageError, type FileInfo, type Preferences } from "../storage/adapter.ts";
 import { MemoryStorage } from "../storage/memory.ts";
-import { landingModel, listingSignature, recordOpened, reviseRecent, watchListing } from "./landing.ts";
+import { landingModel, listingSignature, liveRecent, prunedPatch, recordOpened, reviseRecent, watchListing } from "./landing.ts";
 
 const now = new Date(2026, 10, 5, 15);
 
@@ -185,6 +185,59 @@ describe("recent files", () => {
         "/DrawIt/Demo": ["Untitled.drawit.kdl", "a.drawit.kdl"],
       },
     });
+  });
+});
+
+describe("recent files that no longer exist", () => {
+  const onDisk = (files: readonly string[], asked: string[] = []) => (path: string): Promise<unknown> => {
+    asked.push(path);
+    return files.includes(path) ? Promise.resolve({}) : Promise.reject(new StorageError("not-found", `No file ${path}`));
+  };
+
+  it("leaves them out of the lists and asks only about recent paths", async () => {
+    const asked: string[] = [];
+    const prefs: Preferences = { recent: { "/DrawIt": ["Demo/a.drawit.kdl", "Demo/gone.drawit.kdl"] }, grid: { show: true } };
+    expect(await liveRecent(prefs, "/DrawIt", onDisk(["Demo/a.drawit.kdl"], asked))).toEqual({
+      recent: { "/DrawIt": ["Demo/a.drawit.kdl"] },
+      grid: { show: true },
+    });
+    expect(asked.sort()).toEqual(["Demo/a.drawit.kdl", "Demo/gone.drawit.kdl"]);
+  });
+
+  it("checks only the lists asked for", async () => {
+    const asked: string[] = [];
+    const prefs: Preferences = { recent: { "/DrawIt": ["Demo/a.drawit.kdl"], "/DrawIt/Notes": ["b.drawit.kdl"] } };
+    expect(await liveRecent(prefs, "/DrawIt", onDisk(["Demo/a.drawit.kdl"], asked), ["/DrawIt"])).toEqual(prefs);
+    expect(asked).toEqual(["Demo/a.drawit.kdl"]);
+  });
+
+  it("asks once about a file two lists name, by its path in the open folder", async () => {
+    const asked: string[] = [];
+    const prefs: Preferences = { recent: { "/DrawIt/Demo": ["gone.drawit.kdl"], "/DrawIt": ["Demo/gone.drawit.kdl", "Other/b.drawit.kdl"], "/work": ["c.drawit.kdl"] } };
+    expect(await liveRecent(prefs, "/DrawIt/Demo", onDisk([], asked))).toEqual({
+      recent: { "/DrawIt/Demo": [], "/DrawIt": ["Other/b.drawit.kdl"], "/work": ["c.drawit.kdl"] },
+    });
+    expect(asked).toEqual(["gone.drawit.kdl"]);
+  });
+
+  it("drops an entry that names a folder and keeps one that could not be checked", async () => {
+    const stat = (path: string): Promise<unknown> => Promise.reject(new StorageError(path === "folder.drawit.kdl" ? "invalid-path" : "refused", path));
+    const prefs: Preferences = { recent: { "/work": ["folder.drawit.kdl", "locked.drawit.kdl"] } };
+    expect(await liveRecent(prefs, "/work", stat)).toEqual({ recent: { "/work": ["locked.drawit.kdl"] } });
+  });
+
+  it("drops them from the next write, in lists the write did not touch too", async () => {
+    const prefs: Preferences = { recent: { "/DrawIt/Demo": ["a.drawit.kdl"], "/DrawIt": ["Demo/gone.drawit.kdl", "Demo/a.drawit.kdl"] } };
+    const patch = { recent: { "/DrawIt": ["Demo/a.drawit.kdl", "Demo/gone.drawit.kdl"] } };
+    const added: Preferences = { recent: { ...(prefs["recent"] as object), "/DrawIt/Demo": ["a.drawit.kdl", "old.drawit.kdl"] } };
+    expect(await prunedPatch(added, patch, "/DrawIt/Demo", onDisk(["a.drawit.kdl"]))).toEqual({
+      recent: { "/DrawIt/Demo": ["a.drawit.kdl"], "/DrawIt": ["Demo/a.drawit.kdl"] },
+    });
+  });
+
+  it("writes nothing when nothing changed and every file exists", async () => {
+    const prefs: Preferences = { recent: { "/work": ["a.drawit.kdl"] } };
+    expect(await prunedPatch(prefs, {}, "/work", onDisk(["a.drawit.kdl"]))).toEqual({});
   });
 });
 

@@ -68,12 +68,93 @@ test("the start screen and a landing page each have a Preferences button", async
 
 test("the status pill never overlaps the file pill, which includes the Preferences button", async ({ page }) => {
   await start(page, "file");
-  for (let width = 1100; width >= 600; width -= 25) {
+  let shown = 0;
+  for (let width = 1440; width >= 600; width -= 25) {
     await page.setViewportSize({ width, height: 700 });
-    const status = page.locator(".status");
-    if (!(await status.isVisible())) continue;
-    const a = await status.boundingBox();
-    const b = await page.locator(".pill").first().boundingBox();
-    expect(a && b && a.x + a.width + 12 <= b.x).toBe(true);
+    // Both pills are read in one step, two frames on, so the app has fitted them to this width.
+    const gap = await page.evaluate(() => new Promise<number | null>((done) => {
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        const status = document.querySelector<HTMLElement>(".stage .status");
+        const file = document.querySelector(".stage > .pill:not(.status)");
+        if (!status || !file || status.hidden) done(null);
+        else done(file.getBoundingClientRect().left - status.getBoundingClientRect().right);
+      }));
+    }));
+    if (gap === null) continue;
+    shown += 1;
+    expect(gap, `at ${String(width)} px`).toBeGreaterThanOrEqual(12);
   }
+  expect(shown).toBeGreaterThan(0);
+});
+
+const warning = "Preferences can't be saved. Changes last until DrawIt closes.";
+
+/** Starts the shell with a preferences file that refuses writes until `fix` is called. */
+async function startUnwritable(page: Page): Promise<void> {
+  await page.setViewportSize({ width: 1440, height: 800 });
+  await page.goto("/");
+  await page.evaluate(async (text) => {
+    const load = <T>(path: string) => import(path) as Promise<T>;
+    const { MemoryStorage, MemoryVolume } = await load<typeof import("../src/storage/memory.ts")>("/src/storage/memory.ts");
+    const { startShell } = await load<typeof import("../src/app/shell.ts")>("/src/app/shell.ts");
+    const root = document.getElementById("app");
+    if (!root) throw new Error("missing app root");
+    const volume = new MemoryVolume({
+      path: "/DrawIt",
+      library: "/DrawIt",
+      files: { "Demo/network.drawit.kdl": text },
+      places: { "/DrawIt/Demo": { files: { "network.drawit.kdl": text } } },
+    });
+    const storage = new MemoryStorage({}, { volume });
+    await storage.claimSession();
+    const write = storage.patchPreferences.bind(storage);
+    storage.patchPreferences = () => Promise.reject(new Error("cannot write preferences"));
+    (window as unknown as { hooks: { fix(): void; file(): Promise<unknown> } }).hooks = {
+      fix: () => { storage.patchPreferences = write; },
+      file: () => storage.readPreferences(),
+    };
+    await startShell(root, storage, { show: "home" });
+  }, file);
+}
+
+test("a failed write shows a notice in the dialog, and the change stays for the session", async ({ page }) => {
+  await startUnwritable(page);
+  await page.getByRole("button", { name: "Demo" }).click();
+  await page.getByRole("button", { name: "network" }).first().click();
+  await page.getByRole("checkbox", { name: "Grid", exact: true }).uncheck();
+  await page.getByRole("button", { name: "Preferences" }).click();
+  await expect(dialog(page).getByRole("alert")).toHaveText(warning);
+  await dialog(page).getByRole("tab", { name: "Shortcuts" }).click();
+  await expect(dialog(page).getByRole("alert")).toBeVisible();
+  await dialog(page).getByRole("button", { name: "Done" }).click();
+  await expect(dialog(page)).toHaveCount(0);
+
+  await page.getByRole("checkbox", { name: "Snap" }).uncheck();
+  await expect(page.getByRole("checkbox", { name: "Grid", exact: true })).not.toBeChecked();
+  await page.getByRole("button", { name: "Home" }).click();
+  await page.getByRole("button", { name: "‹ Home" }).click();
+  await expect(page.getByRole("heading", { name: "Recent" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "network" })).toBeVisible();
+});
+
+test("there is no notice while preferences can be written", async ({ page }) => {
+  await start(page, "file");
+  await page.getByRole("checkbox", { name: "Grid", exact: true }).uncheck();
+  await page.getByRole("button", { name: "Preferences" }).click();
+  await expect(dialog(page)).toBeVisible();
+  await expect(dialog(page).getByRole("alert")).toHaveCount(0);
+});
+
+test("the notice leaves once the held changes are written", async ({ page }) => {
+  await startUnwritable(page);
+  await page.locator(".bar").getByRole("button", { name: "Preferences" }).click();
+  await expect(dialog(page)).toBeVisible();
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Demo" }).click();
+  await page.evaluate(() => { (window as unknown as { hooks: { fix(): void } }).hooks.fix(); });
+  await page.getByRole("button", { name: "network" }).first().click();
+  await page.getByRole("button", { name: "Preferences" }).click();
+  await expect(dialog(page)).toBeVisible();
+  await expect(dialog(page).getByRole("alert")).toHaveCount(0);
+  await expect.poll(() => page.evaluate(async () => (await (window as unknown as { hooks: { file(): Promise<{ workspace?: { folder?: string } }> } }).hooks.file()).workspace?.folder)).toBe("/DrawIt/Demo");
 });
