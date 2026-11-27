@@ -6,7 +6,6 @@ export const TOOLBAR_BOTTOM = 16;
 export interface ToolbarPlace {
   x: number;
   y: number;
-  /** Stored for a later preference. The editor still draws the toolbar. */
   shown: boolean;
 }
 

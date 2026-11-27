@@ -37,6 +37,12 @@ describe("panel widths on a window", () => {
     expect(fitPanels(360, 360, 700)).toEqual({ library: 180, properties: 180 });
   });
 
+  it("gives a hidden panel no width and leaves the other one alone", () => {
+    expect(fitPanels(360, 360, 900, { library: false, properties: true })).toEqual({ library: 0, properties: 360 });
+    expect(fitPanels(360, 360, 700, { library: true, properties: false })).toEqual({ library: 220, properties: 0 });
+    expect(fitPanels(360, 360, 700, { library: false, properties: false })).toEqual({ library: 0, properties: 0 });
+  });
+
   it("keeps a drag inside 180 to 360 and leaves the canvas at least 480", () => {
     expect(dragPanel(400, 200, 1200)).toBe(360);
     expect(dragPanel(100, 200, 1200)).toBe(180);

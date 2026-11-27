@@ -42,13 +42,17 @@ import { createTextMeasurer } from "../text/measure.ts";
 import { createTextCommand, newTextId } from "../text/target.ts";
 import { attachViewInput, ZOOM_STEP } from "../view/input.ts";
 import { documentBounds, IDENTITY, screenToWorld, type View, viewTransform, zoomAt, zoomToBounds, zoomToFit } from "../view/view.ts";
-import { GRID_SIZES, readGrid, statusFit, type GridSettings } from "./status.ts";
+import { GRID_SIZES, readGrid, readStatusShown, statusFit, type GridSettings } from "./status.ts";
 import { autosaveOn, createAutosave } from "./autosave.ts";
 import { replaceFromDisk, watchChanges } from "./changes.ts";
 import { cardFace, ThumbnailCache, type CardFace } from "./thumbnail.ts";
 import type { Tool } from "./tool.ts";
 import { dragPanel, fitPanels, LIBRARY_WIDTH, PROPERTIES_WIDTH, readPanels, type PanelWidths } from "./panels.ts";
 import { clampToolbar, readToolbar, TOOLBAR_BOTTOM } from "./toolbar.ts";
+import type { Layout } from "./layout.ts";
+import { installTooltips } from "./tooltip.ts";
+import { icon, iconButton, iconToggle, type IconName } from "./icons.ts";
+import { keyLabel } from "./key-label.ts";
 import { askMove, askName } from "./create.ts";
 import { askBrowse, askImport } from "./pick.ts";
 import { openPreferences } from "./preferences.ts";
@@ -143,18 +147,24 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
   const exportButton = el("button", { type: "button", className: "export", textContent: "Export", disabled: true });
   const pillHome = el("button", { type: "button", textContent: "Home" });
   const pillPreferences = el("button", { type: "button", textContent: "Preferences" });
+  iconButton(pillHome, "home", "Home");
+  iconButton(undoButton, "undo", "Undo", "undo");
+  iconButton(redoButton, "redo", "Redo", "redo");
+  iconButton(exportButton, "export", "Export");
+  iconButton(pillPreferences, "gear", "Preferences");
   const filePill = el("div", { className: "pill" }, pillHome, fileName, undoButton, redoButton, saveState, exportButton, pillPreferences);
   const toolButtons = {
-    select: el("button", { type: "button", textContent: "Select", title: "Select (V)", ariaPressed: "true" }),
-    hand: el("button", { type: "button", textContent: "Hand", title: "Hand (H)" }),
-    rect: el("button", { type: "button", textContent: "Rectangle", title: "Rectangle (R)" }),
-    ellipse: el("button", { type: "button", textContent: "Ellipse", title: "Ellipse (O)" }),
-    line: el("button", { type: "button", textContent: "Line", title: "Line (L)" }),
-    arrow: el("button", { type: "button", textContent: "Arrow", title: "Arrow (A)" }),
-    text: el("button", { type: "button", textContent: "Text", title: "Text (T)" }),
-    frame: el("button", { type: "button", textContent: "Frame", title: "Frame (F)" }),
-    image: el("button", { type: "button", textContent: "Image", title: "Image (I)" }),
+    select: el("button", { type: "button", textContent: "Select", ariaPressed: "true" }),
+    hand: el("button", { type: "button", textContent: "Hand" }),
+    rect: el("button", { type: "button", textContent: "Rectangle" }),
+    ellipse: el("button", { type: "button", textContent: "Ellipse" }),
+    line: el("button", { type: "button", textContent: "Line" }),
+    arrow: el("button", { type: "button", textContent: "Arrow" }),
+    text: el("button", { type: "button", textContent: "Text" }),
+    frame: el("button", { type: "button", textContent: "Frame" }),
+    image: el("button", { type: "button", textContent: "Image" }),
   };
+  for (const [id, item] of Object.entries(toolButtons)) iconButton(item, id as keyof typeof toolButtons, item.textContent, `tool-${id}`);
   const grip = el("button", { type: "button", className: "grip", ariaLabel: "Move toolbar" });
   const sep = (): HTMLSpanElement => el("span", { className: "sep" });
   const toolbar = el(
@@ -179,12 +189,13 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
   toolbar.setAttribute("aria-label", "Tools");
   const imageInput = el("input", { type: "file", accept: "image/*", ariaLabel: "Image file" });
   imageInput.hidden = true;
-  // `shown` is stored for a later preference. The toolbar stays on screen.
   let toolbarOffset = { x: 0, y: 0 };
   let toolbarShown = true;
   const zoom = el("span", { className: "zoom" });
-  const zoomOut = el("button", { type: "button", textContent: "−", ariaLabel: "Zoom out" });
-  const zoomIn = el("button", { type: "button", textContent: "+", ariaLabel: "Zoom in" });
+  const zoomOut = el("button", { type: "button" });
+  const zoomIn = el("button", { type: "button" });
+  iconButton(zoomOut, "zoomOut", "Zoom out", "zoom-out");
+  iconButton(zoomIn, "zoomIn", "Zoom in", "zoom-in");
   const cursor = el("span", { className: "cursor" });
   const gridToggle = el("input", { type: "checkbox" });
   const snapToggle = el("input", { type: "checkbox" });
@@ -196,8 +207,8 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
     zoom,
     zoomIn,
     cursor,
-    el("label", {}, gridToggle, "Grid"),
-    el("label", {}, snapToggle, "Snap"),
+    iconToggle(gridToggle, "Grid", ["grid"], "grid"),
+    iconToggle(snapToggle, "Snap", ["snap"], "snap"),
     el("label", {}, "Grid size", gridSize),
   );
   const colours: ColourStore = {
@@ -249,6 +260,10 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
   const importButton = el("button", { type: "button", className: "btn", textContent: "Import" });
   const folderButton = el("button", { type: "button", className: "btn", textContent: "Open folder…" });
   const barPreferences = el("button", { type: "button", className: "btn", textContent: "Preferences" });
+  const withIcon = (item: HTMLButtonElement, name: IconName): void => { item.prepend(icon(name)); };
+  withIcon(importButton, "import");
+  withIcon(folderButton, "folderOpen");
+  withIcon(barPreferences, "gear");
   const boardActions = el("span", { className: "group", hidden: screen !== "home" }, importButton, folderButton);
   const boardNav = el("div", { className: "nav", hidden: screen === "file" }, boardActions, barPreferences);
   const listing = el("nav", { className: "listing", hidden: screen === "file" });
@@ -343,7 +358,7 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
     undoButton.disabled = session.file?.history.canUndo !== true;
     redoButton.disabled = session.file?.history.canRedo !== true;
     stylePanel.update();
-    propertiesEdge.hidden = stylePanel.element.hidden;
+    propertiesEdge.hidden = !panels.propertiesShown || stylePanel.element.hidden;
     const version = session.file?.history.version;
     if (session.file && version !== undefined && version !== seenVersion) {
       seenVersion = version;
@@ -444,15 +459,20 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
   };
 
   let panels: PanelWidths = readPanels(undefined);
+  const panelsShown = (): { library: boolean; properties: boolean } => ({ library: panels.libraryShown, properties: panels.propertiesShown });
   const placePanels = (): void => {
+    // The style panel sets its own `hidden`, so the author's choice is a class.
+    library.element.classList.toggle("off", !panels.libraryShown);
+    stylePanel.element.classList.toggle("off", !panels.propertiesShown);
+    libraryEdge.hidden = !panels.libraryShown;
+    propertiesEdge.hidden = !panels.propertiesShown || stylePanel.element.hidden;
     const width = stage.clientWidth;
     if (width === 0) return;
-    const fitted = fitPanels(panels.library, panels.properties, width);
+    const fitted = fitPanels(panels.library, panels.properties, width, panelsShown());
     library.element.style.width = `${String(fitted.library)}px`;
     stylePanel.element.style.width = `${String(fitted.properties)}px`;
     libraryEdge.style.left = `${String(fitted.library - 3)}px`;
     propertiesEdge.style.left = `${String(width - fitted.properties - 3)}px`;
-    propertiesEdge.hidden = stylePanel.element.hidden;
   };
   const savePanels = (): void => {
     preferenceFile = {
@@ -480,7 +500,7 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
       edge.classList.add("on");
       const origin = event.clientX;
       const target = side === "library" ? library.element : stylePanel.element;
-      const fitted = fitPanels(panels.library, panels.properties, stage.clientWidth);
+      const fitted = fitPanels(panels.library, panels.properties, stage.clientWidth, panelsShown());
       const start = side === "library" ? fitted.library : fitted.properties;
       const other = side === "library" ? fitted.properties : fitted.library;
       let next = start;
@@ -543,7 +563,7 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
     mount(gridLayer, grid.show ? describeGrid(grid.size, view.scale) : []);
   };
   const placeStatus = (): void => {
-    if (stage.hidden) {
+    if (stage.hidden || !statusShown) {
       status.hidden = true;
       return;
     }
@@ -555,6 +575,7 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
     status.hidden = fit === "hidden";
     cursor.hidden = fit !== "full";
   };
+  let statusShown = true;
   let gridReady = false;
   const setGrid = (change: Partial<GridSettings>): void => {
     grid = { ...grid, ...change };
@@ -564,6 +585,44 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
     drawGrid();
     if (gridReady) void preferences.patch({ grid: { show: grid.show, snap: grid.snap, size: grid.size } });
     placeStatus();
+  };
+
+  const applyToolbarShown = (): void => {
+    toolbar.hidden = !toolbarShown;
+    placeToolbar();
+  };
+  const layout: Layout = {
+    shown: (part) => {
+      if (part === "toolbar") return toolbarShown;
+      if (part === "status") return statusShown;
+      return panelsShown()[part];
+    },
+    setShown: (part, shown) => {
+      if (part === "toolbar") {
+        toolbarShown = shown;
+        applyToolbarShown();
+        saveToolbar();
+      } else if (part === "status") {
+        statusShown = shown;
+        placeStatus();
+        void preferences.patch({ status: { shown } });
+      } else {
+        panels = { ...panels, [`${part}Shown`]: shown };
+        placePanels();
+        placeToolbar();
+        placeStatus();
+        savePanels();
+      }
+    },
+    reset: () => {
+      panels = { ...panels, library: LIBRARY_WIDTH, properties: PROPERTIES_WIDTH };
+      placePanels();
+      savePanels();
+      toolbarOffset = { x: 0, y: 0 };
+      placeToolbar();
+      saveToolbar();
+      placeStatus();
+    },
   };
 
   const setView = (next: View): void => {
@@ -953,6 +1012,12 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
     setTool,
     canEdit: () => session.file !== null,
     openPreferences: () => { showPreferences(); },
+    toggleShown: (part) => { layout.setShown(part, !layout.shown(part)); },
+  });
+  const mac = /Mac|iPhone|iPad/.test(navigator.platform);
+  installTooltips(root, (id) => {
+    const key = actions.find((action) => action.id === id)?.key;
+    return key ? keyLabel(key, mac) : "";
   });
   addEventListener("keydown", (event) => {
     dispatchKey(actions, event, isTextEntry(event.target));
@@ -962,11 +1027,6 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
     event.preventDefault();
   });
 
-  const button = (label: string, run: () => Promise<void>): HTMLButtonElement => {
-    const item = el("button", { type: "button", textContent: label });
-    item.addEventListener("click", () => { void run(); });
-    return item;
-  };
   const dropOpenFile = (): void => {
     autosave.stop();
     textEdit.close();
@@ -1030,8 +1090,9 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
     });
     if (name !== null) await shell.open(`${name}.drawit.kdl`);
   };
-  const way = (label: string, primary = false, run?: () => Promise<void>): HTMLButtonElement => {
-    const item = el("button", { type: "button", className: primary ? "btn primary" : "btn", textContent: label });
+  const way = (name: IconName, label: string, primary = false, run?: () => Promise<void>): HTMLButtonElement => {
+    const item = el("button", { type: "button", className: primary ? "btn primary" : "btn" }, label);
+    item.prepend(icon(name));
     if (run) item.addEventListener("click", () => { void run(); });
     return item;
   };
@@ -1316,13 +1377,15 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
     listing.setAttribute("aria-label", model.title);
     if (model.diagrams.length === 0) showError(emptyFolder);
     else if (error.textContent === emptyFolder) showError(null);
-    const back = button("‹ Home", () => leaveToHome());
+    const back = el("button", { type: "button", className: "btn" }, "Home");
+    back.prepend(icon("home"));
+    back.addEventListener("click", () => { void leaveToHome(); });
     back.className = "back";
     const head = el("div", { className: "head folder" }, back, el("h2", { textContent: model.title }));
     if (model.tag !== "") head.append(el("span", { className: "tag", textContent: model.tag }));
     if (model.folderPath !== "") head.append(el("span", { className: "path", textContent: model.folderPath }));
-    head.append(way("New diagram", true, makeDiagram));
-    const add = way("+ New diagram", false, makeDiagram);
+    head.append(way("newDiagram", "New diagram", true, makeDiagram));
+    const add = way("newDiagram", "+ New diagram", false, makeDiagram);
     add.className = "card add";
     const menu = session.info.kind === "project";
     const blocks: Node[] = [head, el("div", { className: "cards" }, ...model.diagrams.map((card) => diagramCard(card, menu)), add)];
@@ -1362,14 +1425,14 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
           { className: "first-run" },
           el("h2", { textContent: "Draw your first diagram" }),
           el("p", {}, "Your projects are saved in ", el("b", { textContent: "~/DrawIt" }), " as plain text files."),
-          el("div", { className: "acts" }, way("New diagram", true, makeDraft), way("New project", false, makeProject), way("Open folder…", false, browseFor), way("Import a file", false, bringFile)),
+          el("div", { className: "acts" }, way("newDiagram", "New diagram", true, makeDraft), way("newProject", "New project", false, makeProject), way("folderOpen", "Open folder…", false, browseFor), way("import", "Import a file", false, bringFile)),
         ));
         return;
       }
-      const add = way("+ New project", false, makeProject);
+      const add = way("newProject", "+ New project", false, makeProject);
       add.className = "card add";
       const blocks: Node[] = [
-        el("div", { className: "head" }, el("h2", { textContent: "Projects" }), way("New diagram", false, makeDraft), way("New project", true, makeProject)),
+        el("div", { className: "head" }, el("h2", { textContent: "Projects" }), way("newDiagram", "New diagram", false, makeDraft), way("newProject", "New project", true, makeProject)),
         el("div", { className: "cards" }, ...model.projects.map(projectCard), add),
       ];
       if (model.recent.length > 0) {
@@ -1456,7 +1519,7 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
   };
   importButton.addEventListener("click", () => { void bringFile(); });
   folderButton.addEventListener("click", () => { void browseFor(); });
-  const showPreferences = (): void => { void openPreferences(root, preferences); };
+  const showPreferences = (): void => { void openPreferences(root, preferences, layout); };
   pillPreferences.addEventListener("click", showPreferences);
   barPreferences.addEventListener("click", showPreferences);
   pillHome.addEventListener("click", () => { void closeToLanding(); });
@@ -1477,7 +1540,8 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
   const storedToolbar = readToolbar(stored["toolbar"]);
   toolbarOffset = { x: storedToolbar.x, y: storedToolbar.y };
   toolbarShown = storedToolbar.shown;
-  placeToolbar();
+  applyToolbarShown();
+  statusShown = readStatusShown(stored["status"]);
   panels = readPanels(stored["panels"]);
   placePanels();
   setGrid(readGrid(stored["grid"]));

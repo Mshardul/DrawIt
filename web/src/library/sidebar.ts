@@ -1,4 +1,5 @@
 // A search box and the shapes by category. A tile is drawn when it scrolls into view.
+import { setTip } from "../app/tooltip.ts";
 import { mount } from "../render/mount.ts";
 import type { PackLoader } from "../shapes/pack-loader.ts";
 import type { TextMeasurer } from "../text/measure.ts";
@@ -57,7 +58,7 @@ export function createLibrarySidebar(host: LibrarySidebarHost): LibrarySidebar {
     const item = document.createElement("button");
     item.type = "button";
     item.className = "library-item";
-    item.title = entry.name;
+    setTip(item, entry.name);
     item.setAttribute("aria-label", entry.name);
     item.dataset["shape"] = entry.shape;
     item.setAttribute("aria-pressed", String(entry.shape === armed));

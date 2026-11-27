@@ -226,6 +226,7 @@
   --resizer-hover: var(--color-tint);
   --resizer-active: var(--color-accent);
   --panel-label-size: var(--font-size-tiny);
+  --arrange-columns: 6;
   --tile-height: 44px;
   --tile-radius: 5px;
   --tile-columns: 4;

@@ -1,4 +1,6 @@
 // The style panel: one row per property of the selection, built from the property registry. Every edit goes through a command and the panel is redrawn from the document.
+import { setTip } from "../app/tooltip.ts";
+import { iconButton, iconToggle } from "../app/icons.ts";
 import type { OpenFile } from "../app/workspace.ts";
 import { type Command, CommandError } from "../commands/command.ts";
 import { FONT_FAMILIES } from "../text/fonts.ts";
@@ -63,12 +65,9 @@ export function createStylePanel(host: StylePanelHost): StylePanel {
 
   const lockBox = document.createElement("input");
   lockBox.type = "checkbox";
-  lockBox.setAttribute("aria-label", "Locked");
-  const lockRow = document.createElement("label");
-  lockRow.className = "style-row lock-row";
-  lockRow.append("Locked", lockBox);
   const arrange = createArrangeGroup(host);
-  element.append(arrange.element, lockRow, geometry);
+  arrange.element.append(iconToggle(lockBox, "Locked", ["unlocked", "locked"]));
+  element.append(arrange.element, geometry);
 
   const closePickers = (): void => {
     for (const row of rows) if (row.picker) row.picker.hidden = true;
@@ -120,7 +119,7 @@ export function createStylePanel(host: StylePanelHost): StylePanel {
     const button = document.createElement("button");
     button.type = "button";
     button.ariaLabel = label;
-    button.title = label;
+    setTip(button, label);
     button.append(swatch(colour));
     button.addEventListener("click", () => { choose(row, label); });
     return button;
@@ -178,14 +177,12 @@ export function createStylePanel(host: StylePanelHost): StylePanel {
     input.setAttribute("aria-label", field.def.name);
     const clear = document.createElement("button");
     clear.type = "button";
-    clear.textContent = "Clear";
-    clear.ariaLabel = `Clear ${field.def.name}`;
+    iconButton(clear, "clear", `Clear ${field.def.name}`);
     const row: Row = { field, input, clear };
     if (field.def.type === "colour" || field.def.type === "fill") {
       const pick = document.createElement("button");
       pick.type = "button";
-      pick.textContent = "Pick";
-      pick.ariaLabel = `Pick ${field.def.name}`;
+      iconButton(pick, "pickColour", `Pick ${field.def.name}`);
       const picker = document.createElement("div");
       picker.setAttribute("role", "group");
       picker.ariaLabel = `${field.def.name} colours`;
@@ -286,7 +283,6 @@ export function createStylePanel(host: StylePanelHost): StylePanel {
         rows = fields.map(build);
         element.replaceChildren(
           arrange.element,
-          lockRow,
           geometry,
           ...rows.map((row) => {
             const label = document.createElement("label");

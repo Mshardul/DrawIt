@@ -1,4 +1,5 @@
 import { openDialog } from "./dialog.ts";
+import { LAYOUT_PARTS, PART_NAMES, type Layout } from "./layout.ts";
 import type { PreferenceStore } from "./preference-store.ts";
 
 const UNSAVED = "Preferences can't be saved. Changes last until DrawIt closes.";
@@ -9,7 +10,7 @@ type Tab = (typeof TABS)[number];
 
 let opened = 0;
 
-function build(): { element: HTMLElement; panels: HTMLElement } {
+function build(layout: Layout): { element: HTMLElement; panels: HTMLElement } {
   opened += 1;
   const prefix = `prefs-${String(opened)}`;
   const list = document.createElement("div");
@@ -55,6 +56,7 @@ function build(): { element: HTMLElement; panels: HTMLElement } {
     panel.id = `${prefix}-panel-${name}`;
     panel.setAttribute("role", "tabpanel");
     panel.setAttribute("aria-labelledby", button.id);
+    if (name === "General") panel.append(interfaceSection(layout));
     panels.set(name, panel);
     list.append(button);
     body.append(panel);
@@ -65,6 +67,36 @@ function build(): { element: HTMLElement; panels: HTMLElement } {
   wrap.className = "prefs";
   wrap.append(list, body);
   return { element: wrap, panels: body };
+}
+
+function interfaceSection(layout: Layout): HTMLElement {
+  const section = document.createElement("section");
+  const heading = document.createElement("h3");
+  heading.textContent = "Interface";
+  section.append(heading);
+  for (const part of LAYOUT_PARTS) {
+    const box = document.createElement("input");
+    box.type = "checkbox";
+    box.checked = layout.shown(part);
+    box.addEventListener("change", () => { layout.setShown(part, box.checked); });
+    const label = document.createElement("label");
+    label.className = "pref-row";
+    label.append(box, PART_NAMES[part]);
+    section.append(label);
+  }
+  const reset = document.createElement("button");
+  reset.type = "button";
+  reset.className = "btn";
+  reset.textContent = "Reset layout";
+  reset.addEventListener("click", () => { layout.reset(); });
+  const note = document.createElement("span");
+  note.className = "note";
+  note.textContent = "Panel widths and toolbar position";
+  const row = document.createElement("div");
+  row.className = "pref-row";
+  row.append(reset, note);
+  section.append(row);
+  return section;
 }
 
 /** Shows the warning at the top of the panels while the store has changes it cannot write. */
@@ -82,8 +114,8 @@ function warnWhileUnsaved(panels: HTMLElement, store: PreferenceStore): () => vo
 }
 
 /** The Preferences dialog, over whatever screen is showing. Resolves when it is closed. */
-export async function openPreferences(parent: HTMLElement, store: PreferenceStore): Promise<void> {
-  const { element, panels } = build();
+export async function openPreferences(parent: HTMLElement, store: PreferenceStore, layout: Layout): Promise<void> {
+  const { element, panels } = build(layout);
   const stop = warnWhileUnsaved(panels, store);
   await openDialog(parent, {
     title: "Preferences",

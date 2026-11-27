@@ -111,9 +111,10 @@ test("a shift drag-box adds to the selection", async ({ page }) => {
   const from = await at(page, 200, 20);
   const to = await at(page, 300, 60);
   await page.keyboard.down("Shift");
-  await page.mouse.move(from.x, from.y);
+  // Dragged from the bottom corner, which is clear of the status pill.
+  await page.mouse.move(to.x, to.y);
   await page.mouse.down();
-  await page.mouse.move(to.x, to.y, { steps: 4 });
+  await page.mouse.move(from.x, from.y, { steps: 4 });
   await page.mouse.up();
   await page.keyboard.up("Shift");
   expect(await selection(page)).toEqual(["a", "b"]);

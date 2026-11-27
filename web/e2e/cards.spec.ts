@@ -149,11 +149,11 @@ test("a library diagram renames, moves, and deletes, and asks again when there i
   await move.getByRole("option", { name: "Other" }).click();
   await move.getByRole("button", { name: "Move", exact: true }).click();
   await expect(page.getByRole("button", { name: "Vlan", exact: true })).toHaveCount(0);
-  await page.getByRole("button", { name: "‹ Home" }).click();
+  await page.getByRole("button", { name: "Home" }).click();
   await page.getByRole("button", { name: "Other", exact: true }).click();
   await expect(page.locator(".card-wrap").filter({ has: page.getByRole("button", { name: "Vlan", exact: true }) })).toBeVisible();
 
-  await page.getByRole("button", { name: "‹ Home" }).click();
+  await page.getByRole("button", { name: "Home" }).click();
   await page.getByRole("button", { name: "Demo", exact: true }).click();
   const plan = page.locator(".card-wrap").filter({ has: page.getByRole("button", { name: "plan", exact: true }) });
   await plan.getByRole("button", { name: "Actions" }).click();
@@ -168,7 +168,7 @@ test("a library diagram renames, moves, and deletes, and asks again when there i
   await expect(page.getByRole("button", { name: "plan", exact: true })).toHaveCount(0);
 
   await page.evaluate(() => { (window as unknown as { hooks: { noTrash(): void } }).hooks.noTrash(); });
-  await page.getByRole("button", { name: "‹ Home" }).click();
+  await page.getByRole("button", { name: "Home" }).click();
   await page.getByRole("button", { name: "Other", exact: true }).click();
   const kept = page.locator(".card-wrap").filter({ has: page.getByRole("button", { name: "kept", exact: true }) });
   await kept.getByRole("button", { name: "Actions" }).click();

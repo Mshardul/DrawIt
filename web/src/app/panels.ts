@@ -9,7 +9,6 @@ export const PROPERTIES_WIDTH = 200;
 export interface PanelWidths {
   library: number;
   properties: number;
-  /** Stored for a later preference. The panel stays open. */
   libraryShown: boolean;
   propertiesShown: boolean;
 }
@@ -31,9 +30,18 @@ export function readPanels(value: unknown): PanelWidths {
 }
 
 /** Widths to draw. A narrow window shrinks the panels toward 180 before the canvas goes under 480. */
-export function fitPanels(library: number, properties: number, windowWidth: number): { library: number; properties: number } {
+export function fitPanels(
+  library: number,
+  properties: number,
+  windowWidth: number,
+  shown = { library: true, properties: true },
+): { library: number; properties: number } {
   const lib = clampWidth(library, LIBRARY_WIDTH);
   const prop = clampWidth(properties, PROPERTIES_WIDTH);
+  if (!shown.library || !shown.properties) {
+    const alone = (width: number): number => Math.max(PANEL_MIN, Math.min(width, windowWidth - CANVAS_MIN));
+    return { library: shown.library ? alone(lib) : 0, properties: shown.properties ? alone(prop) : 0 };
+  }
   const overflow = lib + prop + CANVAS_MIN - windowWidth;
   if (overflow <= 0) return { library: lib, properties: prop };
   const roomL = lib - PANEL_MIN;

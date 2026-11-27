@@ -133,9 +133,10 @@ test("a drag-box over part of an edge selects the edge", async ({ page }) => {
   const r = await page.locator(".canvas").boundingBox();
   const x = r?.x ?? 0;
   const y = r?.y ?? 0;
-  await page.mouse.move(x + 220, y + 40);
+  // Dragged from the bottom corner, which is clear of the status pill.
+  await page.mouse.move(x + 260, y + 90);
   await page.mouse.down();
-  await page.mouse.move(x + 260, y + 90, { steps: 5 });
+  await page.mouse.move(x + 220, y + 40, { steps: 5 });
   await page.mouse.up();
   expect(await selection(page)).toEqual(["a->b"]);
 });

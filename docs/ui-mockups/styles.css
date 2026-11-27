@@ -184,3 +184,12 @@ input.f.bad { border-color: var(--color-danger); outline: var(--outline-width) s
 .hint-moved { left: var(--hint-x); top: var(--hint-y); }
 .hint-edge { left: calc(100% + var(--hint-edge-gap)); top: 50%; }
 .notice { position: absolute; left: 50%; transform: translateX(-50%); top: var(--notice-top); width: var(--notice-width); background: var(--color-warn-bg); border: var(--border-width) solid var(--color-warn-line); color: var(--color-warn); border-radius: var(--radius-xl); box-shadow: var(--shadow-notice); padding: var(--notice-pad-y) var(--notice-pad-x); display: flex; gap: var(--space-4); align-items: center; z-index: var(--z-notice); }
+.btn.ib { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-3); }
+.ic .fl { fill: currentColor; }
+.arr { display: grid; grid-template-columns: repeat(var(--arrange-columns), var(--pill-button-icon)); gap: var(--tile-gap); margin-bottom: var(--space-5); }
+.fr { display: flex; align-items: center; gap: var(--space-1); }
+.fr b { flex: 1; }
+.arr .t { width: var(--pill-button-icon); height: var(--pill-button-icon); }
+.isheet { display: grid; grid-template-columns: repeat(var(--grid-cols), 1fr); gap: var(--space-4); }
+.icell { display: flex; align-items: center; gap: var(--space-5); }
+.ibox { width: var(--pill-button); height: var(--pill-button); display: flex; align-items: center; justify-content: center; border: var(--border-width) solid var(--color-line); border-radius: var(--tile-radius); flex: none; }

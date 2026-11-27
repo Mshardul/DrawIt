@@ -27,6 +27,11 @@ export function readGrid(value: unknown): GridSettings {
   };
 }
 
+/** The status entry in the preferences file. */
+export function readStatusShown(value: unknown): boolean {
+  return typeof value !== "object" || value === null || (value as Record<string, unknown>)["shown"] !== false;
+}
+
 /** Full when both pills fit with `inset` between them, short without the cursor, hidden when neither fits. */
 export function statusFit(stageWidth: number, fullWidth: number, shortWidth: number, fileWidth: number, inset = PILL_INSET): StatusFit {
   const room = stageWidth - fileWidth - inset * 3;

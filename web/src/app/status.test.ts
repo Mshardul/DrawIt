@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PILL_INSET, readGrid, statusFit } from "./status.ts";
+import { PILL_INSET, readGrid, readStatusShown, statusFit } from "./status.ts";
 
 describe("status pill fit", () => {
   it("shows the cursor when both pills fit with the inset between them", () => {
@@ -28,5 +28,13 @@ describe("grid preferences", () => {
   it("keeps a stored grid and ignores a size the pill does not offer", () => {
     expect(readGrid({ show: true, snap: true, size: 16 })).toEqual({ show: true, snap: true, size: 16 });
     expect(readGrid({ show: "yes", size: 12 })).toEqual({ show: false, snap: false, size: 8 });
+  });
+});
+
+describe("status pill visibility", () => {
+  it("is shown unless the stored flag says otherwise", () => {
+    expect(readStatusShown(undefined)).toBe(true);
+    expect(readStatusShown({ shown: "no" })).toBe(true);
+    expect(readStatusShown({ shown: false })).toBe(false);
   });
 });

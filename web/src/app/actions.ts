@@ -1,3 +1,4 @@
+import { LAYOUT_PARTS, PART_NAMES, type LayoutPart } from "./layout.ts";
 import type { Tool } from "./tool.ts";
 
 export interface ActionKey {
@@ -43,6 +44,7 @@ export interface ActionHost {
   setTool(tool: Tool): void;
   canEdit(): boolean;
   openPreferences(): void;
+  toggleShown(part: LayoutPart): void;
 }
 
 function chordsOf(action: Action): readonly ActionKey[] {
@@ -104,5 +106,11 @@ export function editorActions(host: ActionHost): Action[] {
     tool("tool-text", "Text", "t", "text"),
     tool("tool-image", "Image", "i", "image"),
     { id: "preferences", title: "Preferences…", enabled: always, run: () => { host.openPreferences(); } },
+    ...LAYOUT_PARTS.map((part): Action => ({
+      id: `toggle-${part}`,
+      title: `Toggle ${PART_NAMES[part].toLowerCase()}`,
+      enabled: always,
+      run: () => { host.toggleShown(part); },
+    })),
   ];
 }

@@ -1,5 +1,6 @@
 // The Arrange group of the right panel: align, distribute and stacking buttons for the selection. It
 // holds no state; each button is enabled from the document and runs one command.
+import { iconButton, type IconName } from "../app/icons.ts";
 import type { OpenFile } from "../app/workspace.ts";
 import { type Command, CommandError } from "../commands/command.ts";
 import { ALIGN_MODES, alignCommand, arrangeAvailability, AXES, distributeCommand } from "../edit/arrange.ts";
@@ -27,6 +28,20 @@ const alignName: Record<AlignMode, string> = {
   top: "Align top",
   middle: "Align middle",
   bottom: "Align bottom",
+};
+
+const alignIcon: Record<AlignMode, IconName> = {
+  left: "alignLeft",
+  centre: "alignCentre",
+  right: "alignRight",
+  top: "alignTop",
+  middle: "alignMiddle",
+  bottom: "alignBottom",
+};
+
+const distributeIcon: Record<Axis, IconName> = {
+  horizontal: "distributeH",
+  vertical: "distributeV",
 };
 
 const distributeName: Record<Axis, string> = {
@@ -58,26 +73,25 @@ export function createArrangeGroup(host: ArrangeHost): ArrangeGroup {
     host.refresh();
   };
 
-  const button = (name: string, build: (file: OpenFile) => Command | null): HTMLButtonElement => {
+  const button = (glyph: IconName, name: string, build: (file: OpenFile) => Command | null): HTMLButtonElement => {
     const b = document.createElement("button");
     b.type = "button";
-    b.textContent = name;
-    b.setAttribute("aria-label", name);
+    iconButton(b, glyph, name);
     b.addEventListener("click", () => { run(build); });
     return b;
   };
 
   const aligns = ALIGN_MODES.map((mode) => ({
     mode,
-    button: button(alignName[mode], (f) => alignCommand(f.document, host.measurer, f.history.selection, mode)),
+    button: button(alignIcon[mode], alignName[mode], (f) => alignCommand(f.document, host.measurer, f.history.selection, mode)),
   }));
   const distributes = AXES.map((axis) => ({
     axis,
-    button: button(distributeName[axis], (f) => distributeCommand(f.document, host.measurer, f.history.selection, axis)),
+    button: button(distributeIcon[axis], distributeName[axis], (f) => distributeCommand(f.document, host.measurer, f.history.selection, axis)),
   }));
   const stacks = (["front", "back"] as const).map((to) => ({
     to,
-    button: button(stackName[to], (f) => stackCommand(f.document, f.history.selection, to)),
+    button: button(to === "front" ? "toFront" : "toBack", stackName[to], (f) => stackCommand(f.document, f.history.selection, to)),
   }));
   element.append(...aligns.map((a) => a.button), ...distributes.map((d) => d.button), ...stacks.map((s) => s.button));
 

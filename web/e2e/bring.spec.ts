@@ -48,7 +48,7 @@ test("import copies a diagram into a project and refuses one that does not parse
   await page.getByRole("button", { name: "Demo", exact: true }).click();
   await expect(page.getByRole("button", { name: "pitch", exact: true })).toBeVisible();
 
-  await page.getByRole("button", { name: "‹ Home" }).click();
+  await page.getByRole("button", { name: "Home" }).click();
   await page.locator(".bar").getByRole("button", { name: "Import", exact: true }).click();
   await dialog.locator("input[type=file]").setInputFiles({ name: "network.drawit.kdl", mimeType: "text/plain", buffer: Buffer.from(good) });
   await dialog.getByRole("button", { name: "Import", exact: true }).click();
@@ -103,7 +103,7 @@ test("the folder browser lists, makes a folder, and opens a folder or a file", a
   await expect(page.getByText("Opened folder")).toBeVisible();
   await expect(page.getByRole("button", { name: "architecture", exact: true })).toBeVisible();
 
-  await page.getByRole("button", { name: "‹ Home" }).click();
+  await page.getByRole("button", { name: "Home" }).click();
   await page.locator(".bar").getByRole("button", { name: "Open folder…" }).click();
   await browser.getByRole("button", { name: "Enter work" }).click();
   await browser.getByRole("button", { name: "Enter docs" }).click();

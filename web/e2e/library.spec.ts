@@ -58,7 +58,7 @@ test("a preview is drawn for a visible entry", async ({ page }) => {
 
 test("shapes are tiles, four to a row, with the name on hover and not written under the drawing", async ({ page }) => {
   const tile = item(page, "Rounded rectangle");
-  await expect(tile).toHaveAttribute("title", "Rounded rectangle");
+  await expect(tile).toHaveAttribute("data-tip", "Rounded rectangle");
   await expect(tile).toHaveText("");
   await expect(tile).toHaveCSS("height", "44px");
   const tiles = library(page).locator("section").first().getByRole("button");

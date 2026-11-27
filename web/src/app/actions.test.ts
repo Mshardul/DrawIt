@@ -19,6 +19,7 @@ function host(over: Partial<ActionHost> = {}): ActionHost & { ran: string[] } {
     setTool: (tool: string) => { ran.push(tool); },
     canEdit: () => true,
     openPreferences: call("preferences"),
+    toggleShown: (part: string) => { ran.push(`toggle ${part}`); },
     ...over,
   };
 }
@@ -28,10 +29,12 @@ describe("editor actions", () => {
     expect(editorActions(host()).map((action) => action.id)).toEqual([
       "save", "undo", "redo", "grid", "snap", "zoom-in", "zoom-out", "zoom-reset", "zoom-fit", "zoom-selection",
       "tool-select", "tool-hand", "tool-line", "tool-arrow", "tool-frame", "tool-rect", "tool-ellipse", "tool-text", "tool-image", "preferences",
+      "toggle-library", "toggle-properties", "toggle-toolbar", "toggle-status",
     ]);
     expect(editorActions(host()).map((action) => action.title)).toEqual([
       "Save", "Undo", "Redo", "Grid", "Snap", "Zoom in", "Zoom out", "Reset zoom", "Zoom to fit", "Zoom to selection",
       "Select", "Hand", "Line", "Arrow", "Frame", "Rectangle", "Ellipse", "Text", "Image", "Preferences…",
+      "Toggle library panel", "Toggle properties panel", "Toggle toolbar", "Toggle status pill",
     ]);
   });
 
@@ -42,6 +45,17 @@ describe("editor actions", () => {
     expect(preferences?.enabled()).toBe(true);
     preferences?.run();
     expect(target.ran).toEqual(["preferences"]);
+  });
+
+  it("toggles each panel, the toolbar and the status pill from a key-less action", () => {
+    const target = host({ canEdit: () => false });
+    const toggles = editorActions(target).filter((action) => action.id.startsWith("toggle-"));
+    for (const action of toggles) {
+      expect(action.key).toBeUndefined();
+      expect(action.enabled()).toBe(true);
+      action.run();
+    }
+    expect(target.ran).toEqual(["toggle library", "toggle properties", "toggle toolbar", "toggle status"]);
   });
 
   it("runs the action whose key matches", () => {
