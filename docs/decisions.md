@@ -260,6 +260,6 @@ Why DrawIt works the way it does. The spec states what DrawIt does; this file re
 |---|---|---|
 | O1 | Should named connection ports become a structure-level feature, and when? | Open |
 | O2 | Should the diff detect renamed IDs by matching labels and properties? | Open; renames show as remove plus add when visual diff ships |
-| O3 | Should a trackpad pinch zoom in Safari, which reports it as gesture events and not as a wheel event with Ctrl held? | Open; needs a check on a real Mac |
+| O3 | Should a trackpad pinch zoom in Safari, which reports it as gesture events and not as a wheel event with Ctrl held? | Yes: Safari sends `gesturestart` / `gesturechange` / `gestureend` for a pinch; DrawIt zooms from those and always zooms for a pinch. Chromium and Firefox send a wheel with Ctrl for a pinch, which already zooms when the wheel mode is pan |
 | O4 | Should right-click and two-finger click open an app menu with the selection's commands, and how does it sit with Ctrl-click meaning add to selection on macOS? | Open |
 | O5 | Should the canvas stop a two-finger horizontal swipe from navigating back while panning? | Open; `overscroll-behavior: none` is the likely fix |

@@ -81,6 +81,17 @@ test("ctrl plus wheel zooms about the cursor", async ({ page }) => {
   expect(box?.width).toBeGreaterThan(before?.width ?? Infinity);
 });
 
+test("with wheel set to zoom, a plain wheel zooms and ctrl plus wheel pans", async ({ page }) => {
+  await page.getByRole("button", { name: "Preferences" }).click();
+  await page.getByRole("dialog", { name: "Preferences" }).getByRole("radio", { name: "Zooms the view; Ctrl+wheel pans" }).check();
+  await page.getByRole("dialog", { name: "Preferences" }).getByRole("button", { name: "Done" }).click();
+  await wheel(page, { deltaY: -100 });
+  expect((await view(page)).scale).toBeGreaterThan(1);
+  await page.evaluate(() => { (window as unknown as { hooks: Hooks }).hooks.setView({ x: 0, y: 0, scale: 1 }); });
+  await wheel(page, { deltaX: 20, deltaY: 40, ctrlKey: true });
+  expect(await view(page)).toEqual({ x: -20, y: -40, scale: 1 });
+});
+
 test("space plus drag pans, and releasing space stops it", async ({ page }) => {
   await page.mouse.move(300, 300);
   await page.keyboard.down("Space");

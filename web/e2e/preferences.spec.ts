@@ -239,3 +239,43 @@ test("the visibility choices are written to the preferences file", async ({ page
     return [stored["panels"]?.["libraryShown"], stored["panels"]?.["propertiesShown"], stored["toolbar"]?.["shown"], stored["status"]?.["shown"]];
   })).toEqual([false, false, false, false]);
 });
+
+test("Canvas Show grid and Snap to grid match the status pill and apply at once", async ({ page }) => {
+  await start(page, "file");
+  await page.getByRole("button", { name: "Preferences" }).click();
+  await expect(dialog(page).getByRole("checkbox", { name: "Show grid" })).not.toBeChecked();
+  await dialog(page).getByRole("checkbox", { name: "Show grid" }).check();
+  await expect(page.getByLabel("Grid", { exact: true })).toBeChecked();
+  await expect(page.locator(".canvas pattern")).toHaveCount(1);
+  await dialog(page).getByRole("checkbox", { name: "Snap to grid" }).check();
+  await expect(page.getByLabel("Snap", { exact: true })).toBeChecked();
+});
+
+test("Canvas Grid size replaces the status pill control and accepts sizes from 4 to 128", async ({ page }) => {
+  await start(page, "file");
+  await expect(page.locator(".stage .status").getByLabel("Grid size")).toHaveCount(0);
+  await page.getByLabel("Grid", { exact: true }).check();
+  await page.getByRole("button", { name: "Preferences" }).click();
+  const size = dialog(page).getByLabel("Grid size");
+  await expect(size).toHaveValue("8");
+  await size.fill("12");
+  await size.blur();
+  await expect(page.locator(".canvas pattern")).toHaveAttribute("width", "12");
+  await size.fill("200");
+  await size.blur();
+  await expect(size).toHaveValue("12");
+});
+
+test("Canvas Mouse wheel chooses pan or zoom and is written to preferences", async ({ page }) => {
+  await startUnwritable(page);
+  await page.evaluate(() => { (window as unknown as { hooks: { fix(): void } }).hooks.fix(); });
+  await page.getByRole("button", { name: "Demo" }).click();
+  await page.getByRole("button", { name: "network" }).first().click();
+  await page.getByRole("button", { name: "Preferences" }).click();
+  await expect(dialog(page).getByRole("radio", { name: "Pans the view; Ctrl+wheel zooms" })).toBeChecked();
+  await dialog(page).getByRole("radio", { name: "Zooms the view; Ctrl+wheel pans" }).check();
+  await expect.poll(() => page.evaluate(async () => {
+    const stored = await (window as unknown as { hooks: { file(): Promise<{ wheel?: { mode?: string } }> } }).hooks.file();
+    return stored.wheel?.mode;
+  })).toBe("zoom");
+});

@@ -8,6 +8,9 @@ const FIT_MARGIN = 48;
 /** Zoom per wheel delta unit for a pinch: a trackpad pinch reports small deltas, a mouse wheel notch about 100. */
 const PINCH_RATE = 0.01;
 
+/** What a plain mouse wheel does; Ctrl+wheel does the other. */
+export type WheelMode = "pan" | "zoom";
+
 export interface WheelInput {
   deltaX: number;
   deltaY: number;
@@ -17,9 +20,11 @@ export interface WheelInput {
   y: number;
 }
 
-/** Plain wheel pans; ctrl plus wheel (also what a trackpad pinch sends) zooms about the cursor. */
-export function wheelView(view: View, wheel: WheelInput): View {
-  if (wheel.ctrlKey) return zoomAt(view, { x: wheel.x, y: wheel.y }, Math.exp(-wheel.deltaY * PINCH_RATE));
+/** Plain wheel follows `mode`; Ctrl+wheel does the other. A trackpad pinch arrives as Ctrl+wheel in Chromium and Firefox. */
+export function wheelView(view: View, wheel: WheelInput, mode: WheelMode = "pan"): View {
+  if ((mode === "zoom") !== wheel.ctrlKey) {
+    return zoomAt(view, { x: wheel.x, y: wheel.y }, Math.exp(-wheel.deltaY * PINCH_RATE));
+  }
   return panBy(view, -wheel.deltaX, -wheel.deltaY);
 }
 
@@ -49,6 +54,8 @@ export interface ViewInputHost {
   setView(view: View): void;
   /** When this is the hand tool, the primary button pans. */
   getTool?(): string;
+  /** Plain wheel pan or zoom; read on each event so Preferences applies at once. */
+  getWheelMode?(): WheelMode;
 }
 
 const isTyping = (event: Event): boolean => {
@@ -56,11 +63,19 @@ const isTyping = (event: Event): boolean => {
   return t instanceof HTMLInputElement || t instanceof HTMLSelectElement || t instanceof HTMLTextAreaElement;
 };
 
+/** WebKit pinch: scale relative to gesture start. */
+interface GestureEventLike extends Event {
+  scale: number;
+  clientX: number;
+  clientY: number;
+}
+
 /** Wires wheel, space-drag and middle-drag to `host`. Returns a function that removes them. */
 export function attachViewInput(host: ViewInputHost): () => void {
   const { target } = host;
   let spaceDown = false;
   let panning: { pointer: number; x: number; y: number } | null = null;
+  let gestureScale = 1;
 
   const local = (event: { clientX: number; clientY: number }): Pt => {
     const r = target.getBoundingClientRect();
@@ -77,8 +92,25 @@ export function attachViewInput(host: ViewInputHost): () => void {
         deltaY: event.deltaY * unit,
         ctrlKey: event.ctrlKey,
         ...local(event),
-      }),
+      }, host.getWheelMode?.() ?? "pan"),
     );
+  };
+  // Safari reports a trackpad pinch as gesture events, not as Ctrl+wheel.
+  const onGestureStart = (event: Event): void => {
+    event.preventDefault();
+    gestureScale = (event as GestureEventLike).scale || 1;
+  };
+  const onGestureChange = (event: Event): void => {
+    event.preventDefault();
+    const gesture = event as GestureEventLike;
+    const next = gesture.scale || 1;
+    const factor = next / gestureScale;
+    gestureScale = next;
+    if (factor !== 1) host.setView(zoomAt(host.getView(), local(gesture), factor));
+  };
+  const onGestureEnd = (event: Event): void => {
+    event.preventDefault();
+    gestureScale = 1;
   };
   const onKeyDown = (event: KeyboardEvent): void => {
     if (isTyping(event) || event.code !== "Space") return;
@@ -110,6 +142,9 @@ export function attachViewInput(host: ViewInputHost): () => void {
 
   // Capture phase on the target so a pan gesture runs before tools attached later.
   target.addEventListener("wheel", onWheel, { passive: false });
+  target.addEventListener("gesturestart", onGestureStart, { passive: false });
+  target.addEventListener("gesturechange", onGestureChange, { passive: false });
+  target.addEventListener("gestureend", onGestureEnd, { passive: false });
   target.addEventListener("pointerdown", onPointerDown, { capture: true });
   target.addEventListener("pointermove", onPointerMove);
   target.addEventListener("pointerup", onPointerEnd);
@@ -118,6 +153,9 @@ export function attachViewInput(host: ViewInputHost): () => void {
   addEventListener("keyup", onKeyUp);
   return () => {
     target.removeEventListener("wheel", onWheel);
+    target.removeEventListener("gesturestart", onGestureStart);
+    target.removeEventListener("gesturechange", onGestureChange);
+    target.removeEventListener("gestureend", onGestureEnd);
     target.removeEventListener("pointerdown", onPointerDown, { capture: true });
     target.removeEventListener("pointermove", onPointerMove);
     target.removeEventListener("pointerup", onPointerEnd);

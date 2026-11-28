@@ -61,13 +61,13 @@ async function drag(page: Page, from: [number, number], to: [number, number], ke
   if (key) await page.keyboard.up(key);
 }
 
-test("the status pill shows the zoom and has Grid, Snap and Grid size controls", async ({ page }) => {
+test("the status pill shows the zoom and has Grid and Snap toggles", async ({ page }) => {
   const pill = page.locator(".stage .status");
   const file = page.locator(".stage > .pill:not(.status)");
   await expect(pill.locator(".zoom")).toHaveText("100%");
   await expect(page.getByLabel("Grid", { exact: true })).not.toBeChecked();
   await expect(page.getByLabel("Snap", { exact: true })).not.toBeChecked();
-  await expect(page.getByLabel("Grid size")).toHaveValue("8");
+  await expect(pill.getByLabel("Grid size")).toHaveCount(0);
   const statusBox = await pill.boundingBox();
   const fileBox = await file.boundingBox();
   expect(statusBox && fileBox && statusBox.x < fileBox.x).toBe(true);
@@ -76,6 +76,14 @@ test("the status pill shows the zoom and has Grid, Snap and Grid size controls",
   await page.getByRole("button", { name: "Zoom out" }).click();
   await expect(pill.locator(".zoom")).toHaveText("100%");
 });
+
+async function setGridSize(page: Page, size: string): Promise<void> {
+  await page.getByRole("button", { name: "Preferences" }).click();
+  const dialog = page.getByRole("dialog", { name: "Preferences" });
+  await dialog.getByLabel("Grid size").fill(size);
+  await dialog.getByLabel("Grid size").blur();
+  await dialog.getByRole("button", { name: "Done" }).click();
+}
 
 test("the zoom readout follows the view", async ({ page }) => {
   await page.keyboard.press("ControlOrMeta+=");
@@ -91,7 +99,7 @@ test("the cursor readout follows the pointer in world coordinates", async ({ pag
 test("grid and snap are kept in preferences and restored", async ({ page }) => {
   await page.getByLabel("Grid", { exact: true }).check();
   await page.getByLabel("Snap", { exact: true }).check();
-  await page.getByLabel("Grid size").selectOption("32");
+  await setGridSize(page, "32");
   await expect.poll(async () => page.evaluate(() => (window as unknown as { hooks: Hooks }).hooks.prefs())).toMatchObject({
     grid: { show: true, snap: true, size: 32 },
   });
@@ -108,7 +116,8 @@ test("grid and snap are kept in preferences and restored", async ({ page }) => {
   }, file);
   await expect(page.getByLabel("Grid", { exact: true })).toBeChecked();
   await expect(page.getByLabel("Snap", { exact: true })).not.toBeChecked();
-  await expect(page.getByLabel("Grid size")).toHaveValue("16");
+  await page.getByRole("button", { name: "Preferences" }).click();
+  await expect(page.getByRole("dialog", { name: "Preferences" }).getByLabel("Grid size")).toHaveValue("16");
 });
 
 test("a narrow canvas drops the cursor and a narrower one hides the pill", async ({ page }) => {
@@ -125,7 +134,7 @@ test("the Grid toggle draws and removes the grid, and changing the size changes 
   await expect(page.locator(".canvas pattern")).toHaveCount(0);
   await page.getByLabel("Grid", { exact: true }).check();
   await expect(page.locator(".canvas pattern")).toHaveAttribute("width", "8");
-  await page.getByLabel("Grid size").selectOption("16");
+  await setGridSize(page, "16");
   await expect(page.locator(".canvas pattern")).toHaveAttribute("width", "16");
   await page.getByLabel("Grid", { exact: true }).uncheck();
   await expect(page.locator(".canvas pattern")).toHaveCount(0);
@@ -161,7 +170,7 @@ test("with snap on a drag lands the top-left corner on the grid, in one undo ste
 
 test("the snap follows the grid size", async ({ page }) => {
   await page.getByLabel("Snap", { exact: true }).check();
-  await page.getByLabel("Grid size").selectOption("16");
+  await setGridSize(page, "16");
   await drag(page, [90, 65], [103, 78]);
   expect(await layout(page, "a")).toMatchObject({ x: 48, y: 48 });
 });

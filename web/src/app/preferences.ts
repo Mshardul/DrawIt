@@ -1,6 +1,12 @@
 import { openDialog } from "./dialog.ts";
 import { LAYOUT_PARTS, PART_NAMES, type Layout } from "./layout.ts";
 import type { PreferenceStore } from "./preference-store.ts";
+import {
+  GRID_SIZE_MAX,
+  GRID_SIZE_MIN,
+  parseGridSize,
+  type CanvasPrefs,
+} from "./status.ts";
 
 const UNSAVED = "Preferences can't be saved. Changes last until DrawIt closes.";
 
@@ -10,7 +16,7 @@ type Tab = (typeof TABS)[number];
 
 let opened = 0;
 
-function build(layout: Layout): { element: HTMLElement; panels: HTMLElement } {
+function build(layout: Layout, canvas: CanvasPrefs): { element: HTMLElement; panels: HTMLElement } {
   opened += 1;
   const prefix = `prefs-${String(opened)}`;
   const list = document.createElement("div");
@@ -56,7 +62,9 @@ function build(layout: Layout): { element: HTMLElement; panels: HTMLElement } {
     panel.id = `${prefix}-panel-${name}`;
     panel.setAttribute("role", "tabpanel");
     panel.setAttribute("aria-labelledby", button.id);
-    if (name === "General") panel.append(interfaceSection(layout));
+    if (name === "General") {
+      panel.append(interfaceSection(layout), canvasSection(canvas, prefix));
+    }
     panels.set(name, panel);
     list.append(button);
     body.append(panel);
@@ -99,6 +107,73 @@ function interfaceSection(layout: Layout): HTMLElement {
   return section;
 }
 
+function checkRow(label: string, checked: boolean, onChange: (on: boolean) => void): HTMLElement {
+  const box = document.createElement("input");
+  box.type = "checkbox";
+  box.checked = checked;
+  box.addEventListener("change", () => { onChange(box.checked); });
+  const row = document.createElement("label");
+  row.className = "pref-row";
+  row.append(box, label);
+  return row;
+}
+
+function canvasSection(canvas: CanvasPrefs, prefix: string): HTMLElement {
+  const section = document.createElement("section");
+  const heading = document.createElement("h3");
+  heading.textContent = "Canvas";
+  const grid = canvas.grid();
+  section.append(
+    heading,
+    checkRow("Show grid", grid.show, (show) => { canvas.setGrid({ show }); }),
+    checkRow("Snap to grid", grid.snap, (snap) => { canvas.setGrid({ snap }); }),
+  );
+
+  const size = document.createElement("input");
+  size.type = "number";
+  size.className = "num";
+  size.min = String(GRID_SIZE_MIN);
+  size.max = String(GRID_SIZE_MAX);
+  size.step = "1";
+  size.value = String(grid.size);
+  size.setAttribute("aria-label", "Grid size");
+  size.addEventListener("change", () => {
+    const next = parseGridSize(Number(size.value));
+    size.value = String(next ?? canvas.grid().size);
+    if (next !== null) canvas.setGrid({ size: next });
+  });
+  const unit = document.createElement("span");
+  unit.className = "note";
+  unit.textContent = "px";
+  const sizeRow = document.createElement("label");
+  sizeRow.className = "pref-row";
+  sizeRow.append("Grid size", size, unit);
+
+  const wheelLabel = document.createElement("div");
+  wheelLabel.className = "note pref-row";
+  wheelLabel.textContent = "Mouse wheel";
+  section.append(sizeRow, wheelLabel);
+
+  const group = `${prefix}-wheel`;
+  const current = canvas.wheel();
+  for (const [mode, text] of [
+    ["pan", "Pans the view; Ctrl+wheel zooms"],
+    ["zoom", "Zooms the view; Ctrl+wheel pans"],
+  ] as const) {
+    const radio = document.createElement("input");
+    radio.type = "radio";
+    radio.name = group;
+    radio.value = mode;
+    radio.checked = current === mode;
+    radio.addEventListener("change", () => { canvas.setWheel(mode); });
+    const row = document.createElement("label");
+    row.className = "pref-row";
+    row.append(radio, text);
+    section.append(row);
+  }
+  return section;
+}
+
 /** Shows the warning at the top of the panels while the store has changes it cannot write. */
 function warnWhileUnsaved(panels: HTMLElement, store: PreferenceStore): () => void {
   const warning = document.createElement("div");
@@ -114,8 +189,13 @@ function warnWhileUnsaved(panels: HTMLElement, store: PreferenceStore): () => vo
 }
 
 /** The Preferences dialog, over whatever screen is showing. Resolves when it is closed. */
-export async function openPreferences(parent: HTMLElement, store: PreferenceStore, layout: Layout): Promise<void> {
-  const { element, panels } = build(layout);
+export async function openPreferences(
+  parent: HTMLElement,
+  store: PreferenceStore,
+  layout: Layout,
+  canvas: CanvasPrefs,
+): Promise<void> {
+  const { element, panels } = build(layout, canvas);
   const stop = warnWhileUnsaved(panels, store);
   await openDialog(parent, {
     title: "Preferences",

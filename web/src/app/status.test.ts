@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PILL_INSET, readGrid, readStatusShown, statusFit } from "./status.ts";
+import { PILL_INSET, readGrid, readStatusShown, readWheel, statusFit } from "./status.ts";
 
 describe("status pill fit", () => {
   it("shows the cursor when both pills fit with the inset between them", () => {
@@ -25,9 +25,29 @@ describe("grid preferences", () => {
     expect(readGrid(undefined)).toEqual({ show: false, snap: false, size: 8 });
   });
 
-  it("keeps a stored grid and ignores a size the pill does not offer", () => {
+  it("keeps a stored grid and any whole size from 4 to 128", () => {
     expect(readGrid({ show: true, snap: true, size: 16 })).toEqual({ show: true, snap: true, size: 16 });
-    expect(readGrid({ show: "yes", size: 12 })).toEqual({ show: false, snap: false, size: 8 });
+    expect(readGrid({ show: true, snap: false, size: 12 })).toEqual({ show: true, snap: false, size: 12 });
+    expect(readGrid({ size: 4 })).toEqual({ show: false, snap: false, size: 4 });
+    expect(readGrid({ size: 128 })).toEqual({ show: false, snap: false, size: 128 });
+  });
+
+  it("falls back when show, snap or size is not valid", () => {
+    expect(readGrid({ show: "yes", size: 12.5 })).toEqual({ show: false, snap: false, size: 8 });
+    expect(readGrid({ size: 3 })).toEqual({ show: false, snap: false, size: 8 });
+    expect(readGrid({ size: 129 })).toEqual({ show: false, snap: false, size: 8 });
+  });
+});
+
+describe("wheel preferences", () => {
+  it("pans by default", () => {
+    expect(readWheel(undefined)).toBe("pan");
+    expect(readWheel({ mode: "nope" })).toBe("pan");
+  });
+
+  it("keeps a stored pan or zoom mode", () => {
+    expect(readWheel({ mode: "pan" })).toBe("pan");
+    expect(readWheel({ mode: "zoom" })).toBe("zoom");
   });
 });
 

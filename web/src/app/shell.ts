@@ -42,7 +42,17 @@ import { createTextMeasurer } from "../text/measure.ts";
 import { createTextCommand, newTextId } from "../text/target.ts";
 import { attachViewInput, ZOOM_STEP } from "../view/input.ts";
 import { documentBounds, IDENTITY, screenToWorld, type View, viewTransform, zoomAt, zoomToBounds, zoomToFit } from "../view/view.ts";
-import { GRID_SIZES, readGrid, readStatusShown, statusFit, type GridSettings } from "./status.ts";
+import {
+  DEFAULT_GRID,
+  DEFAULT_WHEEL,
+  readGrid,
+  readStatusShown,
+  readWheel,
+  statusFit,
+  type CanvasPrefs,
+  type GridSettings,
+  type WheelMode,
+} from "./status.ts";
 import { autosaveOn, createAutosave } from "./autosave.ts";
 import { replaceFromDisk, watchChanges } from "./changes.ts";
 import { cardFace, ThumbnailCache, type CardFace } from "./thumbnail.ts";
@@ -199,7 +209,6 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
   const cursor = el("span", { className: "cursor" });
   const gridToggle = el("input", { type: "checkbox" });
   const snapToggle = el("input", { type: "checkbox" });
-  const gridSize = el("select", { ariaLabel: "Grid size" }, ...GRID_SIZES.map((n) => el("option", { value: String(n), textContent: String(n) })));
   const status = el(
     "div",
     { className: "pill status", hidden: screen !== "file" },
@@ -209,7 +218,6 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
     cursor,
     iconToggle(gridToggle, "Grid", ["grid"], "grid"),
     iconToggle(snapToggle, "Snap", ["snap"], "snap"),
-    el("label", {}, "Grid size", gridSize),
   );
   const colours: ColourStore = {
     load: () => {
@@ -288,7 +296,7 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
   let draft: Point[] | null = null;
   // The box of a shape being sized, drawn like the drag-box.
   let shapeDraft: Box | null = null;
-  let grid: GridSettings = { show: false, snap: false, size: 8 };
+  let grid: GridSettings = DEFAULT_GRID;
   // A drag draws this copy of the document; the file's own document changes only on release.
   let preview: DiagramDocument | null = null;
   let opening = Promise.resolve();
@@ -576,15 +584,25 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
     cursor.hidden = fit !== "full";
   };
   let statusShown = true;
-  let gridReady = false;
+  let prefsReady = false;
+  let wheelMode: WheelMode = DEFAULT_WHEEL;
   const setGrid = (change: Partial<GridSettings>): void => {
     grid = { ...grid, ...change };
     gridToggle.checked = grid.show;
     snapToggle.checked = grid.snap;
-    gridSize.value = String(grid.size);
     drawGrid();
-    if (gridReady) void preferences.patch({ grid: { show: grid.show, snap: grid.snap, size: grid.size } });
+    if (prefsReady) void preferences.patch({ grid: { show: grid.show, snap: grid.snap, size: grid.size } });
     placeStatus();
+  };
+  const setWheel = (mode: WheelMode): void => {
+    wheelMode = mode;
+    if (prefsReady) void preferences.patch({ wheel: { mode } });
+  };
+  const canvasPrefs: CanvasPrefs = {
+    grid: () => grid,
+    setGrid,
+    wheel: () => wheelMode,
+    setWheel,
   };
 
   const applyToolbarShown = (): void => {
@@ -903,6 +921,7 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
     getView: () => view,
     setView,
     getTool: () => tool,
+    getWheelMode: () => wheelMode,
   });
 
   saveState.addEventListener("click", () => { void shell.save(); });
@@ -983,7 +1002,6 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
   zoomIn.addEventListener("click", () => { zoomBy(ZOOM_STEP); });
   gridToggle.addEventListener("change", () => { setGrid({ show: gridToggle.checked }); gridToggle.blur(); });
   snapToggle.addEventListener("change", () => { setGrid({ snap: snapToggle.checked }); snapToggle.blur(); });
-  gridSize.addEventListener("change", () => { setGrid({ size: Number(gridSize.value) }); gridSize.blur(); });
   const zoomBy = (factor: number): void => {
     const box = canvas.getBoundingClientRect();
     setView(zoomAt(view, { x: box.width / 2, y: box.height / 2 }, factor));
@@ -1519,7 +1537,7 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
   };
   importButton.addEventListener("click", () => { void bringFile(); });
   folderButton.addEventListener("click", () => { void browseFor(); });
-  const showPreferences = (): void => { void openPreferences(root, preferences, layout); };
+  const showPreferences = (): void => { void openPreferences(root, preferences, layout, canvasPrefs); };
   pillPreferences.addEventListener("click", showPreferences);
   barPreferences.addEventListener("click", showPreferences);
   pillHome.addEventListener("click", () => { void closeToLanding(); });
@@ -1545,7 +1563,8 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
   panels = readPanels(stored["panels"]);
   placePanels();
   setGrid(readGrid(stored["grid"]));
-  gridReady = true;
+  setWheel(readWheel(stored["wheel"]));
+  prefsReady = true;
   placeStatus();
   session.info = await storage.currentWorkspace();
   if (screen === "file") {
