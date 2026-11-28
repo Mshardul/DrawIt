@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Preferences } from "../storage/adapter.ts";
-import { autosaveOn, createAutosave, type AutosaveClock } from "./autosave.ts";
+import { autosaveOn, createAutosave, readAutosave, type AutosaveClock } from "./autosave.ts";
 
 interface Clock extends AutosaveClock {
   advance(ms: number): Promise<void>;
@@ -35,7 +35,8 @@ function clock(): Clock {
 }
 
 describe("autosave preference", () => {
-  it("is on for a library project and off for an opened folder until chosen", () => {
+  it("defaults to on for the library and off for opened folders", () => {
+    expect(readAutosave(undefined)).toEqual({ library: true, opened: false });
     expect(autosaveOn({}, "library")).toBe(true);
     expect(autosaveOn({}, "project")).toBe(true);
     expect(autosaveOn({}, "opened")).toBe(false);
@@ -44,6 +45,7 @@ describe("autosave preference", () => {
 
   it("reads the library and an opened folder from their own keys", () => {
     const preferences: Preferences = { autosave: { library: false, opened: true } };
+    expect(readAutosave(preferences["autosave"])).toEqual({ library: false, opened: true });
     expect(autosaveOn(preferences, "library")).toBe(false);
     expect(autosaveOn(preferences, "project")).toBe(false);
     expect(autosaveOn(preferences, "opened")).toBe(true);
@@ -51,6 +53,7 @@ describe("autosave preference", () => {
 
   it("keeps the default when a stored value is not a boolean", () => {
     const preferences: Preferences = { autosave: { library: "no", opened: 1 } };
+    expect(readAutosave(preferences["autosave"])).toEqual({ library: true, opened: false });
     expect(autosaveOn(preferences, "project")).toBe(true);
     expect(autosaveOn(preferences, "opened")).toBe(false);
   });

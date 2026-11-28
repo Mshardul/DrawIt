@@ -15,14 +15,31 @@ const browserClock: AutosaveClock = {
   },
 };
 
-/** A project is a library folder, so it uses the library key. An absent key is on for the library and off for an opened folder. */
+export interface AutosaveSettings {
+  library: boolean;
+  opened: boolean;
+}
+
+/** On for the library and off for an opened folder when a key is absent. */
+export function readAutosave(value: unknown): AutosaveSettings {
+  const record = typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
+  return {
+    library: typeof record["library"] === "boolean" ? record["library"] : true,
+    opened: typeof record["opened"] === "boolean" ? record["opened"] : false,
+  };
+}
+
+/** A project is a library folder, so it uses the library key. */
 export function autosaveOn(preferences: Preferences, kind: WorkspaceKind): boolean {
-  const stored = preferences["autosave"];
-  const record = typeof stored === "object" && stored !== null ? (stored as Record<string, unknown>) : {};
-  const library = typeof record["library"] === "boolean" ? record["library"] : true;
-  const opened = typeof record["opened"] === "boolean" ? record["opened"] : false;
-  if (kind === "library" || kind === "project") return library;
-  return kind === "opened" && opened;
+  const settings = readAutosave(preferences["autosave"]);
+  if (kind === "library" || kind === "project") return settings.library;
+  return kind === "opened" && settings.opened;
+}
+
+/** Preferences edits for the two autosave keys. */
+export interface SavingPrefs {
+  autosave(): AutosaveSettings;
+  setAutosave(change: Partial<AutosaveSettings>): void;
 }
 
 export interface Autosave {

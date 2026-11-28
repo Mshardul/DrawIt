@@ -309,6 +309,38 @@ func TestTheCommandLineFolderBeatsTheRememberedFolder(t *testing.T) {
 	}
 }
 
+func TestStartScreenLaunchSkipsTheRememberedFolder(t *testing.T) {
+	dir := folderWithFile(t)
+	store := prefs.Open(t.TempDir())
+	remember(t, store, dir)
+	launchStart(t, store)
+	url, _, stop := startWith(t, t.TempDir(), store, "-addr", "127.0.0.1:0")
+	defer func() { _ = stop() }()
+
+	base, token := split(t, url)
+	if status, _, _ := request(t, http.MethodGet, base+"api/files", token, nil); status != http.StatusNotFound {
+		t.Fatalf("status = %d, want no folder when launch is the start screen", status)
+	}
+}
+
+func TestTheCommandLineFolderBeatsTheStartScreenLaunch(t *testing.T) {
+	chosen := folderWithFile(t)
+	other := t.TempDir()
+	if err := os.WriteFile(filepath.Join(other, "b.drawit.kdl"), []byte("b"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	store := prefs.Open(t.TempDir())
+	remember(t, store, other)
+	launchStart(t, store)
+	url, _, stop := startWith(t, t.TempDir(), store, "-addr", "127.0.0.1:0", chosen)
+	defer func() { _ = stop() }()
+
+	body := get(t, url, "api/files")
+	if !strings.Contains(body, "a.drawit.kdl") || strings.Contains(body, "b.drawit.kdl") {
+		t.Fatalf("files = %s", body)
+	}
+}
+
 func TestAnExistingLibraryIsLeftInPlace(t *testing.T) {
 	home := t.TempDir()
 	marker := filepath.Join(home, "DrawIt", "kept.txt")
@@ -375,6 +407,17 @@ func TestRunOpensTheLibrary(t *testing.T) {
 func remember(t *testing.T, store *prefs.Store, folder string) {
 	t.Helper()
 	body, err := json.Marshal(map[string]any{"workspace": map[string]string{"folder": folder}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.Patch(body); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func launchStart(t *testing.T, store *prefs.Store) {
+	t.Helper()
+	body, err := json.Marshal(map[string]any{"launch": map[string]string{"open": "start"}})
 	if err != nil {
 		t.Fatal(err)
 	}

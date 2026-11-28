@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ImageStore } from "../images/store.ts";
 import { MemoryStorage, MemoryVolume } from "../storage/memory.ts";
 import { preferenceStore } from "./preference-store.ts";
-import { enterWorkspace, firstScreen, startingWorkspace, type EditorSession } from "./session.ts";
+import { DEFAULT_LAUNCH, enterWorkspace, firstScreen, readLaunch, startingWorkspace, type EditorSession } from "./session.ts";
 
 function session(storage: MemoryStorage): EditorSession {
   return {
@@ -29,6 +29,18 @@ describe("first screen", () => {
   it("opens the library and a start with no folder on Home", () => {
     expect(firstScreen("library")).toBe("home");
     expect(firstScreen("")).toBe("home");
+  });
+});
+
+describe("launch preference", () => {
+  it("defaults to reopening the last project or folder", () => {
+    expect(readLaunch(undefined)).toBe(DEFAULT_LAUNCH);
+    expect(readLaunch({})).toBe("last");
+    expect(readLaunch({ open: "home" })).toBe("last");
+  });
+
+  it("reads the start screen choice", () => {
+    expect(readLaunch({ open: "start" })).toBe("start");
   });
 });
 

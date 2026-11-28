@@ -1,6 +1,8 @@
 import { openDialog } from "./dialog.ts";
+import type { SavingPrefs } from "./autosave.ts";
 import { LAYOUT_PARTS, PART_NAMES, type Layout } from "./layout.ts";
 import type { PreferenceStore } from "./preference-store.ts";
+import type { LaunchOpen, StartupPrefs } from "./session.ts";
 import {
   GRID_SIZE_MAX,
   GRID_SIZE_MIN,
@@ -16,7 +18,12 @@ type Tab = (typeof TABS)[number];
 
 let opened = 0;
 
-function build(layout: Layout, canvas: CanvasPrefs): { element: HTMLElement; panels: HTMLElement } {
+function build(
+  layout: Layout,
+  canvas: CanvasPrefs,
+  saving: SavingPrefs,
+  startup: StartupPrefs,
+): { element: HTMLElement; panels: HTMLElement } {
   opened += 1;
   const prefix = `prefs-${String(opened)}`;
   const list = document.createElement("div");
@@ -63,7 +70,12 @@ function build(layout: Layout, canvas: CanvasPrefs): { element: HTMLElement; pan
     panel.setAttribute("role", "tabpanel");
     panel.setAttribute("aria-labelledby", button.id);
     if (name === "General") {
-      panel.append(interfaceSection(layout), canvasSection(canvas, prefix));
+      panel.append(
+        interfaceSection(layout),
+        canvasSection(canvas, prefix),
+        savingSection(saving),
+        startupSection(startup, prefix),
+      );
     }
     panels.set(name, panel);
     list.append(button);
@@ -174,6 +186,44 @@ function canvasSection(canvas: CanvasPrefs, prefix: string): HTMLElement {
   return section;
 }
 
+function savingSection(saving: SavingPrefs): HTMLElement {
+  const section = document.createElement("section");
+  const heading = document.createElement("h3");
+  heading.textContent = "Saving";
+  const current = saving.autosave();
+  section.append(
+    heading,
+    checkRow("Autosave in the library", current.library, (library) => { saving.setAutosave({ library }); }),
+    checkRow("Autosave in opened folders", current.opened, (opened) => { saving.setAutosave({ opened }); }),
+  );
+  return section;
+}
+
+function startupSection(startup: StartupPrefs, prefix: string): HTMLElement {
+  const section = document.createElement("section");
+  const heading = document.createElement("h3");
+  heading.textContent = "Startup";
+  section.append(heading);
+  const group = `${prefix}-launch`;
+  const current = startup.open();
+  for (const [open, text] of [
+    ["last", "Reopen the last project or folder"],
+    ["start", "Show the start screen"],
+  ] as const satisfies ReadonlyArray<readonly [LaunchOpen, string]>) {
+    const radio = document.createElement("input");
+    radio.type = "radio";
+    radio.name = group;
+    radio.value = open;
+    radio.checked = current === open;
+    radio.addEventListener("change", () => { startup.setOpen(open); });
+    const row = document.createElement("label");
+    row.className = "pref-row";
+    row.append(radio, text);
+    section.append(row);
+  }
+  return section;
+}
+
 /** Shows the warning at the top of the panels while the store has changes it cannot write. */
 function warnWhileUnsaved(panels: HTMLElement, store: PreferenceStore): () => void {
   const warning = document.createElement("div");
@@ -194,8 +244,10 @@ export async function openPreferences(
   store: PreferenceStore,
   layout: Layout,
   canvas: CanvasPrefs,
+  saving: SavingPrefs,
+  startup: StartupPrefs,
 ): Promise<void> {
-  const { element, panels } = build(layout, canvas);
+  const { element, panels } = build(layout, canvas, saving, startup);
   const stop = warnWhileUnsaved(panels, store);
   await openDialog(parent, {
     title: "Preferences",

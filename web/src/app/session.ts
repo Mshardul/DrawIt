@@ -5,6 +5,23 @@ import type { OpenFile } from "./workspace.ts";
 
 export type OpeningScreen = "landing" | "home";
 
+/** What DrawIt opens when the command line names no folder. */
+export type LaunchOpen = "last" | "start";
+
+export const DEFAULT_LAUNCH: LaunchOpen = "last";
+
+/** The launch entry in the preferences file. */
+export function readLaunch(value: unknown): LaunchOpen {
+  const record = typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
+  return record["open"] === "start" ? "start" : DEFAULT_LAUNCH;
+}
+
+/** Preferences edits for what opens at launch. */
+export interface StartupPrefs {
+  open(): LaunchOpen;
+  setOpen(open: LaunchOpen): void;
+}
+
 /** A project or an opened folder starts on its landing page. Anything else starts on Home. */
 export function firstScreen(kind: WorkspaceKind): OpeningScreen {
   return kind === "project" || kind === "opened" ? "landing" : "home";

@@ -177,11 +177,17 @@ func rememberedFolder(store *prefs.Store) (string, error) {
 		return "", nil
 	}
 	var doc struct {
+		Launch struct {
+			Open string `json:"open"`
+		} `json:"launch"`
 		Workspace struct {
 			Folder json.RawMessage `json:"folder"`
 		} `json:"workspace"`
 	}
 	if err := json.Unmarshal(view.JSON, &doc); err != nil {
+		return "", nil
+	}
+	if doc.Launch.Open == "start" {
 		return "", nil
 	}
 	if len(bytes.TrimSpace(doc.Workspace.Folder)) == 0 {

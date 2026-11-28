@@ -279,3 +279,53 @@ test("Canvas Mouse wheel chooses pan or zoom and is written to preferences", asy
     return stored.wheel?.mode;
   })).toBe("zoom");
 });
+
+test("Saving defaults are on for the library and off for opened folders, and writes both keys", async ({ page }) => {
+  await startUnwritable(page);
+  await page.evaluate(() => { (window as unknown as { hooks: { fix(): void } }).hooks.fix(); });
+  await page.locator(".bar").getByRole("button", { name: "Preferences" }).click();
+  await expect(dialog(page).getByRole("checkbox", { name: "Autosave in the library" })).toBeChecked();
+  await expect(dialog(page).getByRole("checkbox", { name: "Autosave in opened folders" })).not.toBeChecked();
+  await dialog(page).getByRole("checkbox", { name: "Autosave in the library" }).uncheck();
+  await dialog(page).getByRole("checkbox", { name: "Autosave in opened folders" }).check();
+  await expect.poll(() => page.evaluate(async () => {
+    const stored = await (window as unknown as { hooks: { file(): Promise<{ autosave?: { library?: boolean; opened?: boolean } }> } }).hooks.file();
+    return [stored.autosave?.library, stored.autosave?.opened];
+  })).toEqual([false, true]);
+});
+
+test("turning on Autosave in opened folders applies to the open file without reopening it", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 800 });
+  await page.goto("/");
+  await page.evaluate(async (text) => {
+    const load = <T>(path: string) => import(path) as Promise<T>;
+    const { mountShell } = await load<typeof import("../src/testing/mount-shell.ts")>("/src/testing/mount-shell.ts");
+    const { shell, storage } = await mountShell({ "a.drawit.kdl": text });
+    (window as unknown as { hooks: { edit(): void; read(): Promise<string> } }).hooks = {
+      edit: () => {
+        shell.file?.history.execute({ type: "setLayout", changes: [{ id: "a", set: { x: 99 } }] });
+        shell.refresh();
+      },
+      read: async () => new TextDecoder().decode(await storage.read("a.drawit.kdl")),
+    };
+  }, file);
+  await page.getByRole("button", { name: "Preferences" }).click();
+  await dialog(page).getByRole("checkbox", { name: "Autosave in opened folders" }).check();
+  await dialog(page).getByRole("button", { name: "Done" }).click();
+  await page.evaluate(() => { (window as unknown as { hooks: { edit(): void } }).hooks.edit(); });
+  await expect(page.getByRole("button", { name: "Saved", exact: true })).toBeVisible({ timeout: 4000 });
+  expect(await page.evaluate(() => (window as unknown as { hooks: { read(): Promise<string> } }).hooks.read())).toContain("a x=99");
+});
+
+test("Startup defaults to reopening the last folder and writes the launch setting", async ({ page }) => {
+  await startUnwritable(page);
+  await page.evaluate(() => { (window as unknown as { hooks: { fix(): void } }).hooks.fix(); });
+  await page.locator(".bar").getByRole("button", { name: "Preferences" }).click();
+  await expect(dialog(page).getByRole("radio", { name: "Reopen the last project or folder" })).toBeChecked();
+  await expect(dialog(page).getByRole("radio", { name: "Show the start screen" })).not.toBeChecked();
+  await dialog(page).getByRole("radio", { name: "Show the start screen" }).check();
+  await expect.poll(() => page.evaluate(async () => {
+    const stored = await (window as unknown as { hooks: { file(): Promise<{ launch?: { open?: string } }> } }).hooks.file();
+    return stored.launch?.open;
+  })).toBe("start");
+});
