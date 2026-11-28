@@ -20,12 +20,18 @@ export interface AutosaveSettings {
   opened: boolean;
 }
 
-/** On for the library and off for an opened folder when a key is absent. */
+export const DEFAULT_AUTOSAVE: AutosaveSettings = { library: true, opened: false };
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return typeof value === "object" && value !== null ? value as Record<string, unknown> : {};
+}
+
+/** The autosave entry in the preferences file. Missing fields use the defaults. */
 export function readAutosave(value: unknown): AutosaveSettings {
-  const record = typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
+  const record = asRecord(value);
   return {
-    library: typeof record["library"] === "boolean" ? record["library"] : true,
-    opened: typeof record["opened"] === "boolean" ? record["opened"] : false,
+    library: typeof record["library"] === "boolean" ? record["library"] : DEFAULT_AUTOSAVE.library,
+    opened: typeof record["opened"] === "boolean" ? record["opened"] : DEFAULT_AUTOSAVE.opened,
   };
 }
 
@@ -36,7 +42,7 @@ export function autosaveOn(preferences: Preferences, kind: WorkspaceKind): boole
   return kind === "opened" && settings.opened;
 }
 
-/** Preferences edits for the two autosave keys. */
+/** Autosave on/off as Preferences edits them. */
 export interface SavingPrefs {
   autosave(): AutosaveSettings;
   setAutosave(change: Partial<AutosaveSettings>): void;

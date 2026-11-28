@@ -10,13 +10,16 @@ export type LaunchOpen = "last" | "start";
 
 export const DEFAULT_LAUNCH: LaunchOpen = "last";
 
-/** The launch entry in the preferences file. */
-export function readLaunch(value: unknown): LaunchOpen {
-  const record = typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
-  return record["open"] === "start" ? "start" : DEFAULT_LAUNCH;
+function asRecord(value: unknown): Record<string, unknown> {
+  return typeof value === "object" && value !== null ? value as Record<string, unknown> : {};
 }
 
-/** Preferences edits for what opens at launch. */
+/** The launch entry in the preferences file. */
+export function readLaunch(value: unknown): LaunchOpen {
+  return asRecord(value)["open"] === "start" ? "start" : DEFAULT_LAUNCH;
+}
+
+/** Launch open as Preferences edits it. */
 export interface StartupPrefs {
   open(): LaunchOpen;
   setOpen(open: LaunchOpen): void;

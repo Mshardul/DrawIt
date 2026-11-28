@@ -5,11 +5,13 @@ import type { SvgEl } from "./svg.ts";
 
 const CATEGORIES: { title: string; category: string; pack: string; ids: string[] }[] = [
   { title: "basic", category: "Basic", pack: "core", ids: ["rounded-rect", "circle", "diamond", "triangle", "pentagon", "hexagon", "octagon", "star", "callout", "callout-round", "bracket", "brace"] },
-  { title: "flowchart", category: "Flowchart", pack: "core", ids: ["process", "decision", "terminator", "data", "document", "manual-input", "connector"] },
+  { title: "flowchart", category: "Flowchart", pack: "core", ids: ["process", "decision", "terminator", "data", "document", "manual-input", "connector", "preparation", "display", "delay", "stored-data", "internal-storage", "off-page"] },
   { title: "arrows and lines", category: "Arrows and lines", pack: "core", ids: ["arrow-right", "arrow-left", "arrow-up", "arrow-down", "arrow-double", "arrow-curved", "arrow-u-turn", "divider"] },
-  { title: "architecture", category: "Architecture (generic)", pack: "arch", ids: ["server", "database", "cache", "queue", "cdn", "load-balancer", "gateway", "dns", "firewall", "storage-bucket", "function", "container", "client", "browser", "mobile", "user", "cloud"] },
-  { title: "network", category: "Network", pack: "net", ids: ["router", "switch", "vpn", "internet", "subnet", "on-prem"] },
+  { title: "architecture", category: "Architecture (generic)", pack: "arch", ids: ["server", "database", "cache", "queue", "cdn", "load-balancer", "gateway", "dns", "firewall", "storage-bucket", "function", "container", "client", "browser", "mobile", "user", "cloud", "auth", "secret", "search", "warehouse", "notification"] },
+  { title: "network", category: "Network", pack: "net", ids: ["router", "switch", "vpn", "internet", "subnet", "on-prem", "proxy", "nat", "wireless"] },
   { title: "C4", category: "C4", pack: "c4", ids: ["person", "software-system", "container", "component", "boundary"] },
+  { title: "UML", category: "UML", pack: "uml", ids: ["package", "component", "node", "note", "actor", "initial", "final"] },
+  { title: "ERD", category: "ERD", pack: "erd", ids: ["weak-entity", "identifying-relationship"] },
   { title: "infographic", category: "Infographic", pack: "info", ids: ["banner", "badge", "numbered-step", "timeline-marker", "ribbon"] },
 ];
 

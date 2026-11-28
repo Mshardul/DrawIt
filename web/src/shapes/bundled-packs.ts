@@ -1,4 +1,4 @@
-// The packs in `packs/` at the repository root, read at build time so they work offline and load like the fonts.
+// Packs in `packs/` at the repository root, read at build time so they work offline and load like the fonts.
 import { createPackLoader, type PackFiles } from "./pack-loader.ts";
 
 const FILES = import.meta.glob<string>(["../../../packs/*/pack.json", "../../../packs/*/*.svg"], {

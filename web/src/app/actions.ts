@@ -10,9 +10,12 @@ export interface ActionKey {
   alt?: boolean;
 }
 
+export type ActionGroup = "tools" | "editing" | "view" | "files";
+
 export interface Action {
   id: string;
   title: string;
+  group: ActionGroup;
   key?: ActionKey | readonly ActionKey[];
   /** Save still runs while a text field is focused. */
   duringTyping?: boolean;
@@ -77,25 +80,26 @@ const always = (): boolean => true;
 
 export function editorActions(host: ActionHost): Action[] {
   const tool = (id: string, title: string, key: string, value: Tool): Action => ({
-    id, title, key: { key, alt: false }, enabled: always, run: () => { host.setTool(value); },
+    id, title, group: "tools", key: { key, alt: false }, enabled: always, run: () => { host.setTool(value); },
   });
   return [
-    { id: "save", title: "Save", key: { key: "s", mod: true }, duringTyping: true, enabled: always, run: () => { host.save(); } },
-    { id: "undo", title: "Undo", key: { key: "z", mod: true, shift: false, alt: false }, enabled: () => host.canEdit(), run: () => { host.undo(); } },
-    { id: "redo", title: "Redo", key: { key: "z", mod: true, shift: true, alt: false }, enabled: () => host.canEdit(), run: () => { host.redo(); } },
-    { id: "grid", title: "Grid", key: { key: "g", shift: false, alt: false }, enabled: always, run: () => { host.toggleGrid(); } },
-    { id: "snap", title: "Snap", key: { key: "g", shift: true, alt: false }, enabled: always, run: () => { host.toggleSnap(); } },
+    { id: "save", title: "Save", group: "files", key: { key: "s", mod: true }, duringTyping: true, enabled: always, run: () => { host.save(); } },
+    { id: "undo", title: "Undo", group: "editing", key: { key: "z", mod: true, shift: false, alt: false }, enabled: () => host.canEdit(), run: () => { host.undo(); } },
+    { id: "redo", title: "Redo", group: "editing", key: { key: "z", mod: true, shift: true, alt: false }, enabled: () => host.canEdit(), run: () => { host.redo(); } },
+    { id: "grid", title: "Grid", group: "view", key: { key: "g", shift: false, alt: false }, enabled: always, run: () => { host.toggleGrid(); } },
+    { id: "snap", title: "Snap", group: "view", key: { key: "g", shift: true, alt: false }, enabled: always, run: () => { host.toggleSnap(); } },
     {
       id: "zoom-in",
       title: "Zoom in",
+      group: "view",
       key: [{ key: "=", mod: true, alt: false }, { key: "+", mod: true, alt: false }],
       enabled: always,
       run: () => { host.zoomIn(); },
     },
-    { id: "zoom-out", title: "Zoom out", key: { key: "-", mod: true, alt: false }, enabled: always, run: () => { host.zoomOut(); } },
-    { id: "zoom-reset", title: "Reset zoom", key: { key: "0", mod: true, alt: false }, enabled: always, run: () => { host.resetZoom(); } },
-    { id: "zoom-fit", title: "Zoom to fit", key: { key: "1", code: "Digit1", shift: true, alt: false }, enabled: always, run: () => { host.zoomToFit(); } },
-    { id: "zoom-selection", title: "Zoom to selection", key: { key: "2", code: "Digit2", shift: true, alt: false }, enabled: always, run: () => { host.zoomToSelection(); } },
+    { id: "zoom-out", title: "Zoom out", group: "view", key: { key: "-", mod: true, alt: false }, enabled: always, run: () => { host.zoomOut(); } },
+    { id: "zoom-reset", title: "Reset zoom", group: "view", key: { key: "0", mod: true, alt: false }, enabled: always, run: () => { host.resetZoom(); } },
+    { id: "zoom-fit", title: "Zoom to fit", group: "view", key: { key: "1", code: "Digit1", shift: true, alt: false }, enabled: always, run: () => { host.zoomToFit(); } },
+    { id: "zoom-selection", title: "Zoom to selection", group: "view", key: { key: "2", code: "Digit2", shift: true, alt: false }, enabled: always, run: () => { host.zoomToSelection(); } },
     tool("tool-select", "Select", "v", "select"),
     tool("tool-hand", "Hand", "h", "hand"),
     tool("tool-line", "Line", "l", "line"),
@@ -105,10 +109,11 @@ export function editorActions(host: ActionHost): Action[] {
     tool("tool-ellipse", "Ellipse", "o", "ellipse"),
     tool("tool-text", "Text", "t", "text"),
     tool("tool-image", "Image", "i", "image"),
-    { id: "preferences", title: "Preferences…", enabled: always, run: () => { host.openPreferences(); } },
+    { id: "preferences", title: "Preferences…", group: "files", enabled: always, run: () => { host.openPreferences(); } },
     ...LAYOUT_PARTS.map((part): Action => ({
       id: `toggle-${part}`,
       title: `Toggle ${PART_NAMES[part].toLowerCase()}`,
+      group: "view",
       enabled: always,
       run: () => { host.toggleShown(part); },
     })),

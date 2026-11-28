@@ -53,7 +53,14 @@ import {
   type GridSettings,
   type WheelMode,
 } from "./status.ts";
-import { autosaveOn, createAutosave, readAutosave, type SavingPrefs } from "./autosave.ts";
+import {
+  autosaveOn,
+  createAutosave,
+  DEFAULT_AUTOSAVE,
+  readAutosave,
+  type AutosaveSettings,
+  type SavingPrefs,
+} from "./autosave.ts";
 import { replaceFromDisk, watchChanges } from "./changes.ts";
 import { cardFace, ThumbnailCache, type CardFace } from "./thumbnail.ts";
 import type { Tool } from "./tool.ts";
@@ -72,7 +79,14 @@ import { landingModel, listingSignature, liveRecent, prunedPatch, recordOpened, 
 import { moveToProject } from "./move.ts";
 import { diagramNameCheck, projectNameCheck } from "./names.ts";
 import { deleteWording } from "./remove.ts";
-import { enterWorkspace, readLaunch, type EditorSession, type LaunchOpen, type StartupPrefs } from "./session.ts";
+import {
+  DEFAULT_LAUNCH,
+  enterWorkspace,
+  readLaunch,
+  type EditorSession,
+  type LaunchOpen,
+  type StartupPrefs,
+} from "./session.ts";
 import { FILE_EXTENSION, FileChanged, type OpenFile, openFile, workspaceFiles } from "./workspace.ts";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
@@ -331,8 +345,9 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
   let saving = false;
   let seenVersion = -1;
   let preferenceFile: Preferences = {};
+  let autosaveSettings: AutosaveSettings = DEFAULT_AUTOSAVE;
   const autosave = createAutosave({
-    enabled: () => autosaveOn(preferenceFile, session.info.kind),
+    enabled: () => autosaveOn({ autosave: autosaveSettings }, session.info.kind),
     dirty: () => session.file?.dirty === true,
     save: async () => {
       const file = session.file;
@@ -604,17 +619,18 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
     wheel: () => wheelMode,
     setWheel,
   };
-  const setAutosave = (change: Partial<{ library: boolean; opened: boolean }>): void => {
-    const next = { ...readAutosave(preferenceFile["autosave"]), ...change };
-    preferenceFile = { ...preferenceFile, autosave: next };
-    if (prefsReady) void preferences.patch({ autosave: next });
+  const setAutosave = (change: Partial<AutosaveSettings>): void => {
+    autosaveSettings = { ...autosaveSettings, ...change };
+    if (prefsReady) {
+      void preferences.patch({ autosave: { library: autosaveSettings.library, opened: autosaveSettings.opened } });
+    }
     autosave.edited();
   };
   const savingPrefs: SavingPrefs = {
-    autosave: () => readAutosave(preferenceFile["autosave"]),
+    autosave: () => autosaveSettings,
     setAutosave,
   };
-  let launchOpen: LaunchOpen = readLaunch(undefined);
+  let launchOpen: LaunchOpen = DEFAULT_LAUNCH;
   const setLaunch = (open: LaunchOpen): void => {
     launchOpen = open;
     if (prefsReady) void preferences.patch({ launch: { open } });
@@ -1556,7 +1572,7 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
   };
   importButton.addEventListener("click", () => { void bringFile(); });
   folderButton.addEventListener("click", () => { void browseFor(); });
-  const showPreferences = (): void => { void openPreferences(root, preferences, layout, canvasPrefs, savingPrefs, startupPrefs); };
+  const showPreferences = (): void => { void openPreferences(root, preferences, layout, canvasPrefs, savingPrefs, startupPrefs, actions, mac); };
   pillPreferences.addEventListener("click", showPreferences);
   barPreferences.addEventListener("click", showPreferences);
   pillHome.addEventListener("click", () => { void closeToLanding(); });
@@ -1583,6 +1599,7 @@ export async function startShell(root: HTMLElement, storage: StorageAdapter, opt
   placePanels();
   setGrid(readGrid(stored["grid"]));
   setWheel(readWheel(stored["wheel"]));
+  autosaveSettings = readAutosave(stored["autosave"]);
   launchOpen = readLaunch(stored["launch"]);
   prefsReady = true;
   placeStatus();

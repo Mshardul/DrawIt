@@ -291,6 +291,91 @@
       },
       "label": { "x": 24, "y": 40, "w": 48, "h": 28 },
       "keepAspect": true
+    },
+    {
+      "id": "auth",
+      "name": "Auth",
+      "category": "Architecture (generic)",
+      "tags": ["auth", "identity", "login", "idp", "security"],
+      "svg": "auth.svg",
+      "size": { "w": 96, "h": 96 },
+      "outline": "M 16 16 H 80 C 84.418 16 88 19.582 88 24 V 72 C 88 76.418 84.418 80 80 80 H 16 C 11.582 80 8 76.418 8 72 V 24 C 8 19.582 11.582 16 16 16 Z",
+      "anchors": {
+        "top": { "x": 48, "y": 16 },
+        "right": { "x": 88, "y": 48 },
+        "bottom": { "x": 48, "y": 80 },
+        "left": { "x": 8, "y": 48 }
+      },
+      "label": { "x": 24, "y": 24, "w": 48, "h": 48 },
+      "keepAspect": true
+    },
+    {
+      "id": "secret",
+      "name": "Secret",
+      "category": "Architecture (generic)",
+      "tags": ["secret", "key", "vault", "credentials"],
+      "svg": "secret.svg",
+      "size": { "w": 96, "h": 96 },
+      "outline": "M 14 20 H 80 V 44 H 72 V 56 H 64 V 44 H 56 V 56 H 48 V 52 H 14 Z",
+      "anchors": {
+        "top": { "x": 46, "y": 20 },
+        "right": { "x": 80, "y": 32 },
+        "bottom": { "x": 31, "y": 52 },
+        "left": { "x": 14, "y": 36 }
+      },
+      "label": { "x": 20, "y": 26, "w": 20, "h": 16 },
+      "keepAspect": true
+    },
+    {
+      "id": "search",
+      "name": "Search",
+      "category": "Architecture (generic)",
+      "tags": ["search", "index", "find", "query"],
+      "svg": "search.svg",
+      "size": { "w": 96, "h": 96 },
+      "outline": "M 12 40 C 12 24.536 24.536 12 40 12 C 55.464 12 68 24.536 68 40 C 68 46.5 65.5 52.2 61.5 56.5 L 84 79 L 79 84 L 56.5 61.5 C 52.2 65.5 46.5 68 40 68 C 24.536 68 12 55.464 12 40 Z",
+      "anchors": {
+        "top": { "x": 40, "y": 12 },
+        "right": { "x": 68, "y": 40 },
+        "bottom": { "x": 40, "y": 68 },
+        "left": { "x": 12, "y": 40 }
+      },
+      "label": { "x": 24, "y": 24, "w": 32, "h": 32 },
+      "keepAspect": true
+    },
+    {
+      "id": "warehouse",
+      "name": "Warehouse",
+      "category": "Architecture (generic)",
+      "tags": ["warehouse", "analytics", "data-warehouse", "olap"],
+      "svg": "warehouse.svg",
+      "size": { "w": 96, "h": 96 },
+      "outline": "M 24 12 H 72 V 40 H 80 V 68 H 88 V 84 H 8 V 68 H 16 V 40 H 24 Z",
+      "anchors": {
+        "top": { "x": 48, "y": 12 },
+        "right": { "x": 88, "y": 76 },
+        "bottom": { "x": 48, "y": 84 },
+        "left": { "x": 8, "y": 76 }
+      },
+      "label": { "x": 28, "y": 44, "w": 40, "h": 8 },
+      "keepAspect": true
+    },
+    {
+      "id": "notification",
+      "name": "Notification",
+      "category": "Architecture (generic)",
+      "tags": ["notification", "alert", "bell", "push", "email"],
+      "svg": "notification.svg",
+      "size": { "w": 96, "h": 96 },
+      "outline": "M 28 16 H 68 V 60 H 76 L 68 72 H 28 L 20 60 H 28 Z",
+      "anchors": {
+        "top": { "x": 48, "y": 16 },
+        "right": { "x": 68, "y": 48 },
+        "bottom": { "x": 48, "y": 72 },
+        "left": { "x": 28, "y": 48 }
+      },
+      "label": { "x": 32, "y": 24, "w": 32, "h": 32 },
+      "keepAspect": true
     }
   ]
 }

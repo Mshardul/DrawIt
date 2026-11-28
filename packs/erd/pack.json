@@ -1,0 +1,41 @@
+{
+  "pack": "erd",
+  "version": 1,
+  "shapes": [
+    {
+      "id": "weak-entity",
+      "name": "Weak entity",
+      "category": "ERD",
+      "tags": ["weak-entity", "entity", "erd", "dependent"],
+      "svg": "weak-entity.svg",
+      "size": { "w": 192, "h": 112 },
+      "outline": "M 0 0 H 192 V 112 H 0 Z",
+      "anchors": {
+        "top": { "x": 96, "y": 0 },
+        "right": { "x": 192, "y": 56 },
+        "bottom": { "x": 96, "y": 112 },
+        "left": { "x": 0, "y": 56 }
+      },
+      "label": { "x": 16, "y": 16, "w": 160, "h": 80 },
+      "stretch": { "x": [8, 184], "y": [8, 104] },
+      "keepAspect": false
+    },
+    {
+      "id": "identifying-relationship",
+      "name": "Identifying relationship",
+      "category": "ERD",
+      "tags": ["identifying-relationship", "relationship", "erd", "diamond"],
+      "svg": "identifying-relationship.svg",
+      "size": { "w": 160, "h": 96 },
+      "outline": "M 80 0 L 160 48 L 80 96 L 0 48 Z",
+      "anchors": {
+        "top": { "x": 80, "y": 0 },
+        "right": { "x": 160, "y": 48 },
+        "bottom": { "x": 80, "y": 96 },
+        "left": { "x": 0, "y": 48 }
+      },
+      "label": { "x": 40, "y": 24, "w": 80, "h": 48 },
+      "keepAspect": false
+    }
+  ]
+}

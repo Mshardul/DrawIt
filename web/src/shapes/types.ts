@@ -74,7 +74,7 @@ export interface Problem {
 }
 
 /** The shape categories. */
-export const CATEGORIES = ["Basic", "Flowchart", "Architecture (generic)", "Network", "C4", "Infographic", "Arrows and lines"];
+export const CATEGORIES = ["Basic", "Flowchart", "Architecture (generic)", "Network", "C4", "UML", "ERD", "Infographic", "Arrows and lines"];
 
 /** The grid default sizes are multiples of. */
 export const DESIGN_GRID = 8;

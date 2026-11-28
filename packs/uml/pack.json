@@ -1,0 +1,129 @@
+{
+  "pack": "uml",
+  "version": 1,
+  "shapes": [
+    {
+      "id": "package",
+      "name": "Package",
+      "category": "UML",
+      "tags": ["package", "namespace", "folder", "uml"],
+      "svg": "package.svg",
+      "size": { "w": 192, "h": 112 },
+      "outline": "M 0 0 H 64 V 24 H 192 V 112 H 0 Z",
+      "anchors": {
+        "top": { "x": 32, "y": 0 },
+        "right": { "x": 192, "y": 56 },
+        "bottom": { "x": 96, "y": 112 },
+        "left": { "x": 0, "y": 56 }
+      },
+      "label": { "x": 8, "y": 32, "w": 176, "h": 72 },
+      "stretch": { "x": [64, 184], "y": [32, 104] },
+      "keepAspect": false
+    },
+    {
+      "id": "component",
+      "name": "Component",
+      "category": "UML",
+      "tags": ["component", "module", "uml"],
+      "svg": "component.svg",
+      "size": { "w": 192, "h": 96 },
+      "outline": "M 0 20 H 24 V 0 H 192 V 96 H 24 V 76 H 0 V 60 H 24 V 36 H 0 Z",
+      "anchors": {
+        "top": { "x": 96, "y": 0 },
+        "right": { "x": 192, "y": 48 },
+        "bottom": { "x": 96, "y": 96 },
+        "left": { "x": 0, "y": 28 }
+      },
+      "label": { "x": 48, "y": 8, "w": 136, "h": 80 },
+      "stretch": { "x": [40, 184], "y": [8, 88] },
+      "keepAspect": false
+    },
+    {
+      "id": "node",
+      "name": "Node",
+      "category": "UML",
+      "tags": ["node", "deployment", "device", "uml"],
+      "svg": "node.svg",
+      "size": { "w": 192, "h": 128 },
+      "outline": "M 32 0 H 192 V 104 L 160 128 H 0 V 24 L 32 0 Z",
+      "anchors": {
+        "top": { "x": 112, "y": 0 },
+        "right": { "x": 192, "y": 52 },
+        "bottom": { "x": 80, "y": 128 },
+        "left": { "x": 0, "y": 76 }
+      },
+      "label": { "x": 8, "y": 32, "w": 144, "h": 88 },
+      "stretch": { "x": [32, 160], "y": [24, 112] },
+      "keepAspect": false
+    },
+    {
+      "id": "note",
+      "name": "Note",
+      "category": "UML",
+      "tags": ["note", "comment", "annotation", "uml"],
+      "svg": "note.svg",
+      "size": { "w": 160, "h": 128 },
+      "outline": "M 0 0 H 128 L 160 32 V 128 H 0 Z",
+      "anchors": {
+        "top": { "x": 80, "y": 0 },
+        "right": { "x": 160, "y": 64 },
+        "bottom": { "x": 80, "y": 128 },
+        "left": { "x": 0, "y": 64 }
+      },
+      "label": { "x": 8, "y": 8, "w": 120, "h": 112 },
+      "stretch": { "x": [8, 128], "y": [32, 120] },
+      "keepAspect": false
+    },
+    {
+      "id": "actor",
+      "name": "Actor",
+      "category": "UML",
+      "tags": ["actor", "user", "stick", "uml"],
+      "svg": "actor.svg",
+      "size": { "w": 96, "h": 160 },
+      "outline": "M 16 12 H 80 V 148 H 16 Z",
+      "anchors": {
+        "top": { "x": 48, "y": 12 },
+        "right": { "x": 80, "y": 80 },
+        "bottom": { "x": 48, "y": 148 },
+        "left": { "x": 16, "y": 80 }
+      },
+      "label": { "x": 28, "y": 48, "w": 40, "h": 32 },
+      "keepAspect": true
+    },
+    {
+      "id": "initial",
+      "name": "Initial",
+      "category": "UML",
+      "tags": ["initial", "start", "pseudostate", "uml"],
+      "svg": "initial.svg",
+      "size": { "w": 48, "h": 48 },
+      "outline": "M 48 24 C 48 37.255 37.255 48 24 48 C 10.745 48 0 37.255 0 24 C 0 10.745 10.745 0 24 0 C 37.255 0 48 10.745 48 24 Z",
+      "anchors": {
+        "top": { "x": 24, "y": 0 },
+        "right": { "x": 48, "y": 24 },
+        "bottom": { "x": 24, "y": 48 },
+        "left": { "x": 0, "y": 24 }
+      },
+      "label": { "x": 12, "y": 12, "w": 24, "h": 24 },
+      "keepAspect": true
+    },
+    {
+      "id": "final",
+      "name": "Final",
+      "category": "UML",
+      "tags": ["final", "end", "pseudostate", "uml"],
+      "svg": "final.svg",
+      "size": { "w": 48, "h": 48 },
+      "outline": "M 48 24 C 48 37.255 37.255 48 24 48 C 10.745 48 0 37.255 0 24 C 0 10.745 10.745 0 24 0 C 37.255 0 48 10.745 48 24 Z",
+      "anchors": {
+        "top": { "x": 24, "y": 0 },
+        "right": { "x": 48, "y": 24 },
+        "bottom": { "x": 24, "y": 48 },
+        "left": { "x": 0, "y": 24 }
+      },
+      "label": { "x": 12, "y": 12, "w": 24, "h": 24 },
+      "keepAspect": true
+    }
+  ]
+}

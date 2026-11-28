@@ -78,19 +78,22 @@ The shape library is categorised and searchable, in the left sidebar. Shapes shi
 | Category | Shapes |
 | --- | --- |
 | Basic | Rectangles, rounded rectangles, circles, ellipses, diamonds, triangles, polygons, stars, callouts, brackets |
-| Flowchart | Process, decision, terminator, data, document, manual input, connectors |
-| Architecture (generic) | Server, database, cache, queue, CDN, load balancer, API gateway, DNS, firewall, storage bucket, function, container, client, browser, mobile, user, cloud |
-| Network | Router, switch, VPN, internet, subnet, on-prem |
+| Flowchart | Process, decision, terminator, data, document, manual input, connectors, preparation, display, delay, stored data, internal storage, off-page link |
+| Architecture (generic) | Server, database, cache, queue, CDN, load balancer, API gateway, DNS, firewall, storage bucket, function, container, client, browser, mobile, user, cloud, auth, secret, search, warehouse, notification |
+| Network | Router, switch, VPN, internet, subnet, on-prem, proxy, NAT, wireless |
 | C4 | Person, software system, container, component, boundary |
+| UML | Package, component, node, note, actor, initial, final; library aliases Class (rectangle), Use case (ellipse), Decision, State (rounded rectangle) |
+| ERD | Weak entity, identifying relationship; library aliases Entity (rectangle), Relationship (decision), Attribute (ellipse) |
 | Infographic | Badges, banners, numbered steps, timeline markers, ribbons |
 | Arrows and lines | Block arrows, curved arrows, brackets, dividers |
 
-- **Creating:** the sidebar lists shapes by category, with search over names and tags and a preview of each. Clicking a shape arms it; a click on the canvas places it at its default size and a drag sizes it. Rectangle and ellipse are built in and listed alongside the pack shapes.
+- **Creating:** the sidebar lists shapes by category, with search over names and tags and a preview of each. Clicking a shape arms it; a click on the canvas places it at its default size and a drag sizes it. Rectangle and ellipse are built in and listed alongside the pack shapes. A library alias is a second tile for an existing shape under another category and name; both tiles arm the same shape id.
+
 - **Unknown shapes:** a node that names a shape no pack provides is drawn as a dashed placeholder showing the shape name, at its layout size or, when the layout gives no `w` and `h`, at the standard default size, and is kept in the file untouched; the name is not drawn while the node's label is being edited.
 - **Selecting:** a click selects a shape inside its outline or within a few screen px of it; drag-box uses bounding boxes. A shape drawn only with strokes, such as a boundary, is selected only on its outline, and an edge end dropped inside it attaches to what lies behind it.
 - **Original shapes only:** no vendor icon sets (AWS, GCP, Azure) are bundled.
 - **Growth:** packs are added and extended without changes to the core.
-- **Packs:** `core` (basic, flowchart, arrows and lines; names need no prefix), `arch`, `net`, `c4`, `info`.
+- **Packs:** `core` (basic, flowchart, arrows and lines; names need no prefix), `arch`, `net`, `c4`, `uml`, `erd`, `info`.
 - **Pack folder:** `packs/<pack>/` holds `pack.json` (JSON) and one SVG per shape. The folder is named after the pack id; a shape's full name is `<pack>.<id>`.
 - **Manifest:** per shape: `id`, `name`, `category`, `tags`, `svg` (file name), `size` (`{ w, h }`, the default size), `outline`, `anchors`, `label`, `stretch` and `keepAspect`. All coordinates are in the SVG's own space, `0 0 w h` at the default size.
   - `outline` is one closed path used for hit-testing and for attaching edges anywhere along the shape's edge.

@@ -36,6 +36,11 @@ describe("editor actions", () => {
       "Select", "Hand", "Line", "Arrow", "Frame", "Rectangle", "Ellipse", "Text", "Image", "Preferences…",
       "Toggle library panel", "Toggle properties panel", "Toggle toolbar", "Toggle status pill",
     ]);
+    expect(editorActions(host()).map((action) => action.group)).toEqual([
+      "files", "editing", "editing", "view", "view", "view", "view", "view", "view", "view",
+      "tools", "tools", "tools", "tools", "tools", "tools", "tools", "tools", "tools", "files",
+      "view", "view", "view", "view",
+    ]);
   });
 
   it("opens Preferences from a key-less action that runs with no file open", () => {

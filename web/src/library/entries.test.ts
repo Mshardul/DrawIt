@@ -46,7 +46,7 @@ describe("library entries", () => {
 describe("library categories", () => {
   it("groups by category in the order of the shape categories, built-ins first, leaving out empty ones", () => {
     const groups = groupByCategory(libraryEntries(loader));
-    expect(groups.map((g) => g.category)).toEqual(["Basic", "Flowchart", "Architecture (generic)"]);
+    expect(groups.map((g) => g.category)).toEqual(["Basic", "Flowchart", "Architecture (generic)", "UML", "ERD"]);
     expect(groups[0]?.entries.map((e) => e.shape)).toEqual(["rect", "ellipse", "core.diamond"]);
   });
 });
@@ -55,8 +55,8 @@ describe("library search", () => {
   const find = (query: string): string[] => searchEntries(libraryEntries(loader), query).map((e) => e.shape);
 
   it("returns everything for an empty or blank query", () => {
-    expect(find("")).toHaveLength(5);
-    expect(find("   ")).toHaveLength(5);
+    expect(find("")).toHaveLength(12);
+    expect(find("   ")).toHaveLength(12);
   });
 
   it("matches part of a name, ignoring case", () => {
@@ -76,5 +76,28 @@ describe("library search", () => {
   it("does not match the category or the shape's full name", () => {
     expect(find("flowchart")).toEqual([]);
     expect(find("arch.")).toEqual([]);
+  });
+});
+
+describe("library aliases", () => {
+  it("lists Class under UML as rect, Use case as ellipse, Decision as core.decision, State as core.rounded-rect", () => {
+    const uml = groupByCategory(libraryEntries(loader)).find((g) => g.category === "UML")?.entries ?? [];
+    expect(uml).toContainEqual({ shape: "rect", name: "Class", category: "UML", tags: expect.arrayContaining(["class"]), builtIn: true });
+    expect(uml).toContainEqual({ shape: "ellipse", name: "Use case", category: "UML", tags: expect.arrayContaining(["use-case"]), builtIn: true });
+    expect(uml).toContainEqual({ shape: "core.decision", name: "Decision", category: "UML", tags: expect.arrayContaining(["decision"]), builtIn: false });
+    expect(uml).toContainEqual({ shape: "core.rounded-rect", name: "State", category: "UML", tags: expect.arrayContaining(["state"]), builtIn: false });
+  });
+
+  it("lists Entity, Relationship and Attribute under ERD as rect, core.decision and ellipse", () => {
+    const erd = groupByCategory(libraryEntries(loader)).find((g) => g.category === "ERD")?.entries ?? [];
+    expect(erd).toContainEqual({ shape: "rect", name: "Entity", category: "ERD", tags: expect.arrayContaining(["entity"]), builtIn: true });
+    expect(erd).toContainEqual({ shape: "core.decision", name: "Relationship", category: "ERD", tags: expect.arrayContaining(["relationship"]), builtIn: false });
+    expect(erd).toContainEqual({ shape: "ellipse", name: "Attribute", category: "ERD", tags: expect.arrayContaining(["attribute"]), builtIn: true });
+  });
+
+  it("keeps the same shape id for an alias as for the canonical tile", () => {
+    const entries = libraryEntries(loader);
+    expect(entries.find((e) => e.name === "Class")?.shape).toBe("rect");
+    expect(entries.find((e) => e.name === "Rectangle")?.shape).toBe("rect");
   });
 });

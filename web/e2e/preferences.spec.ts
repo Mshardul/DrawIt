@@ -329,3 +329,32 @@ test("Startup defaults to reopening the last folder and writes the launch settin
     return stored.launch?.open;
   })).toBe("start");
 });
+
+test("Shortcuts lists grouped actions and Not set for key-less ones", async ({ page }) => {
+  await start(page, "file");
+  await page.getByRole("button", { name: "Preferences" }).click();
+  await dialog(page).getByRole("tab", { name: "Shortcuts" }).click();
+  const panel = dialog(page).getByRole("tabpanel", { name: "Shortcuts" });
+  await expect(panel.getByRole("heading", { name: "Tools" })).toBeVisible();
+  await expect(panel.getByRole("heading", { name: "Editing" })).toBeVisible();
+  await expect(panel.getByRole("heading", { name: "View" })).toBeVisible();
+  await expect(panel.getByRole("heading", { name: "Files" })).toBeVisible();
+  const row = (title: string) => panel.locator(".kr").filter({ has: page.getByText(title, { exact: true }) });
+  await expect(row("Select").locator(".k")).toHaveText("V");
+  await expect(row("Preferences…").locator(".k")).toHaveText("Not set");
+  await expect(row("Preferences…").locator(".k")).toHaveClass(/muted/);
+});
+
+test("Shortcuts search filters by name or key", async ({ page }) => {
+  await start(page, "file");
+  await page.getByRole("button", { name: "Preferences" }).click();
+  await dialog(page).getByRole("tab", { name: "Shortcuts" }).click();
+  const panel = dialog(page).getByRole("tabpanel", { name: "Shortcuts" });
+  const row = (title: string) => panel.locator(".kr").filter({ has: page.getByText(title, { exact: true }) });
+  await panel.getByPlaceholder("Search actions or keys").fill("zoom");
+  await expect(panel.getByRole("heading", { name: "View" })).toBeVisible();
+  await expect(panel.getByRole("heading", { name: "Tools" })).toHaveCount(0);
+  await expect(row("Select")).toHaveCount(0);
+  await expect(row("Zoom in")).toBeVisible();
+  await expect(row("Zoom to selection")).toBeVisible();
+});

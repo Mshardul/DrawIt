@@ -337,6 +337,114 @@
       "keepAspect": true
     },
     {
+      "id": "preparation",
+      "name": "Preparation",
+      "category": "Flowchart",
+      "tags": ["preparation", "setup", "init", "hexagon"],
+      "svg": "preparation.svg",
+      "size": { "w": 160, "h": 80 },
+      "outline": "M 40 0 H 120 L 160 40 L 120 80 H 40 L 0 40 Z",
+      "anchors": {
+        "top": { "x": 80, "y": 0 },
+        "right": { "x": 160, "y": 40 },
+        "bottom": { "x": 80, "y": 80 },
+        "left": { "x": 0, "y": 40 }
+      },
+      "label": { "x": 32, "y": 16, "w": 96, "h": 48 },
+      "stretch": { "x": [40, 120] },
+      "keepAspect": false
+    },
+    {
+      "id": "display",
+      "name": "Display",
+      "category": "Flowchart",
+      "tags": ["display", "screen", "output", "monitor"],
+      "svg": "display.svg",
+      "size": { "w": 160, "h": 80 },
+      "outline": "M 24 0 H 128 L 160 40 L 128 80 H 24 C 8 80 0 64 0 40 C 0 16 8 0 24 0 Z",
+      "anchors": {
+        "top": { "x": 80, "y": 0 },
+        "right": { "x": 160, "y": 40 },
+        "bottom": { "x": 80, "y": 80 },
+        "left": { "x": 0, "y": 40 }
+      },
+      "label": { "x": 32, "y": 8, "w": 96, "h": 64 },
+      "stretch": { "x": [24, 128] },
+      "keepAspect": false
+    },
+    {
+      "id": "delay",
+      "name": "Delay",
+      "category": "Flowchart",
+      "tags": ["delay", "wait", "timeout", "pause"],
+      "svg": "delay.svg",
+      "size": { "w": 160, "h": 80 },
+      "outline": "M 0 0 H 112 C 138.509 0 160 17.909 160 40 C 160 62.091 138.509 80 112 80 H 0 Z",
+      "anchors": {
+        "top": { "x": 80, "y": 0 },
+        "right": { "x": 160, "y": 40 },
+        "bottom": { "x": 80, "y": 80 },
+        "left": { "x": 0, "y": 40 }
+      },
+      "label": { "x": 8, "y": 8, "w": 104, "h": 64 },
+      "stretch": { "x": [8, 112] },
+      "keepAspect": false
+    },
+    {
+      "id": "stored-data",
+      "name": "Stored data",
+      "category": "Flowchart",
+      "tags": ["stored-data", "storage", "disk", "data"],
+      "svg": "stored-data.svg",
+      "size": { "w": 160, "h": 80 },
+      "outline": "M 24 0 H 136 C 149.255 0 160 17.909 160 40 C 160 62.091 149.255 80 136 80 H 24 C 10.745 80 0 62.091 0 40 C 0 17.909 10.745 0 24 0 Z",
+      "anchors": {
+        "top": { "x": 80, "y": 0 },
+        "right": { "x": 160, "y": 40 },
+        "bottom": { "x": 80, "y": 80 },
+        "left": { "x": 0, "y": 40 }
+      },
+      "label": { "x": 32, "y": 8, "w": 96, "h": 64 },
+      "stretch": { "x": [24, 136] },
+      "keepAspect": false
+    },
+    {
+      "id": "internal-storage",
+      "name": "Internal storage",
+      "category": "Flowchart",
+      "tags": ["internal-storage", "memory", "ram", "storage"],
+      "svg": "internal-storage.svg",
+      "size": { "w": 160, "h": 80 },
+      "outline": "M 0 0 L 160 0 L 160 80 L 0 80 Z",
+      "anchors": {
+        "top": { "x": 80, "y": 0 },
+        "right": { "x": 160, "y": 40 },
+        "bottom": { "x": 80, "y": 80 },
+        "left": { "x": 0, "y": 40 }
+      },
+      "label": { "x": 8, "y": 32, "w": 144, "h": 40 },
+      "stretch": { "y": [24, 72] },
+      "keepAspect": false
+    },
+    {
+      "id": "off-page",
+      "name": "Off-page link",
+      "category": "Flowchart",
+      "tags": ["off-page", "link", "reference", "continue"],
+      "svg": "off-page.svg",
+      "size": { "w": 160, "h": 96 },
+      "outline": "M 0 0 H 160 V 56 L 80 96 L 0 56 Z",
+      "anchors": {
+        "top": { "x": 80, "y": 0 },
+        "right": { "x": 160, "y": 48 },
+        "bottom": { "x": 80, "y": 96 },
+        "left": { "x": 0, "y": 48 }
+      },
+      "label": { "x": 16, "y": 8, "w": 128, "h": 48 },
+      "stretch": { "x": [8, 152], "y": [8, 56] },
+      "keepAspect": false
+    },
+    {
       "id": "arrow-right",
       "name": "Arrow right",
       "category": "Arrows and lines",

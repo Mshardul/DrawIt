@@ -1,8 +1,16 @@
 import { openDialog } from "./dialog.ts";
+import type { Action } from "./actions.ts";
 import type { SavingPrefs } from "./autosave.ts";
 import { LAYOUT_PARTS, PART_NAMES, type Layout } from "./layout.ts";
 import type { PreferenceStore } from "./preference-store.ts";
-import type { LaunchOpen, StartupPrefs } from "./session.ts";
+import type { StartupPrefs } from "./session.ts";
+import {
+  filterShortcutList,
+  NOT_SET,
+  shortcutList,
+  type ShortcutGroup,
+  type ShortcutRow,
+} from "./shortcut-list.ts";
 import {
   GRID_SIZE_MAX,
   GRID_SIZE_MIN,
@@ -23,6 +31,8 @@ function build(
   canvas: CanvasPrefs,
   saving: SavingPrefs,
   startup: StartupPrefs,
+  actions: readonly Action[],
+  mac: boolean,
 ): { element: HTMLElement; panels: HTMLElement } {
   opened += 1;
   const prefix = `prefs-${String(opened)}`;
@@ -76,6 +86,8 @@ function build(
         savingSection(saving),
         startupSection(startup, prefix),
       );
+    } else {
+      panel.append(shortcutsSection(actions, mac));
     }
     panels.set(name, panel);
     list.append(button);
@@ -130,6 +142,26 @@ function checkRow(label: string, checked: boolean, onChange: (on: boolean) => vo
   return row;
 }
 
+function radioRows<T extends string>(
+  group: string,
+  current: T,
+  choices: ReadonlyArray<readonly [T, string]>,
+  onChange: (value: T) => void,
+): HTMLElement[] {
+  return choices.map(([value, text]) => {
+    const radio = document.createElement("input");
+    radio.type = "radio";
+    radio.name = group;
+    radio.value = value;
+    radio.checked = current === value;
+    radio.addEventListener("change", () => { onChange(value); });
+    const row = document.createElement("label");
+    row.className = "pref-row";
+    row.append(radio, text);
+    return row;
+  });
+}
+
 function canvasSection(canvas: CanvasPrefs, prefix: string): HTMLElement {
   const section = document.createElement("section");
   const heading = document.createElement("h3");
@@ -164,25 +196,14 @@ function canvasSection(canvas: CanvasPrefs, prefix: string): HTMLElement {
   const wheelLabel = document.createElement("div");
   wheelLabel.className = "note pref-row";
   wheelLabel.textContent = "Mouse wheel";
-  section.append(sizeRow, wheelLabel);
-
-  const group = `${prefix}-wheel`;
-  const current = canvas.wheel();
-  for (const [mode, text] of [
-    ["pan", "Pans the view; Ctrl+wheel zooms"],
-    ["zoom", "Zooms the view; Ctrl+wheel pans"],
-  ] as const) {
-    const radio = document.createElement("input");
-    radio.type = "radio";
-    radio.name = group;
-    radio.value = mode;
-    radio.checked = current === mode;
-    radio.addEventListener("change", () => { canvas.setWheel(mode); });
-    const row = document.createElement("label");
-    row.className = "pref-row";
-    row.append(radio, text);
-    section.append(row);
-  }
+  section.append(
+    sizeRow,
+    wheelLabel,
+    ...radioRows(`${prefix}-wheel`, canvas.wheel(), [
+      ["pan", "Pans the view; Ctrl+wheel zooms"],
+      ["zoom", "Zooms the view; Ctrl+wheel pans"],
+    ], (mode) => { canvas.setWheel(mode); }),
+  );
   return section;
 }
 
@@ -203,24 +224,53 @@ function startupSection(startup: StartupPrefs, prefix: string): HTMLElement {
   const section = document.createElement("section");
   const heading = document.createElement("h3");
   heading.textContent = "Startup";
-  section.append(heading);
-  const group = `${prefix}-launch`;
-  const current = startup.open();
-  for (const [open, text] of [
-    ["last", "Reopen the last project or folder"],
-    ["start", "Show the start screen"],
-  ] as const satisfies ReadonlyArray<readonly [LaunchOpen, string]>) {
-    const radio = document.createElement("input");
-    radio.type = "radio";
-    radio.name = group;
-    radio.value = open;
-    radio.checked = current === open;
-    radio.addEventListener("change", () => { startup.setOpen(open); });
-    const row = document.createElement("label");
-    row.className = "pref-row";
-    row.append(radio, text);
-    section.append(row);
+  section.append(
+    heading,
+    ...radioRows(`${prefix}-launch`, startup.open(), [
+      ["last", "Reopen the last project or folder"],
+      ["start", "Show the start screen"],
+    ], (open) => { startup.setOpen(open); }),
+  );
+  return section;
+}
+
+function shortcutRow({ title, key }: ShortcutRow): HTMLElement {
+  const row = document.createElement("div");
+  row.className = "kr";
+  const name = document.createElement("span");
+  name.className = "sp";
+  name.textContent = title;
+  const badge = document.createElement("span");
+  const unset = key === undefined;
+  badge.className = unset ? "k muted" : "k";
+  badge.textContent = unset ? NOT_SET : key;
+  row.append(name, badge);
+  return row;
+}
+
+function renderShortcutGroups(into: HTMLElement, groups: readonly ShortcutGroup[]): void {
+  into.replaceChildren();
+  for (const group of groups) {
+    const heading = document.createElement("h3");
+    heading.textContent = group.title;
+    into.append(heading);
+    into.append(...group.rows.map(shortcutRow));
   }
+}
+
+function shortcutsSection(actions: readonly Action[], mac: boolean): HTMLElement {
+  const section = document.createElement("div");
+  const search = document.createElement("input");
+  search.type = "search";
+  search.className = "f";
+  search.placeholder = "Search actions or keys";
+  search.setAttribute("aria-label", "Search actions or keys");
+  const list = document.createElement("div");
+  const all = shortcutList(actions, mac);
+  const paint = (): void => { renderShortcutGroups(list, filterShortcutList(all, search.value)); };
+  search.addEventListener("input", paint);
+  paint();
+  section.append(search, list);
   return section;
 }
 
@@ -246,8 +296,10 @@ export async function openPreferences(
   canvas: CanvasPrefs,
   saving: SavingPrefs,
   startup: StartupPrefs,
+  actions: readonly Action[],
+  mac: boolean,
 ): Promise<void> {
-  const { element, panels } = build(layout, canvas, saving, startup);
+  const { element, panels } = build(layout, canvas, saving, startup, actions, mac);
   const stop = warnWhileUnsaved(panels, store);
   await openDialog(parent, {
     title: "Preferences",

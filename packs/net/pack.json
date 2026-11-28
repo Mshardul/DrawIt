@@ -104,6 +104,57 @@
       },
       "label": { "x": 24, "y": 28, "w": 48, "h": 56 },
       "keepAspect": true
+    },
+    {
+      "id": "proxy",
+      "name": "Proxy",
+      "category": "Network",
+      "tags": ["proxy", "forward", "reverse", "edge"],
+      "svg": "proxy.svg",
+      "size": { "w": 96, "h": 96 },
+      "outline": "M 16 28 H 60 L 80 48 L 60 68 H 16 Z",
+      "anchors": {
+        "top": { "x": 38, "y": 28 },
+        "right": { "x": 80, "y": 48 },
+        "bottom": { "x": 38, "y": 68 },
+        "left": { "x": 16, "y": 48 }
+      },
+      "label": { "x": 20, "y": 36, "w": 32, "h": 24 },
+      "keepAspect": true
+    },
+    {
+      "id": "nat",
+      "name": "NAT",
+      "category": "Network",
+      "tags": ["nat", "translation", "gateway", "network"],
+      "svg": "nat.svg",
+      "size": { "w": 96, "h": 96 },
+      "outline": "M 16 28 H 80 C 84.418 28 88 31.582 88 36 V 60 C 88 64.418 84.418 68 80 68 H 16 C 11.582 68 8 64.418 8 60 V 36 C 8 31.582 11.582 28 16 28 Z",
+      "anchors": {
+        "top": { "x": 48, "y": 28 },
+        "right": { "x": 88, "y": 48 },
+        "bottom": { "x": 48, "y": 68 },
+        "left": { "x": 8, "y": 48 }
+      },
+      "label": { "x": 16, "y": 36, "w": 64, "h": 24 },
+      "keepAspect": true
+    },
+    {
+      "id": "wireless",
+      "name": "Wireless",
+      "category": "Network",
+      "tags": ["wireless", "wifi", "access-point", "radio"],
+      "svg": "wireless.svg",
+      "size": { "w": 96, "h": 96 },
+      "outline": "M 16 20 H 80 V 68 H 58 L 48 84 L 38 68 H 16 Z",
+      "anchors": {
+        "top": { "x": 48, "y": 20 },
+        "right": { "x": 80, "y": 48 },
+        "bottom": { "x": 48, "y": 84 },
+        "left": { "x": 16, "y": 48 }
+      },
+      "label": { "x": 28, "y": 28, "w": 40, "h": 32 },
+      "keepAspect": true
     }
   ]
 }

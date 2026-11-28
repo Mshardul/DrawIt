@@ -1,7 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">
   <path data-role="fill" d="M 16 16 H 80 C 84.418 16 88 19.582 88 24 V 72 C 88 76.418 84.418 80 80 80 H 16 C 11.582 80 8 76.418 8 72 V 24 C 8 19.582 11.582 16 16 16 Z"/>
-  <line data-role="detail" x1="8" y1="34" x2="88" y2="34"/>
-  <circle data-role="detail" cx="22" cy="25" r="3"/>
-  <circle data-role="detail" cx="34" cy="25" r="3"/>
-  <circle data-role="detail" cx="46" cy="25" r="3"/>
+  <line data-role="detail" x1="8" y1="32" x2="88" y2="32"/>
+  <line data-role="detail" x1="8" y1="48" x2="88" y2="48"/>
+  <circle data-role="detail" cx="20" cy="24" r="3"/>
+  <circle data-role="detail" cx="32" cy="24" r="3"/>
+  <circle data-role="detail" cx="44" cy="24" r="3"/>
+  <polyline data-role="detail" points="22,36 16,40 22,44"/>
+  <line data-role="detail" x1="28" y1="40" x2="72" y2="40"/>
 </svg>
